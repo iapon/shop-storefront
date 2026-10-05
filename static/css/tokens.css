@@ -1,0 +1,126 @@
+/* ============================================================
+   shop-storefront — дизайн-токены витрины (--shop-*)
+   Единственное место правки темы/бренда (см. README, «Смена темы»).
+   Значения наследуют темы ядра платформы dynamica-light / dynamica-dark.
+   Без Tailwind-билда: CSS отдаётся статикой, ссылки несут ?v={{ site.version }}.
+   ------------------------------------------------------------
+   Тёмная тема держится 1:1 с ядром — bg=surface=base-100, surface-2=base-200
+   (карточка отделяется рамкой и тенью, не заливкой — как в light).
+   Вариант «карточка светлеет»: заменить --shop-surface на oklch(22% 0.045 266)
+   и --shop-surface-2 на oklch(28% 0.04 266) — правка двух значений.
+   ============================================================ */
+
+/* ── Светлая тема (default) ─────────────────────────────────── */
+:root {
+  /* фон страницы / поверхность карточки / утопленная поверхность */
+  --shop-bg:          oklch(100% 0 0);          /* = light base-100 */
+  --shop-surface:     oklch(100% 0 0);
+  --shop-surface-2:   oklch(98% 0.005 247);     /* = base-200: фон, чипы, превью */
+  /* текст: основной / вторичный / подсказка / placeholder-disabled (тон-иерархия админки) */
+  --shop-text:        oklch(20% 0.04 266);
+  --shop-text-2:      color-mix(in oklch, oklch(20% 0.04 266) 70%, transparent);
+  --shop-text-3:      color-mix(in oklch, oklch(20% 0.04 266) 50%, transparent);
+  --shop-text-4:      color-mix(in oklch, oklch(20% 0.04 266) 40%, transparent);
+
+  /* бренд */
+  --shop-brand:       oklch(58% 0.22 273);      /* ≈ #4F46E5 */
+  --shop-brand-contrast: oklch(100% 0 0);
+  --shop-brand-tint:  color-mix(in oklch, oklch(58% 0.22 273) 10%, transparent);
+
+  /* статусы (тинты доминируют над заливками) */
+  --shop-success:     oklch(72% 0.17 162);
+  --shop-success-tint: color-mix(in oklch, oklch(72% 0.17 162) 10%, transparent);
+  --shop-warning:     oklch(80% 0.16 80);
+  --shop-warning-tint: color-mix(in oklch, oklch(80% 0.16 80) 10%, transparent);
+  --shop-error:       oklch(64% 0.22 25);
+  --shop-error-tint:  color-mix(in oklch, oklch(64% 0.22 25) 10%, transparent);
+
+  /* границы */
+  --shop-border:      color-mix(in oklch, oklch(92% 0.01 247) 60%, transparent); /* base-300/60 */
+  --shop-border-strong: oklch(92% 0.01 247);
+
+  /* радиусы (ядро: field/selector 0.5rem, box 0.875rem; app-card 0.375rem) */
+  --shop-radius-sm:   0.375rem;   /* инпуты, чипы, мелкие кнопки */
+  --shop-radius-md:   0.5rem;     /* кнопки-CTA, карточки товара */
+  --shop-radius-lg:   0.75rem;    /* герои-визуалы, баннеры */
+  --shop-radius-pill: 9999px;     /* kicker, бейджи */
+
+  /* тени — темозависимый tint через base-content (две, и только две) */
+  --shop-shadow-card: 0 1px 2px color-mix(in oklch, oklch(20% 0.04 266) 5%, transparent),
+                      0 1px 3px color-mix(in oklch, oklch(20% 0.04 266) 7%, transparent);
+  --shop-shadow-pop:  0 4px 6px -1px color-mix(in oklch, oklch(20% 0.04 266) 8%, transparent),
+                      0 10px 15px -3px color-mix(in oklch, oklch(20% 0.04 266) 5%, transparent),
+                      0 0 0 1px color-mix(in oklch, oklch(20% 0.04 266) 3%, transparent);
+
+  /* типографика (MVP: системный стек; woff2 — руками flowctl files push, README) */
+  --shop-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shop-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shop-text-xs:  0.75rem;    /* eyebrow, мета, подписи */
+  --shop-text-sm:  0.875rem;   /* тело карточек, инпуты */
+  --shop-text-md:  1rem;       /* база (body 16px/1.6) */
+  --shop-text-lg:  1.125rem;   /* заголовок карточки, lede */
+  --shop-text-xl:  1.25rem;
+  --shop-text-2xl: 1.5rem;     /* заголовок секции */
+  --shop-text-3xl: 1.875rem;   /* статус-экран, текстовый блок */
+  --shop-text-5xl: 3rem;       /* заголовок героя */
+  --shop-leading-body: 1.6;
+  --shop-leading-heading: 1.25;
+  --shop-leading-hero: 1.1;
+  --shop-tracking-heading: -0.01em;
+  --shop-tracking-caps: 0.08em;
+  --shop-tracking-kicker: 0.18em;
+
+  /* контейнеры и spacing-ритм лендинга */
+  --shop-container:   72rem;   /* каталог, хедер, футер (max-w-6xl) */
+  --shop-container-prose: 48rem; /* описания, checkout-колонка (max-w-3xl) */
+  --shop-container-narrow: 36rem; /* статус-экран заказа (max-w-xl) */
+  --shop-gutter: 1.5rem;       /* px-6 */
+  --shop-section-y: 3rem;      /* py-12 */
+  --shop-gap: 1.5rem;          /* gap сеток */
+
+  /* фокус и анимация */
+  --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(58% 0.22 273) 35%, transparent);
+  --shop-ease: cubic-bezier(0.19, 1, 0.22, 1); /* ease-out-expo */
+  --shop-theme-fade: 150ms ease; /* глобальный кросс-фейд темы */
+}
+
+/* ── Тёмная тема — 1:1 с ядром dynamica-dark ────────────────── */
+[data-theme="dynamica-dark"] {
+  --shop-bg:        oklch(20% 0.04 266);    /* = dark base-100 */
+  --shop-surface:   oklch(20% 0.04 266);    /* 1:1 с ядром; «карточка светлеет» → 22% 0.045 266 */
+  --shop-surface-2: oklch(22% 0.045 266);   /* = dark base-200; вариант выше → 28% 0.04 266 */
+  --shop-text:   oklch(94% 0.01 247);
+  --shop-text-2: color-mix(in oklch, oklch(94% 0.01 247) 70%, transparent);
+  --shop-text-3: color-mix(in oklch, oklch(94% 0.01 247) 50%, transparent);
+  --shop-text-4: color-mix(in oklch, oklch(94% 0.01 247) 40%, transparent);
+  --shop-brand:  oklch(72% 0.18 273);
+  --shop-brand-contrast: oklch(15% 0.04 273);
+  --shop-brand-tint: color-mix(in oklch, oklch(72% 0.18 273) 10%, transparent);
+  --shop-success: oklch(78% 0.16 162);
+  --shop-success-tint: color-mix(in oklch, oklch(78% 0.16 162) 10%, transparent);
+  --shop-warning: oklch(82% 0.15 80);
+  --shop-warning-tint: color-mix(in oklch, oklch(82% 0.15 80) 10%, transparent);
+  --shop-error:  oklch(72% 0.2 25);
+  --shop-error-tint: color-mix(in oklch, oklch(72% 0.2 25) 10%, transparent);
+  --shop-border: color-mix(in oklch, oklch(28% 0.04 266) 60%, transparent);
+  --shop-border-strong: oklch(28% 0.04 266);
+  --shop-shadow-card: 0 1px 2px color-mix(in oklch, oklch(94% 0.01 247) 5%, transparent),
+                      0 1px 3px color-mix(in oklch, oklch(94% 0.01 247) 7%, transparent);
+  --shop-shadow-pop:  0 4px 6px -1px color-mix(in oklch, oklch(94% 0.01 247) 8%, transparent),
+                      0 10px 15px -3px color-mix(in oklch, oklch(94% 0.01 247) 5%, transparent),
+                      0 0 0 1px color-mix(in oklch, oklch(94% 0.01 247) 3%, transparent);
+  --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(72% 0.18 273) 35%, transparent);
+}
+
+/* Глобальный кросс-фейд темы — один transition, без JS-тайминга.
+   Тему выбирает ТОЛЬКО клиент: страницы кэшируются по path, SSR всегда отдаёт
+   dynamica-light. */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: color var(--shop-theme-fade) ease,
+                background-color var(--shop-theme-fade) ease,
+                border-color var(--shop-theme-fade) ease;
+  }
+}

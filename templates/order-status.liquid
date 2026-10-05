@@ -1,0 +1,38 @@
+{%- comment -%}
+  order-status.liquid — статус заказа (биндинг: o.data.order, 0..1).
+  Один экран покрывает оба состояния: new → «Заказ принят» + подсказка про
+  отмену; paid → «Заказ оплачен ✓»; нет заказа → «Заказ не найден».
+  Номер заказа — единственный font-mono на странице.
+{%- endcomment -%}
+{%- assign ord = o.data.order -%}
+{%- if ord -%}{%- assign page_title = "Заказ " | append: ord.id -%}{%- else -%}{%- assign page_title = "Заказ не найден" -%}{%- endif -%}
+{%- capture content -%}
+<div class="status-screen">
+  {%- if ord -%}
+    {%- if ord.status == "paid" -%}
+      <span class="status-badge success" aria-hidden="true">✓</span>
+      <h1 class="status-title">Заказ оплачен ✓</h1>
+      <p class="status-text">Спасибо! Мы получили оплату и приступаем к сборке. Подтверждение отправлено на {{ ord.customer_email }}.</p>
+    {%- elsif ord.status == "cancelled" -%}
+      <span class="status-badge error" aria-hidden="true">×</span>
+      <h1 class="status-title">Заказ отменён</h1>
+      <p class="status-text">Если вы отменили заказ случайно — просто оформите его заново в каталоге.</p>
+    {%- else -%}
+      <span class="status-badge brand" aria-hidden="true">…</span>
+      <h1 class="status-title">Заказ принят</h1>
+      <p class="status-text">Осталось оплатить {{ ord.amount | money }} ₽ — сейчас откроется платёжная страница ЮKassa. Статус обновится автоматически: просто обновите эту страницу через пару минут.</p>
+      <p class="status-text">Передумаете — напишите нам на почту поддержки до оплаты, и мы отменим заказ.</p>
+    {%- endif -%}
+    <p class="status-order-no">Заказ № {{ ord.id }}</p>
+    {%- if ord.items_summary -%}<p class="status-text text-3">{{ ord.items_summary }}</p>{%- endif -%}
+    <p class="status-help">Сохраните ссылку на эту страницу — она показывает актуальный статус заказа.</p>
+    <div class="status-actions"><a class="btn btn-secondary" href="/">Вернуться в каталог</a></div>
+  {%- else -%}
+    <span class="status-badge error" aria-hidden="true">∅</span>
+    <h1 class="status-title">Заказ не найден</h1>
+    <p class="status-text">Проверьте ссылку: возможно, номер заказа указан неверно.</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="/">В каталог</a></div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

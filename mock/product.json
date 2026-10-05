@@ -1,0 +1,35 @@
+{
+  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар]; вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4.",
+  "found": {
+    "p": {
+      "data": {
+        "products": [
+          {
+            "id": "p-1",
+            "title": "Кружка «Лён»",
+            "slug": "mug-linen",
+            "price_kopecks": 99000,
+            "description": "Литая керамика, матовая глазурь. 350 мл, можно в посудомойку.\nСделано в мастерской на берегу Ладоги.",
+            "stock": 12,
+            "categories": ["ceramics"],
+            "photos": [{ "url": "" }]
+          }
+        ]
+      }
+    },
+    "rel": {
+      "data": {
+        "products": [
+          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 8, "photos": [] },
+          { "id": "p-6", "title": "Блюдо «Озеро»", "slug": "dish-lake", "price_kopecks": 219000, "stock": 2, "photos": [] }
+        ]
+      }
+    },
+    "site": { "version": 7, "params": { "slug": "mug-linen" }, "query": {} }
+  },
+  "not_found": {
+    "p": { "data": { "products": [] } },
+    "rel": { "data": { "products": [] } },
+    "site": { "version": 7, "params": { "slug": "gone-item" }, "query": {} }
+  }
+}

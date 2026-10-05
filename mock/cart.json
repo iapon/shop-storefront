@@ -1,0 +1,6 @@
+{
+  "_comment": "Мок API /api/cart для дев-среды и smoke. GET/POST отвечают {items: [{slug, qty}]}; ответ сервера — канон (state := response.items). dev-мидлвара эмулирует эндпоинт с in-memory состоянием на гостевую куку; guest/member — стартовые наборы.",
+  "guest": { "items": [ { "slug": "mug-linen", "qty": 1 } ] },
+  "member": { "items": [ { "slug": "tote-canvas", "qty": 2 }, { "slug": "candle-fir", "qty": 1 } ] },
+  "empty": { "items": [] }
+}

@@ -1,0 +1,75 @@
+{%- comment -%}
+  base.liquid — оболочка витрины. Паттерн страницы:
+  {% capture content %}…{% endcapture %}{% include "base" %} —
+  include делит скоуп, поэтому content/page_title/page_desc видны отсюда.
+  Название магазина: сентинел ${SHOP_NAME} заменяется при установке магазина;
+  руками — просто впишите название в assign ниже.
+{%- endcomment -%}
+{%- assign shop_name = "${SHOP_NAME}" -%}
+{%- if shop_name == "${SHOP_NAME}" -%}{%- assign shop_name = "Магазин" -%}{%- endif -%}
+<!doctype html>
+<html lang="ru" data-theme="dynamica-light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page_title %}{{ page_title }} — {{ shop_name }}{% else %}{{ shop_name }}{% endif %}</title>
+{%- if page_desc %}<meta name="description" content="{{ page_desc }}">{% endif -%}
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ site.version }}">
+<link rel="stylesheet" href="/static/css/tokens.css?v={{ site.version }}">
+<link rel="stylesheet" href="/static/css/shop.css?v={{ site.version }}">
+<script>
+/* boot темы — до первой отрисовки (anti-FOUC; см. static/js/theme.js):
+   cookie dynamica-theme → localStorage → prefers-color-scheme → light */
+(function () {
+  function norm(v) {
+    if (v === 'dark' || v === 'dynamica-dark') return 'dynamica-dark';
+    if (v === 'light' || v === 'dynamica-light') return 'dynamica-light';
+    return null;
+  }
+  var t = null, m = document.cookie.match(/(?:^|;\s*)dynamica-theme=(light|dark|dynamica-light|dynamica-dark)/);
+  if (m) t = norm(decodeURIComponent(m[1]));
+  if (!t) { try { t = norm(localStorage.getItem('dynamica-theme')); } catch (e) {} }
+  if (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) t = 'dynamica-dark';
+  if (!t) t = 'dynamica-light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.documentElement.style.colorScheme = t === 'dynamica-dark' ? 'dark' : 'light';
+})();
+</script>
+<script src="/static/js/theme.js?v={{ site.version }}" defer></script>
+<script src="/static/js/cart.js?v={{ site.version }}" defer></script>
+</head>
+<body>
+{%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
+  /checkout; на остальных страницах счётчик равен 0 и мгновенно гидратируется
+  cart.js через GET /api/cart (страницы кэшируются, корзина в HTML не отдаётся). {%- endcomment -%}
+{%- assign cart_count = 0 -%}
+{%- if cart -%}
+  {%- assign cart_row = cart.data.carts | first -%}
+  {%- if cart_row -%}
+    {%- for i in cart_row.items -%}{%- assign cart_count = cart_count | plus: i.qty -%}{%- endfor -%}
+  {%- endif -%}
+{%- endif -%}
+<header class="shop-header">
+  <div class="shop-container shop-header-inner">
+    <a class="shop-logo" href="/">{{ shop_name }}</a>
+    <span class="shop-header-spacer"></span>
+    <a class="cart-counter" href="/checkout" data-empty="{% if cart_count > 0 %}0{% else %}1{% endif %}">
+      <span aria-hidden="true">🛒</span>
+      <span data-cart-count>{{ cart_count }}</span>
+    </a>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-haspopup="true">
+      <span data-icon="sun" aria-hidden="true">☀️</span>
+      <span data-icon="moon" aria-hidden="true">🌙</span>
+    </button>
+  </div>
+</header>
+<main>
+{{ content }}
+</main>
+<footer class="shop-footer">
+  <div class="shop-container shop-footer-inner">
+    © {{ "now" | date: "%Y" }} {{ shop_name }} · Работает на DynapiCMS
+  </div>
+</footer>
+</body>
+</html>

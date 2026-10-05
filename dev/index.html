@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shop-storefront — дев-роутер</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.6; color: #222; }
+  h1 { font-size: 1.5rem; } code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 4px; }
+  li { margin: 0.25rem 0; }
+</style>
+</head>
+<body>
+<h1>shop-storefront — дев-роутер</h1>
+<p>Страницы рендерятся liquidjs из <code>templates/</code> с моками <code>mock/</code>. Реальные пути витрины тоже работают.</p>
+<ul>
+  <li><a href="/?mock=catalog">Каталог</a> — <code>/?mock=catalog</code> (чипы: <code>&amp;cat=ceramics</code>, страницы: <code>&amp;page=2</code>)</li>
+  <li><a href="/?mock=product">Товар (найден)</a> — <code>/?mock=product</code>; <a href="/?mock=product&variant=not_found">не найден</a></li>
+  <li><a href="/?mock=checkout">Чекаут (гость)</a> — <code>/?mock=checkout</code>; <a href="/?mock=checkout&variant=member">member</a>; <a href="/?mock=checkout&variant=empty">пустая</a></li>
+  <li><a href="/?mock=cart">Корзина (список гостя)</a> — <code>/?mock=cart</code></li>
+  <li><a href="/?mock=order">Заказ принят</a> — <code>/?mock=order</code>; <a href="/?mock=order&variant=paid">оплачен</a>; <a href="/?mock=order&variant=not_found">не найден</a></li>
+  <li><a href="/?mock=404">404</a> — <code>/?mock=404</code> (любой несовпавший путь)</li>
+</ul>
+<p>API корзины эмулируется в памяти: <code>GET/POST /api/cart</code>, <code>POST /api/checkout</code> (сабмит формы ведёт на <code>/order/dev-order-1</code>). Режим member: кука <code>dev_member=1</code>.</p>
+</body>
+</html>

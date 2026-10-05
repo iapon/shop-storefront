@@ -1,0 +1,39 @@
+{
+  "_comment": "Мок данных статуса заказа: o.data.order (0..1). new → «Заказ принят», paid → «Заказ оплачен ✓», not_found → «Заказ не найден».",
+  "new": {
+    "o": {
+      "data": {
+        "order": {
+          "id": "8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d",
+          "title": "05.10.2026 14:22",
+          "items_summary": "Кружка «Лён» × 2, Планинг «Сосна» × 1",
+          "amount": "232.90",
+          "status": "new",
+          "customer_email": "ivan@example.ru",
+          "created_at": "2026-10-05T14:22:31Z"
+        }
+      }
+    },
+    "site": { "version": 7, "params": { "id": "8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d" }, "query": {} }
+  },
+  "paid": {
+    "o": {
+      "data": {
+        "order": {
+          "id": "8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d",
+          "title": "05.10.2026 14:22",
+          "items_summary": "Кружка «Лён» × 2, Планинг «Сосна» × 1",
+          "amount": "232.90",
+          "status": "paid",
+          "customer_email": "ivan@example.ru",
+          "created_at": "2026-10-05T14:22:31Z"
+        }
+      }
+    },
+    "site": { "version": 7, "params": { "id": "8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d" }, "query": {} }
+  },
+  "not_found": {
+    "o": { "data": { "order": null } },
+    "site": { "version": 7, "params": { "id": "missing" }, "query": {} }
+  }
+}

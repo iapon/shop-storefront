@@ -1,0 +1,101 @@
+{%- comment -%}
+  checkout.liquid — оформление заказа. Биндинги: cart.data.carts (серверная
+  корзина посетителя: 0..1 строка {id, items}), prods.data.products (товары
+  корзины), site.params. Позиции и суммы приходят с сервера; пусто/нет
+  идентификатора → «Корзина пуста». JS перехватывает сабмит → POST /api/checkout.
+  Форма: honeypot-поле website (скрытое от человека, css .hp-field).
+{%- endcomment -%}
+{%- assign page_title = "Оформление заказа" -%}
+{%- assign cart_row = cart.data.carts | first -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  <h1 class="product-title">Оформление заказа</h1>
+
+  {%- if cart_row and cart_row.items.size > 0 -%}
+  <div class="checkout-grid">
+    <div class="shop-prose" style="max-width:none;">
+      <h2 class="rel-heading" style="margin-top:0;">Ваш заказ</h2>
+      <ul class="cart-lines">
+        {%- assign total_k = 0 -%}
+        {%- for i in cart_row.items -%}
+          {%- assign line = nil -%}
+          {%- for pr in prods.data.products -%}
+            {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
+          {%- endfor -%}
+          {%- if line -%}
+            {%- assign line_sum = line.price_kopecks | times: i.qty -%}
+            {%- assign total_k = total_k | plus: line_sum -%}
+            <li class="cart-line">
+              <span class="cart-line-name">
+                {{ line.title }}
+                {%- if line.stock <= 0 -%}
+                  <span class="badge badge-error">нет в наличии</span>
+                {%- elsif i.qty > line.stock -%}
+                  <span class="badge badge-warning">в наличии только {{ line.stock }}</span>
+                {%- endif -%}
+              </span>
+              <span class="cart-line-qty">× {{ i.qty }}</span>
+              <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+
+      <h2 class="rel-heading">Контакты</h2>
+      <form class="shop-prose" data-checkout-form novalidate>
+        <div class="form-error" data-form-error role="alert"></div>
+        {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
+           Сервер молча подтверждает пустышку, не создавая заказа. {%- endcomment -%}
+        <div class="hp-field" aria-hidden="true">
+          <label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <div class="field">
+          <label class="field-label" for="co-name">Имя *</label>
+          <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="Иван Петров">
+        </div>
+        <div class="field">
+          <label class="field-label" for="co-email">Email *</label>
+          <input class="field-input" id="co-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
+          <p class="field-hint">На этот email придёт подтверждение заказа.</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="co-phone">Телефон</label>
+          <input class="field-input" id="co-phone" name="phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00">
+        </div>
+        <div class="field">
+          <label class="field-label" for="co-comment">Комментарий к заказу</label>
+          <textarea class="field-textarea" id="co-comment" name="comment" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Перейти к оплате</button>
+        <p class="field-hint">Оплата через ЮKassa: после нажатия вы перейдёте на платёжную страницу.</p>
+      </form>
+    </div>
+
+    <aside>
+      <h2 class="rel-heading" style="margin-top:0;">Итого</h2>
+      {%- for i in cart_row.items -%}
+        {%- assign line = nil -%}
+        {%- for pr in prods.data.products -%}
+          {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
+        {%- endfor -%}
+        {%- if line -%}
+          {%- assign line_sum = line.price_kopecks | times: i.qty -%}
+          <div class="summary-row"><span>{{ line.title }} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
+        {%- endif -%}
+      {%- endfor -%}
+      <div class="summary-total"><span>К оплате</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>
+      <p class="field-hint" style="margin-top:1rem;">Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.</p>
+    </aside>
+  </div>
+
+  {%- else -%}
+  <div class="status-screen" style="padding-left:0;padding-right:0;">
+    <span class="status-badge brand" aria-hidden="true">🛒</span>
+    <h2 class="status-title">Корзина пуста</h2>
+    <p class="status-text">Добавьте товары из каталога — они сохранятся, даже если вы ещё не зарегистрированы.</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="/">В каталог</a></div>
+  </div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

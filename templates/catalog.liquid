@@ -1,0 +1,51 @@
+{%- comment -%}
+  catalog.liquid — главная/каталог. Биндинги: cats.data.categories,
+  prods.data.products, count.data.productsCount, query.cat, query.page.
+  Корзинных данных в HTML нет — счётчик гидратирует JS.
+  Карточный грид на странице РОВНО ОДИН (анти-card-soup).
+{%- endcomment -%}
+{%- capture content -%}
+{%- assign current_cat = query.cat -%}
+<section class="hero">
+  <div class="shop-container">
+    <span class="hero-kicker">Каталог</span>
+    <h1 class="hero-title">Выберите товар</h1>
+    <p class="hero-subtitle">Доставка по всей России. Оплата картой онлайн через ЮKassa.</p>
+  </div>
+</section>
+
+<div class="shop-container">
+  <nav class="chip-row" aria-label="Категории">
+    <a class="chip" href="/" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
+    {% for c in cats.data.categories %}
+      <a class="chip" href="/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }}</a>
+    {% endfor %}
+  </nav>
+
+  {%- assign total = count.data.productsCount -%}
+  {%- assign page_size = 12 -%}
+  {%- assign page_no = query.page | plus: 0 -%}
+  {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
+  {%- if prods.data.products.size > 0 -%}
+    <div class="product-grid">
+      {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
+    </div>
+  {%- else -%}
+    <p class="empty-note">Здесь пока пусто — загляните позже или выберите другую категорию.</p>
+  {%- endif -%}
+
+  {%- assign pages = total | plus: 11 | divided_by: 12 | ceil -%}
+  {%- if pages > 1 -%}
+    <nav class="pagination" aria-label="Страницы">
+      {% for n in (1..pages) %}
+        {%- if current_cat -%}
+          <a class="page-link" href="/?cat={{ current_cat }}&amp;page={{ n }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
+        {%- else -%}
+          <a class="page-link" href="/?page={{ n }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
+        {%- endif -%}
+      {% endfor %}
+    </nav>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

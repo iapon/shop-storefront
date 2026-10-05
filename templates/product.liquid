@@ -1,0 +1,59 @@
+{%- comment -%}
+  product.liquid — карточка товара (биндинги: p.data.products — текущий,
+  rel.data.products — похожие ≤4, site.params.slug).
+  Не найден → состояние в шаблоне.
+{%- endcomment -%}
+{%- assign product = p.data.products | first -%}
+{%- if product -%}{%- assign page_title = product.title -%}{%- assign page_desc = product.title | append: " — купить в интернет-магазине" -%}{%- endif -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  {%- if product -%}
+  <div class="product-page">
+    <div class="product-photo">
+      {%- if product.photos and product.photos.size > 0 -%}
+        <img src="{{ product.photos[0].url }}" alt="{{ product.title }}">
+      {%- else -%}
+        <span>нет фото</span>
+      {%- endif -%}
+    </div>
+    <div>
+      <h1 class="product-title">{{ product.title }}</h1>
+      <div class="product-price">{{ product.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
+      <div class="buy-row">
+        {%- if product.stock > 0 -%}
+          {%- if product.stock <= 5 -%}
+            <span class="badge badge-warning">Осталось {{ product.stock }}</span>
+          {%- else -%}
+            <span class="badge badge-success">В наличии: {{ product.stock }}</span>
+          {%- endif -%}
+          <input class="qty-input" type="number" min="1" value="1" inputmode="numeric"
+                 aria-label="Количество" data-cart-qty>
+          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}">В корзину</button>
+        {%- else -%}
+          <span class="badge badge-error">Нет в наличии</span>
+        {%- endif -%}
+      </div>
+      {%- if product.description -%}
+      <div class="product-desc">{{ product.description }}</div>
+      {%- endif -%}
+    </div>
+  </div>
+
+    {%- if rel.data.products.size > 0 -%}
+    <h2 class="rel-heading">Похожие товары</h2>
+    <div class="rel-grid">
+      {% for p in rel.data.products %}{% include "partials/product-card" %}{% endfor %}
+    </div>
+    {%- endif -%}
+
+  {%- else -%}
+  <div class="status-screen" style="padding-left:0;padding-right:0;">
+    <span class="status-badge error" aria-hidden="true">∅</span>
+    <h1 class="status-title">Товар не найден</h1>
+    <p class="status-text">Возможно, он распродан или снят с продажи.</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="/">В каталог</a></div>
+  </div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

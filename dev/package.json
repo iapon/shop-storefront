@@ -1,0 +1,15 @@
+{
+  "name": "shop-storefront-dev",
+  "private": true,
+  "type": "module",
+  "description": "Дев-харнесс витрины: Vite-сервер поверх liquid-источников с liquidjs-шимами платформенных фильтров",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "smoke": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "liquidjs": "^10.19.0",
+    "vite": "^5.4.11"
+  }
+}

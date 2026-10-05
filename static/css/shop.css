@@ -199,6 +199,23 @@ img { display: block; max-width: 100%; }
 .cart-line-name { flex: 1; }
 .cart-line-qty { color: var(--shop-text-3); font-size: var(--shop-text-sm); white-space: nowrap; }
 .cart-line-sum { font-weight: 600; white-space: nowrap; }
+/* «×» у позиции и «Очистить корзину»: тихие действия, не конкурирующие с CTA */
+.cart-line-remove {
+  flex: none; align-self: center;
+  width: 1.75rem; height: 1.75rem; line-height: 1;
+  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
+  background: var(--shop-surface); color: var(--shop-text-3);
+  font-size: var(--shop-text-md); cursor: pointer;
+  transition: color var(--shop-theme-fade), border-color var(--shop-theme-fade);
+}
+.cart-line-remove:hover { color: var(--shop-error); border-color: color-mix(in oklch, var(--shop-error) 50%, transparent); }
+.cart-clear {
+  margin-top: 0.75rem; padding: 0; border: 0; background: none;
+  color: var(--shop-text-3); font-size: var(--shop-text-xs); font-family: inherit;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  transition: color var(--shop-theme-fade);
+}
+.cart-clear:hover { color: var(--shop-error); }
 .cart-total-row {
   display: flex; justify-content: space-between; padding: 1rem 0 0;
   font-size: var(--shop-text-lg); font-weight: 600;

@@ -1,18 +1,24 @@
 /* shop-storefront — корзина.
    Контракт витрины:
    - состояние живёт В ПАМЯТИ вкладки (не localStorage);
-   - при загрузке гидратируется GET /api/cart;
-   - КАЖДОЕ изменение шлёт ПОЛНЫЙ массив на POST /api/cart {items};
+   - при загрузке гидратируется GET SHOP_BASE + /api/cart;
+   - КАЖДОЕ изменение шлёт ПОЛНЫЙ массив на POST SHOP_BASE + /api/cart {items};
    - ответ сервера = канон (state := response.items);
    - счётчик в шапке — [data-cart-count];
-   - сабмит чекаута перехватывается → POST /api/checkout → location = redirect.
-   API витрины:
-   GET  /api/cart          → {items: [{slug, qty}]}
-   POST /api/cart          → {items: [{slug, qty}]}   (полный replace)
-   POST /api/checkout      → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
+   - сабмит чекаута перехватывается → POST SHOP_BASE + /api/checkout → location = redirect.
+   API витрины (все пути — под базой магазина SHOP_BASE):
+   GET  <base>/api/cart          → {items: [{slug, qty}]}
+   POST <base>/api/cart          → {items: [{slug, qty}]}   (полный replace)
+   POST <base>/api/checkout      → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
  */
 (function () {
   'use strict';
+
+  /* База магазина (путь каталога): сентинел __SHOP_BASE__ заменяется при
+     установке магазина (визард платформы) на выбранный путь, например
+     "/shop" — корень сайта оставлен лендингу. Для ручного пуша шаблонов
+     замени литерал сам (см. README, раздел «__SHOP_BASE__»). */
+  var SHOP_BASE = '__SHOP_BASE__';
 
   var state = { items: [] }; // [{slug: string, qty: number}]
 
@@ -27,7 +33,7 @@
   }
 
   function apiCart(method, body) {
-    return fetch('/api/cart', {
+    return fetch(SHOP_BASE + '/api/cart', {
       method: method,
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
@@ -72,6 +78,14 @@
     return save();
   }
 
+  /* Позиции чекаута рендерит сервер (SSR-состояние канонично): после
+     удаления позиции или очистки перезагружаем страницу — пустая корзина
+     честно превращается во вежливое пустое состояние, суммы пересчитываются
+     на сервере. Счётчик в шапке обновляется и до перезагрузки. */
+  function refreshCartPage() {
+    if (document.querySelector('[data-checkout-form]')) window.location.reload();
+  }
+
   /* ── Гидратация ─────────────────────────────────────────── */
   apiCart('GET').then(function (resp) {
     if (resp && Array.isArray(resp.items)) state.items = resp.items;
@@ -94,7 +108,14 @@
     var rm = ev.target.closest('[data-cart-remove]');
     if (rm) {
       ev.preventDefault();
-      remove(rm.getAttribute('data-cart-remove'));
+      remove(rm.getAttribute('data-cart-remove')).then(refreshCartPage);
+      return;
+    }
+    var clr = ev.target.closest('[data-cart-clear]');
+    if (clr) {
+      ev.preventDefault();
+      state.items = [];
+      save().then(refreshCartPage);
     }
   });
 
@@ -132,7 +153,7 @@
       fail('Заполните имя и email.');
       return;
     }
-    fetch('/api/checkout', {
+    fetch(SHOP_BASE + '/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',

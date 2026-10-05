@@ -1,23 +1,27 @@
 {%- comment -%}
-  checkout.liquid — оформление заказа. Биндинги: cart.data.carts (серверная
-  корзина посетителя: 0..1 строка {id, items}), prods.data.products (товары
-  корзины), site.params. Позиции и суммы приходят с сервера; пусто/нет
-  идентификатора → «Корзина пуста». JS перехватывает сабмит → POST /api/checkout.
+  checkout.liquid — оформление заказа. Биндинги: prods.data.products (товары
+  корзины), results.ci.items (позиции серверной корзины: флоу парсит json-строку
+  items узлом k_ci — Liquid не читает JSON-строки), site.params. Позиции и суммы
+  приходят с сервера; пусто/нет идентификатора → «Корзина пуста». JS перехватывает
+  сабмит → POST __SHOP_BASE__/api/checkout (сентинел заменяется путём магазина).
   Форма: honeypot-поле website (скрытое от человека, css .hp-field).
+  Позицию убирает кнопка data-cart-remove="slug", корзину целиком —
+  data-cart-clear: cart.js шлёт ПОЛНЫЙ массив на POST __SHOP_BASE__/api/cart
+  (replace-семантика) и перезагружает страницу — SSR-состояние канонично.
 {%- endcomment -%}
 {%- assign page_title = "Оформление заказа" -%}
-{%- assign cart_row = cart.data.carts | first -%}
+{%- assign ci_items = results.ci.items -%}
 {%- capture content -%}
 <div class="shop-container section-y">
   <h1 class="product-title">Оформление заказа</h1>
 
-  {%- if cart_row and cart_row.items.size > 0 -%}
+  {%- if ci_items and ci_items.size > 0 -%}
   <div class="checkout-grid">
     <div class="shop-prose" style="max-width:none;">
       <h2 class="rel-heading" style="margin-top:0;">Ваш заказ</h2>
       <ul class="cart-lines">
         {%- assign total_k = 0 -%}
-        {%- for i in cart_row.items -%}
+        {%- for i in ci_items -%}
           {%- assign line = nil -%}
           {%- for pr in prods.data.products -%}
             {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
@@ -36,10 +40,13 @@
               </span>
               <span class="cart-line-qty">× {{ i.qty }}</span>
               <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
+              <button class="cart-line-remove" type="button" data-cart-remove="{{ i.slug }}"
+                      aria-label="Убрать «{{ line.title }}» из корзины" title="Убрать">×</button>
             </li>
           {%- endif -%}
         {%- endfor -%}
       </ul>
+      <button class="cart-clear" type="button" data-cart-clear>Очистить корзину</button>
 
       <h2 class="rel-heading">Контакты</h2>
       <form class="shop-prose" data-checkout-form novalidate>
@@ -73,7 +80,7 @@
 
     <aside>
       <h2 class="rel-heading" style="margin-top:0;">Итого</h2>
-      {%- for i in cart_row.items -%}
+      {%- for i in ci_items -%}
         {%- assign line = nil -%}
         {%- for pr in prods.data.products -%}
           {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
@@ -93,7 +100,7 @@
     <span class="status-badge brand" aria-hidden="true">🛒</span>
     <h2 class="status-title">Корзина пуста</h2>
     <p class="status-text">Добавьте товары из каталога — они сохранятся, даже если вы ещё не зарегистрированы.</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="/">В каталог</a></div>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
   </div>
   {%- endif -%}
 </div>

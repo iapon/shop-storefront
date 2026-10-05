@@ -26,12 +26,12 @@
     <p class="status-order-no">Заказ № {{ ord.id }}</p>
     {%- if ord.items_summary -%}<p class="status-text text-3">{{ ord.items_summary }}</p>{%- endif -%}
     <p class="status-help">Сохраните ссылку на эту страницу — она показывает актуальный статус заказа.</p>
-    <div class="status-actions"><a class="btn btn-secondary" href="/">Вернуться в каталог</a></div>
+    <div class="status-actions"><a class="btn btn-secondary" href="__SHOP_BASE__/">Вернуться в каталог</a></div>
   {%- else -%}
     <span class="status-badge error" aria-hidden="true">∅</span>
     <h1 class="status-title">Заказ не найден</h1>
     <p class="status-text">Проверьте ссылку: возможно, номер заказа указан неверно.</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="/">В каталог</a></div>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
   {%- endif -%}
 </div>
 {%- endcapture -%}

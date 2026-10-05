@@ -14,6 +14,17 @@ export const templatesDir = join(root, 'templates');
 export const staticDir = join(root, 'static');
 export const mockDir = join(root, 'mock');
 
+/* База магазина в дев-среде — тот же контракт, что в проде: сентинел
+   __SHOP_BASE__ в templates/ и static/ заменяется на путь каталога
+   (визард платформы подставляет ответ шага store_path, по умолчанию /shop).
+   Корень «/» остаётся будущему лендингу — страницы магазина живут под /shop. */
+export const SHOP_BASE = '/shop';
+
+/** Замена сентинела __SHOP_BASE__ (html отрендеренных страниц, js статики). */
+export function withShopBase(text) {
+  return String(text).split('__SHOP_BASE__').join(SHOP_BASE);
+}
+
 const MIME = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -131,7 +142,8 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
     const checkoutMock = loadMock('checkout');
     const items = cartMock[variant || 'guest']?.items ?? [];
     ctx = {
-      cart: { data: { carts: [{ id: 'cart-anon-1', items }] } },
+      results: { ci: { items } },
+      cart: { data: { carts: [{ id: 'cart-anon-1', items: JSON.stringify(items) }] } },
       prods: checkoutMock.guest.prods,
       site: checkoutMock.guest.site,
       query: {}
@@ -147,7 +159,7 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
     ...overrides,
     site: { version: 7, params: {}, query: {}, ...(ctx.site || {}) }
   };
-  return engine.renderFile(template, ctx);
+  return engine.renderFile(template, ctx).then(withShopBase);
 }
 
 /* ── Дев-эмуляция API корзины/чекаута (in-memory, на процесс) ── */
@@ -182,7 +194,9 @@ function readBody(req) {
 
 async function handleApi(req, res, url) {
   const isMember = (req.headers.cookie || '').includes('dev_member=1');
-  if (url.pathname === '/api/cart') {
+  // API живёт под базой магазина (/shop/api/…); принимаем и голый /api/… —
+  // так можно дёргать мок-эндпоинты руками.
+  if (url.pathname === SHOP_BASE + '/api/cart' || url.pathname === '/api/cart') {
     const id = anonId(req, res);
     if (req.method === 'GET') {
       // гидратация; режим member → стартовый набор из мока (демо «вливания» гостя)
@@ -199,7 +213,7 @@ async function handleApi(req, res, url) {
       return sendJson(res, 200, { items: body.items });
     }
   }
-  if (url.pathname === '/api/checkout' && req.method === 'POST') {
+  if ((url.pathname === SHOP_BASE + '/api/checkout' || url.pathname === '/api/checkout') && req.method === 'POST') {
     let body = {};
     try { body = JSON.parse((await readBody(req)) || '{}'); } catch { /* ignore */ }
     if ((body.website || '') !== '') return sendJson(res, 200, { ok: true }); // honeypot: молча
@@ -217,7 +231,8 @@ function serveStatic(req, res, url) {
   if (!abs.startsWith(staticDir + sep) || rel.includes('..')) return false;
   if (!existsSync(abs)) return false;
   res.setHeader('Content-Type', MIME[extname(abs)] || 'application/octet-stream');
-  res.end(readFileSync(abs));
+  const data = readFileSync(abs, 'utf8');
+  res.end(MIME[extname(abs)]?.startsWith('text/') ? withShopBase(data) : data);
   return true;
 }
 
@@ -240,7 +255,11 @@ export function harnessMiddleware(engine) {
       let mockName = url.searchParams.get('mock');
       let variant = url.searchParams.get('variant');
       if (!mockName) {
-        const hit = PATH_ROUTES.find((r) => r.re.test(url.pathname));
+        // страница может прийти и под базой магазина: /shop, /shop/product/x …
+        let p = url.pathname;
+        if (p === SHOP_BASE) p = '/';
+        else if (p.startsWith(SHOP_BASE + '/')) p = p.slice(SHOP_BASE.length);
+        const hit = PATH_ROUTES.find((r) => r.re.test(p));
         mockName = hit ? hit.mock : null;
         if (!mockName) mockName = '404';
       }

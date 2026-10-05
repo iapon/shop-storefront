@@ -2,7 +2,7 @@
   partials/product-card.liquid — карточка товара (используется каталогом и «Похожими»).
   Ожидает товар в переменной p (скоуп include разделяется с вызывающим шаблоном).
 {%- endcomment -%}
-<a class="product-card" href="/product/{{ p.slug }}">
+<a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
     {%- if p.photos and p.photos.size > 0 -%}
       <img src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy">

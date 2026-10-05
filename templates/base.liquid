@@ -40,20 +40,22 @@
 </head>
 <body>
 {%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
-  /checkout; на остальных страницах счётчик равен 0 и мгновенно гидратируется
+  /checkout (позиции парсит флоу в results.ci — Liquid не читает JSON-строки);
+  на остальных страницах счётчик равен 0 и мгновенно гидратируется
   cart.js через GET /api/cart (страницы кэшируются, корзина в HTML не отдаётся). {%- endcomment -%}
 {%- assign cart_count = 0 -%}
 {%- if cart -%}
   {%- assign cart_row = cart.data.carts | first -%}
   {%- if cart_row -%}
-    {%- for i in cart_row.items -%}{%- assign cart_count = cart_count | plus: i.qty -%}{%- endfor -%}
+    {%- assign ssr_items = results.ci.items -%}
+    {%- for i in ssr_items -%}{%- assign cart_count = cart_count | plus: i.qty -%}{%- endfor -%}
   {%- endif -%}
 {%- endif -%}
 <header class="shop-header">
   <div class="shop-container shop-header-inner">
-    <a class="shop-logo" href="/">{{ shop_name }}</a>
+    <a class="shop-logo" href="__SHOP_BASE__/">{{ shop_name }}</a>
     <span class="shop-header-spacer"></span>
-    <a class="cart-counter" href="/checkout" data-empty="{% if cart_count > 0 %}0{% else %}1{% endif %}">
+    <a class="cart-counter" href="__SHOP_BASE__/checkout" data-empty="{% if cart_count > 0 %}0{% else %}1{% endif %}">
       <span aria-hidden="true">🛒</span>
       <span data-cart-count>{{ cart_count }}</span>
     </a>

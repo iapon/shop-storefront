@@ -19,10 +19,14 @@ const cases = [
   ['checkout', 'member', ['Ваш заказ', '1490.00']],
   ['checkout', 'empty', ['Корзина пуста']],
   ['cart', 'guest', ['Ваш заказ', '990.00']],
-  ['order', null, ['Заказ принят', '232.90', 'Заказ №']],
+  ['order', 'new', ['Заказ принят']],
   ['order', 'paid', ['Заказ оплачен']],
   ['order', 'not_found', ['Заказ не найден']],
-  ['404', null, ['Страница не найдена', 'В каталог']]
+  ['account', null, ['Мои заказы', '232.90', 'оплачен', 'ожидает оплаты', 'href="/shop/order/', 'Кружка «Лён» × 2']],
+  ['account', 'empty', ['Заказов пока нет']],
+  ['login', null, ['Вход', 'action="/login"', 'type="password"']],
+  ['register', null, ['Регистрация', 'action="/register"', 'Создать аккаунт']],
+  ['404', null, ['Страница не найдена']],
 ];
 
 let failed = 0;
@@ -254,6 +258,31 @@ async function smokeCartReplace() {
   }
 }
 await smokeCartReplace();
+
+/* ── Проба member-контура: шапка переключается по member (SSR) ────────────
+   Контракт (ЛК): гость видит «Войти»/«Регистрация», вошедший — «Кабинет»/
+   «Выйти» (выход — POST-форма на /logout); в шапке data-member несёт id
+   сессии. Кабинет ссылается на заказы ПОД БАЗОЙ магазина (/shop/order/…). */
+{
+  const guest = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  const member = await renderMockPage(engine, 'account', null, { query: { ...q } });
+  const login = await renderMockPage(engine, 'login', null, { query: { failed: '1' } });
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  check(guest.includes('href="/login"') && guest.includes('href="/register"'), 'гость: шапка несёт /login и /register');
+  check(!guest.includes('href="/account"'), 'гость: ссылки «Кабинет» быть не должно');
+  check(guest.includes('data-member=""'), 'гость: data-member пуст');
+  check(member.includes('href="/account"') && member.includes('action="/logout"'), 'вошедший: шапка несёт /account и POST-форму /logout');
+  check(!member.includes('href="/login"'), 'вошедшему ссылку «Войти» не показываем');
+  check(/data-member="[0-9a-f-]{36}"/.test(member), 'вошедший: data-member несёт id');
+  check(login.includes('Неверный email или пароль'), 'login?failed=1 показывает ошибку');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL member-menu: ' + fails.join(' | '));
+  } else {
+    console.log('OK   member-menu (гость: Войти/Регистрация; вошедший: Кабинет/Выйти-POST; кабинет → /shop/order/…)');
+  }
+}
 
 if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');

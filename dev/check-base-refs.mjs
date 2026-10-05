@@ -1,12 +1,14 @@
 // Временная проверка grep-запрета (w3 №7): абсолютных ссылок от корня быть
-// не должно — всё через __SHOP_BASE__ или относительное; /static/* исключён
-// (платформенный маунт от корня сайта). Запуск: node dev/check-base-refs.mjs
+// не должно — всё через __SHOP_BASE__ или относительное. Исключения — маунты
+// платформы: /static/* (рендер-сервис) и member-контур сайта (/login
+// /register /logout /account — конвенция member-системы, на корне).
+// Запуск: node dev/check-base-refs.mjs
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const RE = /(?:href|src|action)\s*=\s*["']\/(?!static\/)|fetch\(\s*["'`]\/(?!static\/)/;
+const RE = /(?:href|src|action)\s*=\s*["']\/(?!static\/|login\b|register\b|logout\b|account\b)|fetch\(\s*["'`]\/(?!static\/|login\b|register\b|logout\b|account\b)/;
 const bad = [];
 const walk = (dir) => {
   for (const f of readdirSync(dir)) {

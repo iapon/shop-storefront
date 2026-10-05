@@ -1,0 +1,37 @@
+{%- comment -%}
+  login.liquid — страница входа (GET /login; POST обрабатывает сценарий login:
+  bcrypt-проверка + кука member). failed=1 в query — неверный email или пароль.
+  Вошедшему покупателю здесь нечего делать — покажем вежливую подсказку.
+{%- endcomment -%}
+{%- assign page_title = "Вход" -%}
+{%- capture content -%}
+<div class="shop-container section-y auth-narrow">
+  <div class="status-screen" style="padding-left:0;padding-right:0;">
+    <span class="status-badge brand" aria-hidden="true">👤</span>
+    {%- if member and member.id -%}
+      <h1 class="status-title">Вы уже вошли</h1>
+      <p class="status-text">Можно перейти в кабинет — там ваши заказы.</p>
+      <div class="status-actions"><a class="btn btn-primary btn-lg" href="/account">Кабинет</a></div>
+    {%- else -%}
+      <h1 class="status-title">Вход</h1>
+      <p class="status-text">С заказами, сохранённой корзиной и историей покупок.</p>
+      {%- if query.failed == "1" -%}
+        <p class="form-error" data-visible role="alert">Неверный email или пароль — попробуйте ещё раз.</p>
+      {%- endif -%}
+      <form class="auth-form" method="post" action="/login" novalidate>
+        <div class="field">
+          <label class="field-label" for="lg-email">Email</label>
+          <input class="field-input" id="lg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
+        </div>
+        <div class="field">
+          <label class="field-label" for="lg-password">Пароль</label>
+          <input class="field-input" id="lg-password" name="password" type="password" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Войти</button>
+      </form>
+      <p class="field-hint" style="margin-top:1rem;">Нет аккаунта? <a href="/register">Зарегистрируйтесь</a> — корзина гостя переедет в ваш кабинет.</p>
+    {%- endif -%}
+  </div>
+</div>
+{%- endcapture -%}
+{% include "base" %}

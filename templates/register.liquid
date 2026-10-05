@@ -1,0 +1,41 @@
+{%- comment -%}
+  register.liquid — страница регистрации (GET /register; POST обрабатывает
+  сценарий register — адаптация пресета: аккаунт создаётся сразу, затем сценарий
+  шлёт письмо-подтверждение; для письма владельцу нужен SMTP — см. чек-лист
+  установки). register=taken / check_email=1 в query — подсказки после redirect.
+{%- endcomment -%}
+{%- assign page_title = "Регистрация" -%}
+{%- capture content -%}
+<div class="shop-container section-y auth-narrow">
+  <div class="status-screen" style="padding-left:0;padding-right:0;">
+    <span class="status-badge brand" aria-hidden="true">🛍️</span>
+    {%- if member and member.id -%}
+      <h1 class="status-title">Вы уже зарегистрированы</h1>
+      <p class="status-text">Аккаунт создан и вы вошли — загляните в кабинет.</p>
+      <div class="status-actions"><a class="btn btn-primary btn-lg" href="/account">Кабинет</a></div>
+    {%- else -%}
+      <h1 class="status-title">Регистрация</h1>
+      <p class="status-text">История заказов, корзина на всех устройствах, статус оплаты — в личном кабинете.</p>
+      {%- if query.register == "taken" -%}
+        <p class="form-error" data-visible role="alert">Такой email уже зарегистрирован — <a href="/login">войдите</a>.</p>
+      {%- elsif query.check_email == "1" -%}
+        <p class="status-text" data-visible>Почти готово! Мы отправили письмо для подтверждения — проверьте почту.</p>
+      {%- endif -%}
+      <form class="auth-form" method="post" action="/register" novalidate>
+        <div class="field">
+          <label class="field-label" for="rg-email">Email</label>
+          <input class="field-input" id="rg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
+        </div>
+        <div class="field">
+          <label class="field-label" for="rg-password">Пароль</label>
+          <input class="field-input" id="rg-password" name="password" type="password" required minlength="6" autocomplete="new-password">
+          <p class="field-hint">От 6 символов.</p>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Создать аккаунт</button>
+      </form>
+      <p class="field-hint" style="margin-top:1rem;">Уже есть аккаунт? <a href="/login">Войдите</a>.</p>
+    {%- endif -%}
+  </div>
+</div>
+{%- endcapture -%}
+{% include "base" %}

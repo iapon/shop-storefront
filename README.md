@@ -4,7 +4,9 @@ Liquid-шаблоны, статика и дев-харнесс витрины. �
 админки платформы; этот репозиторий — только витрина/тема.
 
 ```
-templates/   # 7 liquid-файлов — источник правды разметки
+templates/   # 10 liquid-файлов — источник правды разметки (магазин + ЛК:
+             # login/register/account; ЛК-страницы на КОРНЕ сайта — /login,
+             # /register, /account, /logout — платформенная конвенция member-системы)
 static/      # css/tokens.css (тема), css/shop.css, js/cart.js, js/theme.js, favicon.svg
 mock/        # фикстуры данных страниц для дев-харнесса
 dev/         # Vite-харнесс: liquidjs + шимы платформенных фильтров + smoke
@@ -20,10 +22,13 @@ npm run smoke      # рендер всех страниц с моками, бе�
 npm run build      # сборка харнесса
 ```
 
-Роутер харнесса: `/?mock=catalog|product|checkout|cart|order|404`
+Роутер харнесса: `/?mock=catalog|product|checkout|cart|order|account|login|register|404`
 (варианты: `&variant=not_found` для product, `member|empty` для checkout,
-`paid|not_found` для order). Реальные пути витрины тоже работают:
-`/`, `/product/:slug`, `/checkout`, `/order/:id`, любой несовпавший путь — 404.
+`empty` для account, `paid|not_found` для order). Реальные пути витрины тоже
+работают: `/`, `/product/:slug`, `/checkout`, `/order/:id`, `/account`,
+`/login`, `/register`, любой несовпавший путь — 404. Шапка читает `member`
+(SSR): гость — «Войти/Регистрация», вошедший — «Кабинет» + POST-форма «Выйти»
+(в проде member-запросы никогда не берутся из HTML-кэша — меню всегда своё).
 API корзины (`GET/POST /api/cart`, `POST /api/checkout`) эмулируется в памяти;
 режим member — кука `dev_member=1`.
 

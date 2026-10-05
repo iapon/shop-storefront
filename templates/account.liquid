@@ -1,0 +1,46 @@
+{%- comment -%}
+  account.liquid — кабинет покупателя (GET /account; роут members_only + login_path
+  /login — гостей отводит на вход платформа). Биндинги: o.data.orders (заказы
+  покупателя: member_id = кука member, 20 последних по created_at DESC), member.
+  Ссылка на заказ — __SHOP_BASE__/order/<id>: роут заказа живёт под базой магазина
+  (корень сайта принадлежит лендингу). Статус-бейдж — тихий тинт (как ui-badge).
+{%- endcomment -%}
+{%- assign page_title = "Мои заказы" -%}
+{%- assign my_orders = o.data.orders -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  <h1 class="product-title">Мои заказы</h1>
+
+  {%- if my_orders and my_orders.size > 0 -%}
+    <ul class="account-orders">
+      {%- for ord in my_orders -%}
+        <li class="account-order">
+          <div class="account-order-main">
+            <a class="account-order-link" href="__SHOP_BASE__/order/{{ ord.id }}">Заказ № {{ ord.id }}</a>
+            <span class="account-order-date">{{ ord.created_at | date: "%d.%m.%Y %H:%M" }}</span>
+            {%- if ord.status == "paid" -%}
+              <span class="badge badge-success">оплачен</span>
+            {%- elsif ord.status == "cancelled" -%}
+              <span class="badge badge-error">отменён</span>
+            {%- else -%}
+              <span class="badge badge-warning">ожидает оплаты</span>
+            {%- endif -%}
+          </div>
+          {%- if ord.items_summary -%}
+            <p class="account-order-summary">{{ ord.items_summary }}</p>
+          {%- endif -%}
+          <p class="account-order-amount">{{ ord.amount | money }} ₽</p>
+        </li>
+      {%- endfor -%}
+    </ul>
+  {%- else -%}
+    <div class="status-screen" style="padding-left:0;padding-right:0;">
+      <span class="status-badge brand" aria-hidden="true">📦</span>
+      <h2 class="status-title">Заказов пока нет</h2>
+      <p class="status-text">Оформите первый заказ — он появится здесь сразу после оплаты.</p>
+      <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
+    </div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

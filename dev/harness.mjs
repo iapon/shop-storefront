@@ -117,6 +117,9 @@ const PAGE_FOR_MOCK = {
   checkout: { template: 'checkout', mock: 'checkout', pick: 'guest' },
   cart: { template: 'checkout', mock: 'cart', pick: 'guest' }, // отдельной страницы корзины нет: та же типографика
   order: { template: 'order-status', mock: 'order-status', pick: 'new' },
+  account: { template: 'account', mock: 'account', pick: 'default' },
+  login: { template: 'login', mock: null, pick: null },
+  register: { template: 'register', mock: null, pick: null },
   '404': { template: '404', mock: null, pick: null }
 };
 
@@ -124,7 +127,10 @@ const PATH_ROUTES = [
   { re: /^\/$/, mock: 'catalog' },
   { re: /^\/checkout\/?$/, mock: 'checkout' },
   { re: /^\/product\/[^/]+\/?$/, mock: 'product' },
-  { re: /^\/order\/[^/]+\/?$/, mock: 'order' }
+  { re: /^\/order\/[^/]+\/?$/, mock: 'order' },
+  { re: /^\/account\/?$/, mock: 'account' },
+  { re: /^\/login\/?$/, mock: 'login' },
+  { re: /^\/register\/?$/, mock: 'register' }
 ];
 
 /* Контекст страницы = вариант мока + site/query. */

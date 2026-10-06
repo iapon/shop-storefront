@@ -10,6 +10,14 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
+  /* Футер прижат к низу на ЛЮБОЙ высоте контента: страница — колонка на весь
+     экран, main растёт (короткие страницы — 404, пустая корзина, кабинет —
+     не оставляют футер посреди вьюпорта). dvh, а не vh: на мобилке адресная
+     строка браузера не раздувает высоту; 100vh выше — фолбэк старых браузеров. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   font-family: var(--shop-font-sans);
   font-size: var(--shop-text-md);
   line-height: var(--shop-leading-body);
@@ -17,6 +25,7 @@ body {
   background: var(--shop-bg);
   font-synthesis-weight: none;
 }
+main { flex: 1 0 auto; } /* контент растёт, шапка и футер остаются по краям */
 h1, h2, h3 {
   margin: 0 0 0.5rem;
   font-weight: 600;

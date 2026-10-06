@@ -284,6 +284,32 @@ await smokeCartReplace();
   }
 }
 
+/* ── Проба раскладки: футер прижат к низу на коротких страницах ──────────
+   Контракт (w3-stretch): body — flex-колонка на весь экран (100dvh), main
+   растёт (flex: 1 0 auto), футер — sibling сразу после main в base.liquid.
+   Все страницы собираются через {% include "base" %}, поэтому структурный
+   чек на двух коротких страницах (404, кабинет) покрывает все; CSS-контракт
+   проверяем по источнику статики (смок рендерит HTML без применения стилей). */
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8');
+  const bodyRule = /body\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  const page404 = await renderMockPage(engine, '404', null, {});
+  const account = await renderMockPage(engine, 'account', null, {});
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  check(bodyRule.includes('min-height: 100dvh'), 'shop.css: у body нет min-height: 100dvh');
+  check(bodyRule.includes('display: flex') && bodyRule.includes('flex-direction: column'), 'shop.css: body не flex-колонка');
+  check(/main\s*\{[^}]*flex:\s*1 0 auto/.test(css), 'shop.css: main не растягивается (flex: 1 0 auto)');
+  check(/<\/main>\s*<footer class="shop-footer">/.test(page404), '404: футер не sibling сразу после main');
+  check(/<\/main>\s*<footer class="shop-footer">/.test(account), 'account: футер не sibling сразу после main');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL layout-stretch: ' + fails.join(' | '));
+  } else {
+    console.log('OK   layout-stretch (body flex-колонка 100dvh, main flex-grow, футер после main)');
+  }
+}
+
 if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);

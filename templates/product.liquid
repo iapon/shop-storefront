@@ -25,6 +25,7 @@
 {%- assign cfg = g_site.data.cfg | first -%}
 {%- if cfg == blank -%}{%- assign cfg = results.g_site.cfg | first -%}{%- endif -%}
 {%- assign shop_name = cfg.name | default: "Магазин" -%}
+{%- assign ph_n = "{{n}}" -%}{%- assign ph_amount = "{{amount}}" -%}{%- assign ph_email = "{{email}}" -%}
 {%- comment -%} canon_base — канонический базовый URL (D26): site_url из
   настроек (нормализация домена, scheme константой — витрина за TLS),
   фоллбек — живой host запроса (first-class переменная страничных шаблонов;

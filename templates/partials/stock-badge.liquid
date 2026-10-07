@@ -10,7 +10,7 @@
 {%- if p.stock <= 0 -%}
   <span class="badge badge-error">{{ t_out_of_stock }}</span>
 {%- elsif p.stock <= 5 -%}
-  <span class="badge badge-warning">{{ t_low_stock | replace: "{{n}}", p.stock }}</span>
+  <span class="badge badge-warning">{{ t_low_stock | replace: ph_n, p.stock }}</span>
 {%- else -%}
-  <span class="badge badge-success">{{ t_in_stock | replace: "{{n}}", p.stock }}</span>
+  <span class="badge badge-success">{{ t_in_stock | replace: ph_n, p.stock }}</span>
 {%- endif -%}

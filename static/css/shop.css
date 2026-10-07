@@ -3,6 +3,13 @@
    Анти-card-soup: карточный грид — ТОЛЬКО каталог и «Похожие» (≤4);
    корзина/checkout/статусы — типографика; тинты вместо заливок;
    тени две; font-mono — только номер заказа.
+
+   МОБИЛЬНЫЙ-ФЁРСТ (паттерн лендинг-плагина): базовые стили = малые
+   экраны (320px: одна колонка, текучие ширины, тап-таргеты ≥ 2.5rem,
+   шрифты инпутов ≥ 16px — iOS не зумит), улучшения — ТОЛЬКО через
+   @media (min-width: …): 30rem (грид 1→2) → 40rem (десктопная шапка,
+   ритм, компактные контролы) → 48rem (product/checkout 2 колонки)
+   → 62rem (грид 2→4). Ни одного max-width-медиазапроса и px-ширин.
    ============================================================ */
 
 /* ── База ───────────────────────────────────────────────────── */
@@ -31,34 +38,52 @@ h1, h2, h3 {
   font-weight: 600;
   letter-spacing: var(--shop-tracking-heading);
   line-height: var(--shop-leading-heading);
+  overflow-wrap: break-word; /* длинное слово не распирает узкую колонку 320 */
 }
-p { margin: 0 0 1rem; }
+p { margin: 0 0 1rem; overflow-wrap: break-word; }
 a { color: var(--shop-brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
 img { display: block; max-width: 100%; }
 ::selection { background: color-mix(in oklch, var(--shop-brand) 20%, transparent); }
 :focus-visible { outline: none; box-shadow: var(--shop-focus-ring); border-radius: var(--shop-radius-sm); }
 
-.shop-container { max-width: var(--shop-container); margin: 0 auto; padding: 0 var(--shop-gutter); }
+/* Контейнер: на 320 гаттер уже (1rem), с 40rem — десктопный 1.5rem (--shop-gutter) */
+.shop-container { max-width: var(--shop-container); margin: 0 auto; padding: 0 1rem; }
 .shop-prose { max-width: var(--shop-container-prose); }
-.section-y { padding-top: var(--shop-section-y); padding-bottom: var(--shop-section-y); }
+/* Вертикальный ритм секций: на телефоне на треть компактней */
+.section-y { padding-top: calc(var(--shop-section-y) * 0.67); padding-bottom: calc(var(--shop-section-y) * 0.67); }
 
 .text-2 { color: var(--shop-text-2); }
 .text-3 { color: var(--shop-text-3); }
 .mono { font-family: var(--shop-font-mono); }
 
-/* ── Шапка / подвал ────────────────────────────────────────── */
+/* ── Шапка / подвал ──────────────────────────────────────────
+   База (< 40rem): осознанные ДВЕ строки — лого + корзина + тема
+   (order 1–4), ссылки входа/кабинета уходят на вторую строку и
+   прижимаются вправо (margin-left:auto). Без этого flex-строка
+   не влезает в 320 и выталкивает корзину с тумблером за экран
+   (горизонтальный скролл всего сайта). С 40rem — одна строка
+   как раньше: flex-wrap: nowrap, порядок DOM, прежние гэпы. */
 .shop-header { border-bottom: 1px solid var(--shop-border); background: var(--shop-bg); }
 .shop-header-inner {
-  display: flex; align-items: center; gap: 1.5rem;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.25rem 0.75rem;
   min-height: 3.5rem;
+  padding-top: 0.25rem; padding-bottom: 0.25rem;
 }
 .shop-logo {
+  order: 1; min-width: 0;
   font-size: var(--shop-text-lg); font-weight: 600;
   color: var(--shop-text); letter-spacing: var(--shop-tracking-heading);
+  overflow-wrap: break-word;
 }
 .shop-logo:hover { text-decoration: none; color: var(--shop-brand); }
-.shop-header-spacer { flex: 1; }
+.shop-header-spacer { order: 2; flex: 1 1 auto; }
+.cart-counter { order: 3; min-height: 2.5rem; }
+.icon-btn { order: 4; width: 2.5rem; height: 2.5rem; }
+.shop-header-inner > .header-link,
+.shop-header-inner > .header-logout { order: 5; }
+.shop-header-inner > a.header-link { margin-left: auto; }
 .cart-counter {
   position: relative; display: inline-flex; align-items: center; gap: 0.375rem;
   padding: 0.375rem 0.625rem; border-radius: var(--shop-radius-pill);
@@ -69,18 +94,20 @@ img { display: block; max-width: 100%; }
 .cart-counter[data-empty="1"] { background: transparent; color: var(--shop-text-3); }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.25rem; height: 2.25rem; border: 0; border-radius: var(--shop-radius-pill);
+  border: 0; border-radius: var(--shop-radius-pill);
   background: transparent; color: var(--shop-text-2); cursor: pointer;
 }
 .icon-btn:hover { background: var(--shop-surface-2); color: var(--shop-text); }
-/* member-контур в шапке: тихие текстовые ссылки; выход — форма-кнопка */
+/* member-контур в шапке: тихие текстовые ссылки; выход — форма-кнопка.
+   На телефоне вертикальный паддинг добирает тап-таргет до ≥ 40px. */
 .header-link {
   color: var(--shop-text-2); font-size: var(--shop-text-sm); text-decoration: none;
+  padding: 0.625rem 0;
   transition: color var(--shop-theme-fade);
 }
 .header-link:hover { color: var(--shop-text); }
-.header-logout { display: inline-flex; margin-left: 0.25rem; }
-.header-logout-btn { padding: 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
+.header-logout { display: inline-flex; }
+.header-logout-btn { padding: 0.625rem 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
 /* ЛК: узкая колонка форм входа/регистрации и список заказов кабинета */
 .auth-narrow { max-width: 26rem; margin-inline: auto; }
 .auth-form { display: grid; gap: 0.875rem; margin-top: 1.25rem; text-align: left; }
@@ -98,8 +125,10 @@ img { display: block; max-width: 100%; }
 .shop-footer { border-top: 1px solid var(--shop-border); margin-top: var(--shop-section-y); }
 .shop-footer-inner { padding: 1.5rem 0; font-size: var(--shop-text-sm); color: var(--shop-text-3); }
 
-/* ── Мини-хиро каталога ─────────────────────────────────────── */
-.hero { padding: var(--shop-section-y) 0 0; }
+/* ── Мини-хиро каталога ───────────────────────────────────────
+   Заголовок героя текучий: clamp от 2rem (320) до 3rem (≥ 33rem),
+   дальше не растёт — десктоп видит прежние 3rem. */
+.hero { padding: calc(var(--shop-section-y) * 0.67) 0 0; }
 .hero-kicker {
   display: inline-flex; align-items: center;
   padding: 0.25rem 0.75rem; border-radius: var(--shop-radius-pill);
@@ -110,7 +139,8 @@ img { display: block; max-width: 100%; }
 }
 .hero-title {
   margin-top: 1rem;
-  font-size: var(--shop-text-5xl); font-weight: 700;
+  font-size: clamp(2rem, 1rem + 6vw, var(--shop-text-5xl));
+  font-weight: 700;
   line-height: var(--shop-leading-hero); letter-spacing: var(--shop-tracking-heading);
 }
 .hero-subtitle { margin-top: 0.75rem; max-width: 42rem; font-size: var(--shop-text-lg); color: var(--shop-text-2); }
@@ -119,7 +149,7 @@ img { display: block; max-width: 100%; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0; }
 .chip {
   display: inline-flex; align-items: center;
-  padding: 0.375rem 0.875rem; border-radius: var(--shop-radius-pill);
+  min-height: 2.5rem; padding: 0.375rem 1rem; border-radius: var(--shop-radius-pill);
   border: 1px solid var(--shop-border); background: var(--shop-surface);
   font-size: var(--shop-text-sm); color: var(--shop-text-2); cursor: pointer;
   transition: border-color 200ms var(--shop-ease), color 200ms var(--shop-ease);
@@ -130,10 +160,13 @@ img { display: block; max-width: 100%; }
   color: var(--shop-brand);
 }
 
-/* ── Карточный грид (ЕДИНСТВЕННЫЙ: каталог + «Похожие») ────── */
-.product-grid {
-  display: grid; gap: var(--shop-gap);
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+/* ── Карточный грид (ЕДИНСТВЕННЫЙ: каталог + «Похожие») ──────
+   Мобильный-фёрст: 1 колонка (база) → 2 (30rem) → 4 (62rem).
+   minmax(0, 1fr) — колонка не распирается длинным словом. */
+.product-grid,
+.rel-grid {
+  display: grid; gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
 }
 .product-card {
   display: flex; flex-direction: column;
@@ -169,9 +202,10 @@ img { display: block; max-width: 100%; }
 .badge-error   { background: var(--shop-error-tint); color: var(--shop-error); }
 .badge-brand   { background: var(--shop-brand-tint); color: var(--shop-brand); }
 
-/* ── Карточка товара ───────────────────────────────────────── */
-.product-page { display: grid; gap: var(--shop-gap); grid-template-columns: 1fr; }
-@media (min-width: 48rem) { .product-page { grid-template-columns: minmax(0, 30rem) 1fr; align-items: start; } }
+/* ── Карточка товара ─────────────────────────────────────────
+   База: фото над текстом (одна колонка), CTA «В корзину» — на всю
+   ширину строки покупки (канон мобильного e-commerce). */
+.product-page { display: grid; gap: var(--shop-gap); grid-template-columns: minmax(0, 1fr); }
 .product-photo {
   aspect-ratio: 4 / 5; width: 100%; border-radius: var(--shop-radius-lg);
   background: var(--shop-surface-2); overflow: hidden;
@@ -183,17 +217,18 @@ img { display: block; max-width: 100%; }
 .product-price .rub { font-weight: 400; color: var(--shop-text-3); margin-left: 0.25rem; }
 .product-desc { color: var(--shop-text-2); white-space: pre-line; }
 .buy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.25rem 0; }
+.buy-row > .btn { flex: 1 1 100%; }
 .qty-input {
   width: 4.5rem; height: 2.75rem; text-align: center;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); color: var(--shop-text);
-  font-size: var(--shop-text-sm);
+  font-size: var(--shop-text-md);
 }
 
 /* ── Кнопки ─────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.625rem 1.5rem; border-radius: var(--shop-radius-md);
+  padding: 0.625rem 1.5rem; min-height: 2.5rem; border-radius: var(--shop-radius-md);
   border: 1px solid transparent; cursor: pointer;
   font-size: var(--shop-text-sm); font-weight: 500; font-family: inherit;
   transition: background-color 200ms var(--shop-ease), opacity 200ms var(--shop-ease);
@@ -209,31 +244,36 @@ img { display: block; max-width: 100%; }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Пагинация — тихие квадраты, активная в тинте ───────────── */
-.pagination { display: flex; gap: 0.375rem; margin-top: var(--shop-section-y); }
+.pagination { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: var(--shop-section-y); }
 .page-link {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 2.25rem; height: 2.25rem; padding: 0 0.5rem;
+  min-width: 2.5rem; height: 2.5rem; padding: 0 0.5rem;
   border-radius: var(--shop-radius-sm); font-size: var(--shop-text-sm);
   color: var(--shop-text-2);
 }
 .page-link:hover { background: var(--shop-surface-2); text-decoration: none; color: var(--shop-text); }
 .page-link[aria-current="true"] { background: var(--shop-brand-tint); color: var(--shop-brand); }
 
-/* ── Checkout: двухколоночная типографика, ноль карточек ───── */
-.checkout-grid { display: grid; gap: var(--shop-section-y); grid-template-columns: 1fr; }
-@media (min-width: 48rem) { .checkout-grid { grid-template-columns: minmax(0, 1fr) 20rem; } }
+/* ── Checkout: двухколоночная типографика, ноль карточек ─────
+   База: одна колонка (заказ → форма → итог); 48rem — заказ+форма
+   слева, «Итого» справа. Строки корзины на телефоне — СТЕК:
+   имя на своей строке, ниже «× количество … сумма …… крестик»;
+   крестик 2.5rem — тап-таргет, а не 28-й пиксель. */
+.checkout-grid { display: grid; gap: calc(var(--shop-section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
 .cart-lines { list-style: none; margin: 0; padding: 0; }
 .cart-line {
-  display: flex; align-items: baseline; gap: 0.75rem;
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 0.25rem 0.5rem;
   padding: 0.75rem 0; border-bottom: 1px solid var(--shop-border);
 }
-.cart-line-name { flex: 1; }
-.cart-line-qty { color: var(--shop-text-3); font-size: var(--shop-text-sm); white-space: nowrap; }
-.cart-line-sum { font-weight: 600; white-space: nowrap; }
+.cart-line-name { flex: 1 1 100%; min-width: 0; }
+.cart-line-qty { order: 3; color: var(--shop-text-3); font-size: var(--shop-text-sm); white-space: nowrap; }
+.cart-line-sum { order: 4; margin-left: auto; font-weight: 600; white-space: nowrap; }
 /* «×» у позиции и «Очистить корзину»: тихие действия, не конкурирующие с CTA */
 .cart-line-remove {
+  order: 5; margin-left: 0.5rem;
   flex: none; align-self: center;
-  width: 1.75rem; height: 1.75rem; line-height: 1;
+  width: 2.5rem; height: 2.5rem; line-height: 1;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); color: var(--shop-text-3);
   font-size: var(--shop-text-md); cursor: pointer;
@@ -253,11 +293,13 @@ img { display: block; max-width: 100%; }
 }
 .field { margin-bottom: 1rem; }
 .field-label { display: block; margin-bottom: 0.375rem; font-size: var(--shop-text-sm); font-weight: 500; }
+/* Инпуты на телефоне — 16px: Safari iOS с фокусом на поле мельче
+   16px зумит страницу (нечитаемость + прыжок вёрстки). */
 .field-input, .field-textarea {
   width: 100%; padding: 0.625rem 0.75rem;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); color: var(--shop-text);
-  font-size: var(--shop-text-sm); font-family: inherit;
+  font-size: var(--shop-text-md); font-family: inherit;
 }
 .field-input::placeholder, .field-textarea::placeholder { color: var(--shop-text-4); }
 .field-input:focus, .field-textarea:focus {
@@ -273,13 +315,13 @@ img { display: block; max-width: 100%; }
   font-size: var(--shop-text-sm);
 }
 .form-error[data-visible="1"] { display: block; }
-.summary-row { display: flex; justify-content: space-between; padding: 0.375rem 0; font-size: var(--shop-text-sm); color: var(--shop-text-2); }
+.summary-row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.375rem 0; font-size: var(--shop-text-sm); color: var(--shop-text-2); }
 .summary-total { border-top: 1px solid var(--shop-border); margin-top: 0.5rem; padding-top: 0.75rem; font-size: var(--shop-text-md); font-weight: 600; color: var(--shop-text); }
 
 /* ── Status-screen (заказ, 404) — чистая типографика, 36rem ── */
 .status-screen {
   max-width: var(--shop-container-narrow); margin: 0 auto;
-  padding: calc(var(--shop-section-y) * 1.5) var(--shop-gutter);
+  padding: calc(var(--shop-section-y) * 0.75) var(--shop-gutter);
   text-align: center;
 }
 .status-badge {
@@ -301,7 +343,55 @@ img { display: block; max-width: 100%; }
 
 /* ── Списки с разделителями («Похожие» — грид ≤4) ──────────── */
 .rel-heading { margin: calc(var(--shop-section-y) * 1.25) 0 1.25rem; font-size: var(--shop-text-2xl); }
-.rel-grid { display: grid; gap: var(--shop-gap); grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); }
 
 /* Пустые состояния — строка текста, не карточка */
 .empty-note { padding: calc(var(--shop-section-y) * 0.75) 0; color: var(--shop-text-3); text-align: center; }
+
+/* ============================================================
+   УЛУЧШЕНИЯ — только min-width (мобильный-фёрст).
+   30rem — грид 1→2; 40rem — десктопная шапка/ритм/контролы;
+   48rem — product и checkout в 2 колонки; 62rem — грид 2→4.
+   ============================================================ */
+
+/* ≥ 30rem (480): две колонки каталога/«Похожих» */
+@media (min-width: 30rem) {
+  .product-grid, .rel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ≥ 40rem (640): десктопная шапка одной строкой + компакный ритм */
+@media (min-width: 40rem) {
+  .shop-container { padding: 0 var(--shop-gutter); }
+  .section-y { padding-top: var(--shop-section-y); padding-bottom: var(--shop-section-y); }
+  .hero { padding-top: var(--shop-section-y); }
+  .shop-header-inner { flex-wrap: nowrap; gap: 1.5rem; padding-top: 0; padding-bottom: 0; }
+  .shop-logo, .shop-header-spacer, .cart-counter, .icon-btn,
+  .shop-header-inner > .header-link,
+  .shop-header-inner > .header-logout { order: 0; }
+  .shop-header-inner > a.header-link { margin-left: 0; }
+  .header-link, .header-logout-btn { padding: 0; }
+  .header-logout { margin-left: 0.25rem; }
+  .cart-counter { min-height: 0; }
+  .icon-btn { width: 2.25rem; height: 2.25rem; }
+  .chip { min-height: 0; padding: 0.375rem 0.875rem; }
+  .page-link { min-width: 2.25rem; height: 2.25rem; }
+  .field-input, .field-textarea, .qty-input { font-size: var(--shop-text-sm); }
+  .checkout-grid { gap: var(--shop-section-y); }
+  .status-screen { padding: calc(var(--shop-section-y) * 1.5) var(--shop-gutter); }
+  /* строки корзины — обратно в одну строку (имя жмётся, не стек) */
+  .cart-line { flex-wrap: nowrap; gap: 0.75rem; }
+  .cart-line-name { flex: 1 1 auto; order: 0; }
+  .cart-line-qty, .cart-line-sum { order: 0; margin-left: 0; }
+  .cart-line-remove { order: 0; margin-left: 0; width: 1.75rem; height: 1.75rem; }
+  .buy-row > .btn { flex: 0 0 auto; }
+}
+
+/* ≥ 48rem (768): карточка товара и checkout — 2 колонки */
+@media (min-width: 48rem) {
+  .product-page { grid-template-columns: minmax(0, 30rem) minmax(0, 1fr); align-items: start; }
+  .checkout-grid { grid-template-columns: minmax(0, 1fr) 20rem; }
+}
+
+/* ≥ 62rem (992): каталог/«Похожие» — 4 колонки, десктопный гэп */
+@media (min-width: 62rem) {
+  .product-grid, .rel-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--shop-gap); }
+}

@@ -310,8 +310,48 @@ await smokeCartReplace();
   }
 }
 
+/* ── Проба мобильного-фёрста: 320 без горизонтального скролла ─────────
+   Контракт (w3-mobile, паттерн лендинг-плагина): базовые стили = малые
+   экраны, улучшения ТОЛЬКО через @media (min-width: …). Смок рендерит
+   HTML без применения стилей, поэтому контракт проверяем по источнику
+   CSS: (1) ноль max-width-медиазапросов; (2) ноль px-ширин (текучие
+   rem-контролы, никакой фиксированной геометрии); (3) шапка в базе
+   переносится (flex-wrap: wrap) — иначе корзина с тумблером темы
+   выталкиваются за 320 (это и была живая поломка 412/320);
+   (4) грид каталога в базе — одна колонка minmax(0, 1fr) со ступенями
+   30rem/62rem (1→2→4); (5) тап-таргеты в базе ≥ 2.5rem (тумблер темы,
+   крестик корзины, чип, страница пагинации); (6) инпуты в базе 16px
+   (--shop-text-md) — Safari iOS не зумит страницу при фокусе. */
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
+    // Контракт — по КОДУ: комментарии не должны влиять на пробу
+    // (шапка файла документирует «никаких max-width» и сама бы матчилась).
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  check(!/@media[^{]*max-width/.test(css), 'найден max-width-медиазапрос — не мобильный-фёрст');
+  check(/@media \(min-width: 30rem\)/.test(css) && /@media \(min-width: 40rem\)/.test(css)
+        && /@media \(min-width: 62rem\)/.test(css), 'нет min-width-ступеней 30/40/62rem');
+  const pxW = [...css.matchAll(/(min-)?width:\s*(\d+)px/g)].map((m) => Number(m[2]));
+  check(pxW.every((n) => n <= 320), 'px-ширина шире 320 — фиксированная геометрия запрещена: ' + pxW.filter((n) => n > 320).join(', '));
+  check(/\.shop-header-inner\s*\{[^}]*flex-wrap:\s*wrap/.test(css), 'шапка в базе не переносится (flex-wrap: wrap)');
+  check(/\.product-grid,\s*\.rel-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(css),
+        'грид каталога в базе не одна текучая колонка minmax(0, 1fr)');
+  check(/\.icon-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'тумблер темы в базе уже 2.5rem');
+  check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.5rem/.test(css), 'крестик корзины в базе уже 2.5rem');
+  check(/\.chip\s*\{[^}]*min-height:\s*2\.5rem/.test(css), 'чип категорий в базе ниже 2.5rem');
+  check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--shop-text-md\)/.test(css),
+        'инпуты в базе мельче 16px — iOS Safari зумит при фокусе');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL layout-mobile: ' + fails.join(' | '));
+  } else {
+    console.log('OK   layout-mobile (min-width-only, база 1 колонка, шапка переносится, тап-таргеты 2.5rem, инпуты 16px)');
+  }
+}
+
 if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log(`smoke done: render ${cases.length}/${cases.length} OK + theme-toggle + cart-replace`);
+console.log(`smoke done: render ${cases.length}/${cases.length} OK + theme-toggle + cart-replace + layout-stretch + layout-mobile`);

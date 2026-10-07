@@ -555,8 +555,46 @@ await smokeQtySteppers();
   }
 }
 
+/* ── Инвариант скоупа паршалов (регрессия класса include-assign) ──────────
+   Движок рендера (osteele/liquid) НЕ поднимает assign/capture из паршала
+   включателю — паршал обязан быть чистой функцией входов (данные текут
+   только вниз). (1) Статика: в templates/partials/*.liquid запрещены
+   {% assign %} и {% capture %} — любое появление ловим здесь.
+   (2) Синхронизация: бутстрап словаря обязан быть заинлайнен БАЙТ-В-БАЙТ
+   в каждом entry-шаблоне (каноническая копия — dev/ui-text-bootstrap.liquid);
+   include "partials/ui-text" больше не существует. */
+{
+  const { readdirSync } = await import('node:fs');
+  const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const partDir = join(rootDir, 'templates', 'partials');
+  const fails = [];
+  for (const f of readdirSync(partDir)) {
+    if (!f.endsWith('.liquid')) continue;
+    const src = readFileSync(join(partDir, f), 'utf8');
+    const body = src.replace(/\{%-?\s*comment[\s\S]*?endcomment\s*-?%\}/g, ''); // комментарии не считаются
+    if (/\{%-?\s*assign/.test(body)) fails.push(`partials/${f}: найден {% assign %} — паршал должен быть чистой функцией`);
+    if (/\{%-?\s*capture/.test(body)) fails.push(`partials/${f}: найден {% capture %} — capture вверх не доезжает`);
+    if (/include\s+"partials\/ui-text"/.test(body)) fails.push(`partials/${f}: include ликвидированного ui-text`);
+  }
+  const bootstrap = readFileSync(join(rootDir, 'dev', 'ui-text-bootstrap.liquid'), 'utf8');
+  const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
+    'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
+    'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
+  for (const e of entries) {
+    const src = readFileSync(join(rootDir, 'templates', e), 'utf8');
+    if (!src.includes(bootstrap)) fails.push(`${e}: бутстрап словаря отсутствует/разошёлся с dev/ui-text-bootstrap.liquid`);
+    if (/include\s+"partials\/ui-text"/.test(src)) fails.push(`${e}: устаревший include partials/ui-text (assign не доедет)`);
+  }
+  if (fails.length) {
+    failed++;
+    console.log('FAIL partial-purity: ' + fails.join(' | '));
+  } else {
+    console.log('OK   partial-purity (паршалы без assign/capture; бутстрап байт-в-байт во всех entry)');
+  }
+}
+
 if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + partial-purity');

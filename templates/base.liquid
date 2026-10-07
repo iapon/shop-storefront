@@ -1,10 +1,11 @@
 {%- comment -%}
   base.liquid — оболочка витрины. Паттерн страницы:
-  {% include "partials/ui-text" %}
   {% assign page_title = … %} {% assign page_canon = "__SHOP_BASE__/…" %}
   {% capture content %}…{% endcapture %}{% include "base" %}
-  include делит скоуп, поэтому content/page_*/t_*/cfg/canon_base видны
-  отсюда (их назначает partials/ui-text — см. его заголовок).
+  include отдаёт переменные ВНИЗ (content/page_*/t_*/cfg/canon_base видны
+  здесь): их назначает бутстрап словаря, заинлайненный в каждом
+  entry-шаблоне ДО capture (данные текут только вниз; partial = чистая
+  функция — include-присваивания вверх не доходят).
 
   Название магазина и контакты — из shop-config (сущность «Настройки
   магазина», биндинг g_site: cfg.name, D25): правятся в контенте, в шаблоне
@@ -17,7 +18,6 @@
   body: тексты из словаря, cart.js читает атрибуты со своим вшитым
   фоллбеком (мост D25).
 {%- endcomment -%}
-{%- include "partials/ui-text" -%}
 <!doctype html>
 <html lang="ru" data-theme="dynamica-light">
 <head>

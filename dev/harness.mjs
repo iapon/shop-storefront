@@ -120,7 +120,7 @@ export function registerPlatformFilters(engine) {
   );
   // find — семантика платформы (liquid_filters.go findFilter): первый
   // элемент с равенством строк; nil-вход и промах → nil (словарь ui_text
-  // читается только им — partials/ui-text).
+  // читается только им — бутстрап entry-шаблонов).
   engine.registerFilter('find', (arr, key, expected) => {
     if (!Array.isArray(arr)) return null;
     const hit = arr.find((x) => x && String(x?.[key]) === String(expected));

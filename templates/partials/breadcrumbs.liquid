@@ -1,65 +1,55 @@
 {%- comment -%}
   partials/breadcrumbs.liquid — единый рендер хлебных крошек + JSON-LD
-  BreadcrumbList (D26/D18). Вход (задаёт вызывающий шаблон, лишние уровни
-  просто не назначены):
+  BreadcrumbList (D26/D18). ЧИСТАЯ ФУНКЦИЯ: ноль assign/capture (принцип
+  «данные текут только вниз» — движок include не поднимает присваивания
+  включателю). Оба выхода эмитятся в месте вызова: nav + инлайновый
+  <script type="application/ld+json"> (JSON-LD в body валиден и читается
+  Google'ом и Яндексом; capture вверх не нужен).
+
+  Вход (задаёт вызывающий шаблон, лишние уровни просто не назначены):
     bc_parent_title / bc_parent_slug — родитель категории (опционально, всегда ссылка);
     bc_cat_title   / bc_cat_slug     — категория (опционально, всегда ссылка;
                                        пустой slug = ссылка в корень каталога —
                                        «Главная → Каталог» для товара без категорий);
     bc_current                        — заголовок текущей страницы (опционально,
                                        рендерится span'ом, не ссылкой).
+  Плюс из бутстрапа страницы (вниз): t_breadcrumbs_aria, t_breadcrumbs_home,
+  canon_base.
+
   Гард глубины 5 (D18): структура даёт максимум Главная → родитель → категория
-  → текущая = 4 узла; глубже по построению не бывает. При появлении новых
-  уровней добавить счётчик-гард здесь, а не в вызывающих шаблонах.
+  → текущая = 4 узла; глубже по построению не бывает.
 
   URL крошек — сентинел __SHOP_BASE__ (как во всей витрине); в JSON-LD —
-  абсолютные: canon_base (site_url, фоллбек https://{{ host }} — assign из
-  base.liquid; include делит скоуп) + тот же путь. page_jsonld ДОПОЛНЯЕТСЯ
-  здесь (append) и доезжает до base.liquid (скоуп include общий);
-  page_canon вызывающий шаблон назначает сам — partial его не трогает.
-  Кавычки/бэкслеши в заголовках вырезаются перед вставкой в JSON —
-  ld-строка обязана парситься всегда.
+  абсолютные: canon_base (site_url, фоллбек https://{{ host }}) + тот же путь.
+  Позиции в JSON-LD — статические числа по факту наличия уровней (вложенные
+  conditionals, без аккумуляторов). Кавычки/бэкслеши в заголовках уходят в
+  фильтр | json — ld-строка обязана парситься всегда.
 {%- endcomment -%}
 {%- if bc_parent_title or bc_cat_title or bc_current -%}
 <nav class="breadcrumbs" aria-label="{{ t_breadcrumbs_aria }}">
   <ol class="crumb-list">
-    {%- assign bc_pos = 0 -%}
-    {%- assign bc_jsonld_items = "" -%}
     <li class="crumb-item">
-      {%- assign bc_pos = bc_pos | plus: 1 -%}
       <a class="crumb" href="__SHOP_BASE__/">{{ t_breadcrumbs_home }}</a>
-      {%- capture bc_j -%}{"@type":"ListItem","position":{{ bc_pos }},"name":{{ t_breadcrumbs_home | json }},"item":"{{ canon_base }}__SHOP_BASE__/"}{%- endcapture -%}
-      {%- assign bc_jsonld_items = bc_j -%}
     </li>
     {%- if bc_parent_title -%}
     <li class="crumb-item">
-      {%- assign bc_pos = bc_pos | plus: 1 -%}
       <span class="crumb-sep" aria-hidden="true">/</span>
       <a class="crumb" href="__SHOP_BASE__/category/{{ bc_parent_slug }}">{{ bc_parent_title }}</a>
-      {%- capture bc_j -%}{"@type":"ListItem","position":{{ bc_pos }},"name":{{ bc_parent_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/category/{{ bc_parent_slug }}"}{%- endcapture -%}
-      {%- assign bc_jsonld_items = bc_jsonld_items | append: "," | append: bc_j -%}
     </li>
     {%- endif -%}
     {%- if bc_cat_title -%}
     <li class="crumb-item">
-      {%- assign bc_pos = bc_pos | plus: 1 -%}
       <span class="crumb-sep" aria-hidden="true">/</span>
       <a class="crumb" href="__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}">{{ bc_cat_title }}</a>
-      {%- capture bc_j -%}{"@type":"ListItem","position":{{ bc_pos }},"name":{{ bc_cat_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}"}{%- endcapture -%}
-      {%- assign bc_jsonld_items = bc_jsonld_items | append: "," | append: bc_j -%}
     </li>
     {%- endif -%}
     {%- if bc_current -%}
     <li class="crumb-item">
-      {%- assign bc_pos = bc_pos | plus: 1 -%}
       <span class="crumb-sep" aria-hidden="true">/</span>
       <span class="crumb crumb-current" aria-current="page">{{ bc_current }}</span>
-      {%- capture bc_j -%}{"@type":"ListItem","position":{{ bc_pos }},"name":{{ bc_current | json }}}{%- endcapture -%}
-      {%- assign bc_jsonld_items = bc_jsonld_items | append: "," | append: bc_j -%}
     </li>
     {%- endif -%}
   </ol>
 </nav>
-{%- capture bc_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{{ bc_jsonld_items }}]}</script>{%- endcapture -%}
-{%- assign page_jsonld = page_jsonld | default: "" | append: bc_ld -%}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":{{ t_breadcrumbs_home | json }},"item":"{{ canon_base }}__SHOP_BASE__/"}{%- if bc_parent_title -%},{"@type":"ListItem","position":2,"name":{{ bc_parent_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/category/{{ bc_parent_slug }}"}{%- endif -%}{%- if bc_cat_title -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}3{%- else -%}2{%- endif -%},"name":{{ bc_cat_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}"}{%- endif -%}{%- if bc_current -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}{%- if bc_cat_title -%}4{%- else -%}3{%- endif -%}{%- else -%}{%- if bc_cat_title -%}3{%- else -%}2{%- endif -%}{%- endif -%},"name":{{ bc_current | json }}}{%- endif -%}]}</script>
 {%- endif -%}

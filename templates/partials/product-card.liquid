@@ -1,8 +1,9 @@
 {%- comment -%}
   partials/product-card.liquid — карточка товара (используется каталогом,
-  категорией и «Похожими»). Ожидает товар в переменной p (скоуп include
-  разделяется с вызывающим шаблоном). Бейдж наличия — partial stock-badge
-  (порог и тексты в одном месте); волна B добавит сюда сердечко избранного.
+  категорией и «Похожими»). ЧИСТАЯ ФУНКЦИЯ: ожидает товар в переменной p
+  (переменные текут вниз — читает, не назначает). Бейдж наличия —
+  partial stock-badge (тоже чистый: читает p.stock); волна B добавит сюда
+  сердечко избранного.
 {%- endcomment -%}
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
@@ -15,7 +16,6 @@
   <div class="product-card-body">
     <h3 class="product-card-title">{{ p.title }}</h3>
     <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
-    {%- assign stock_qty = p.stock -%}
     {% include "partials/stock-badge" %}
   </div>
 </a>

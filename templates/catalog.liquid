@@ -223,17 +223,28 @@
   <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
     {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
     {%- comment -%} query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q=
-      и ?cat= кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1) {%- endcomment -%}
-    <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
-    <label class="sort-label" for="cat-sort">
-      <span class="sort-label-text">{{ t_sort_label }}</span>
-      <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
-        <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
-        <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
-        <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
-      </select>
-    </label>
-    <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
+      и ?cat= кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1).
+      Тулбар компактный (rich-shop, v1.6.1): поиск слева — узкое поле с
+      иконкой-лупой; справа группа «сортировка+кнопка»: select ОБЁРНУТ в
+      .sort-box с кастомным шевроном (appearance: none), НЕ голый и НЕ на
+      всю ширину — зажат max-width на ≥30rem (см. shop.css, проба
+      «тулбар компактен»). Видимый лейбл сортировки ушёл в sr-only. {%- endcomment -%}
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="m13.4 13.4 4 4"/></svg>
+      <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+    </div>
+    <div class="tools-right">
+      <label class="sr-only" for="cat-sort">{{ t_sort_label }}</label>
+      <div class="sort-box">
+        <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
+          <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
+          <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
+          <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+        </select>
+        <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
+      </div>
+      <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
+    </div>
   </form>
   <script>
   /* сортировка применяется сразу — select сам сабмитит GET-форму (D20);

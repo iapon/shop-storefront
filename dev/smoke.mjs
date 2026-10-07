@@ -555,6 +555,100 @@ await smokeQtySteppers();
   }
 }
 
+/* ── Проба «тулбар компактен» (v1.6.1, разнос владельца) ──────────────
+   Контракт: на desktop-вьюпорте поиск и сортировка НЕ растянуты на всю
+   ширину страницы (rich-shop тулбар). Смок рендерит HTML без применения
+   стилей, поэтому контракт — по исходнику shop.css (комментарии вычищены):
+   в блоке @media (min-width: 30rem) у .search-box и .sort-box есть
+   max-width в rem (поле ≤ 20rem = 320px, селект ≤ 13.75rem = 220px); в
+   базе (320) панель складывается — .search-box полная строка (там это
+   ок). Плюс обёртки: select не голый (appearance: none + .sort-box с
+   кастомным шевроном в разметке), у поиска — иконка-лупа; легаси-классы
+   растянутой вёрстки (.sort-label) ликвидированы. */
+
+/* mediaBlock: вырезать сбалансированный по скобкам блок @media-правила
+   (наивный [^}] не берёт вложенные правила). */
+const mediaBlock = (cssSrc, header) => {
+  const m = new RegExp(header + '\\s*\\{').exec(cssSrc);
+  if (!m) return '';
+  let depth = 0, i = m.index + m[0].length - 1;
+  for (; i < cssSrc.length; i++) {
+    if (cssSrc[i] === '{') depth++;
+    else if (cssSrc[i] === '}') { depth--; if (depth === 0) break; }
+  }
+  return cssSrc.slice(m.index, i + 1);
+};
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const block30 = mediaBlock(css, '@media \\(min-width: 30rem\\)');
+  const remMax = (rule) => { const m = /max-width:\s*([\d.]+)rem/.exec(rule); return m ? Number(m[1]) : null; };
+  const searchRule = /\.search-box\s*\{[^}]*\}/.exec(block30)?.[0] ?? '';
+  const sortRule = /\.sort-box\s*\{[^}]*\}/.exec(block30)?.[0] ?? '';
+  const sw = remMax(searchRule), tw = remMax(sortRule);
+  check(sw !== null && sw >= 15 && sw <= 20, `desktop: у .search-box нет компактного max-width 15–20rem: ${searchRule}`);
+  check(tw !== null && tw >= 10 && tw <= 13.75, `desktop: у .sort-box нет фиксированной ширины 10–13.75rem: ${sortRule}`);
+  check(/\.tools-right\s*\{[^}]*margin-left:\s*auto/.test(block30), 'desktop: группа «сортировка+кнопка» прижата вправо');
+  const baseSearch = /\.search-box\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/flex:\s*1 1 100%/.test(baseSearch), 'база 320: поле поиска — полная строка (панель складывается)');
+  check(/\.field-input\.sort-select\s*\{[^}]*appearance:\s*none/.test(css), 'select не голый: appearance: none (+ кастомный шеврон)');
+  const catTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'catalog.liquid'), 'utf8');
+  const catPageTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'category.liquid'), 'utf8');
+  check(catTpl.includes('search-icon') && catTpl.includes('sort-chevron'), 'каталог: тулбар несёт иконку-лупу и шеврон сортировки');
+  check(catPageTpl.includes('sort-chevron'), 'категория: сортировка тоже обёрнута (шеврон)');
+  check(!/\.sort-label\s*\{/.test(css), 'легаси .sort-label растянутой вёрстки ликвидирован');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL toolbar-compact: ' + fails.join(' | '));
+  } else {
+    console.log('OK   toolbar-compact (desktop: поиск ≤20rem, селект ≤12.5rem, группа справа; select обёрнут, лупа на месте)');
+  }
+}
+
+/* ── Проба «чипы в одну строку» (v1.6.1, второй разнос владельца) ─────
+   Контракт: чипы категорий — ОДНА горизонтальная строка на ЛЮБОЙ ширине;
+   multi-line ragged-wrap запрещён. По исходнику CSS (DOM-проверку
+   scrollWidth>clientWidth делает живая вёрстка/скрины 320): у .chip-row
+   в базе flex-wrap: nowrap + overflow-x: auto (переполнение = скролл,
+   вертикальный перенос — нет) + scroll-snap + скрытый скроллбар + фейд
+   справа; сами чипы не сжимаются (flex: 0 0 auto); на ≥48rem фейд
+   выключен. Отступ дерева .chip-child margin-left (дыра между чипами)
+   ликвидирован. Разметка чипов в ОБЕИХ точках рендера (каталог +
+   категория) несёт class="chip-row". В общий паршал не выносилось:
+   счётчики/дерево требуют assign, а паршалы обязаны быть чистыми
+   функциями (проба partial-purity) — контракт одной строки несёт CSS. */
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const rowRule = /\.chip-row\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/flex-wrap:\s*nowrap/.test(rowRule), 'chip-row: вертикальный перенос не запрещён (нет flex-wrap: nowrap)');
+  check(/overflow-x:\s*auto/.test(rowRule), 'chip-row: переполнение не скроллится (нет overflow-x: auto)');
+  check(/scroll-snap-type:\s*x/.test(rowRule), 'chip-row: нет scroll-snap');
+  check(/scrollbar-width:\s*none/.test(rowRule) && /\.chip-row::-webkit-scrollbar\s*\{[^}]*display:\s*none/.test(css), 'chip-row: скроллбар не скрыт');
+  check(/mask-image:\s*linear-gradient/.test(rowRule), 'chip-row: нет fade-подсказки прокрутки справа');
+  check(/\.chip\s*\{[^}]*flex:\s*0 0 auto/.test(css), 'чип сжимается внутри строки (должен быть flex: 0 0 auto)');
+  const allRowRules = [...css.matchAll(/\.chip-row\s*\{[^}]*\}/g)].map((m) => m[0]);
+  check(allRowRules.every((r) => !/flex-wrap:\s*wrap/.test(r)), 'найден ragged-wrap: flex-wrap: wrap на .chip-row');
+  const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
+  check(/\.chip-row\s*\{[^}]*mask-image:\s*none/.test(block48), '≥48rem: фейд чипов не выключен');
+  check(!/\.chip-child\s*\{[^}]*margin-left/.test(css), 'дыра чипов: .chip-child margin-left не ликвидирован');
+  for (const tpl of ['catalog.liquid', 'category.liquid']) {
+    const src = readFileSync(join(rootDir, 'templates', tpl), 'utf8');
+    check(src.includes('class="chip-row"'), `${tpl}: чипы рендерятся без class="chip-row"`);
+  }
+  if (fails.length) {
+    failed++;
+    console.log('FAIL chips-single-row: ' + fails.join(' | '));
+  } else {
+    console.log('OK   chips-single-row (одна скролл-строка: nowrap+snap+скрытый скроллбар+фейд<48rem; дыра margin-left ликвидирована)');
+  }
+}
+
 /* ── Инвариант скоупа паршалов (регрессия класса include-assign) ──────────
    Движок рендера (osteele/liquid) НЕ поднимает assign/capture из паршала
    включателю — паршал обязан быть чистой функцией входов (данные текут
@@ -597,4 +691,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + partial-purity');

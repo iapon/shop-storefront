@@ -200,14 +200,20 @@
 
     {%- if prods.data.products.size > 0 -%}
     <form class="cat-tools" method="get" action="__SHOP_BASE__/category/{{ category.slug }}" data-cat-tools>
-      <label class="sort-label" for="category-sort">
-        <span class="sort-label-text">{{ t_sort_label }}</span>
-        <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select>
-          <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
-          <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
-          <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
-        </select>
-      </label>
+      {%- comment -%} тулбар категории — тот же контракт, что в каталоге
+        (v1.6.1): select обёрнут в .sort-box с кастомным шевроном, справа;
+        ширина зажата max-width на ≥30rem — не растягивается. {%- endcomment -%}
+      <div class="tools-right">
+        <label class="sr-only" for="category-sort">{{ t_sort_label }}</label>
+        <div class="sort-box">
+          <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select>
+            <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
+            <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
+            <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+          </select>
+          <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
+        </div>
+      </div>
     </form>
 
     <div class="product-grid">

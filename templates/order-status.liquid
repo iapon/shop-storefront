@@ -20,8 +20,9 @@
     {%- if ord.status == "paid" -%}
       <span class="status-badge success" aria-hidden="true">✓</span>
       <h1 class="status-title">{{ t_order_paid }}</h1>
+      {%- comment -%} email покупателя — его же ввод: escape вместе со словарной строкой {%- endcomment -%}
       {%- assign op_txt = t_order_paid_text | replace: "{{email}}", ord.customer_email -%}
-      <p class="status-text">{{ op_txt }}</p>
+      <p class="status-text">{{ op_txt | escape }}</p>
     {%- elsif ord.status == "cancelled" -%}
       <span class="status-badge error" aria-hidden="true">×</span>
       <h1 class="status-title">{{ t_order_cancelled }}</h1>
@@ -30,7 +31,7 @@
       <span class="status-badge brand" aria-hidden="true">…</span>
       <h1 class="status-title">{{ t_order_new }}</h1>
       {%- assign on_txt = t_order_new_text | replace: "{{amount}}", ord.amount -%}
-      <p class="status-text">{{ on_txt }}</p>
+      <p class="status-text">{{ on_txt | escape }}</p>
       <p class="status-text">{{ t_order_new_cancel_hint }}</p>
     {%- endif -%}
     <p class="status-order-no">{{ t_order_no }} {{ ord.id }}</p>

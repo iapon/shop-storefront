@@ -5,7 +5,7 @@
    тени две; font-mono — только номер заказа.
 
    МОБИЛЬНЫЙ-ФЁРСТ (паттерн лендинг-плагина): базовые стили = малые
-   экраны (320px: одна колонка, текучие ширины, тап-таргеты ≥ 2.5rem,
+   экраны (320px: одна колонка, текучие ширины, тап-таргеты ≥ 2.75rem,
    шрифты инпутов ≥ 16px — iOS не зумит), улучшения — ТОЛЬКО через
    @media (min-width: …): 30rem (грид 1→2, поиск в ряд) → 40rem
    (десктопная шапка, ритм, компактные контролы, футер 2 колонки)
@@ -80,8 +80,8 @@ img { display: block; max-width: 100%; }
 }
 .shop-logo:hover { text-decoration: none; color: var(--shop-brand); }
 .shop-header-spacer { order: 2; flex: 1 1 auto; }
-.cart-counter { order: 3; min-height: 2.5rem; }
-.icon-btn { order: 4; width: 2.5rem; height: 2.5rem; }
+.cart-counter { order: 3; min-height: 2.75rem; }
+.icon-btn { order: 4; width: 2.75rem; height: 2.75rem; }
 .shop-header-inner > .header-link,
 .shop-header-inner > .header-logout { order: 5; }
 .shop-header-inner > a.header-link { margin-left: auto; }
@@ -103,7 +103,7 @@ img { display: block; max-width: 100%; }
    На телефоне вертикальный паддинг добирает тап-таргет до ≥ 40px. */
 .header-link {
   color: var(--shop-text-2); font-size: var(--shop-text-sm); text-decoration: none;
-  padding: 0.625rem 0;
+  padding: 0.6875rem 0;
   transition: color var(--shop-theme-fade);
 }
 .header-link:hover { color: var(--shop-text); }
@@ -163,7 +163,7 @@ img { display: block; max-width: 100%; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.5rem 0; }
 .chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
-  min-height: 2.5rem; padding: 0.375rem 1rem; border-radius: var(--shop-radius-pill);
+  min-height: 2.75rem; padding: 0.375rem 1rem; border-radius: var(--shop-radius-pill);
   border: 1px solid var(--shop-border); background: var(--shop-surface);
   font-size: var(--shop-text-sm); color: var(--shop-text-2); cursor: pointer;
   transition: border-color 200ms var(--shop-ease), color 200ms var(--shop-ease);
@@ -203,9 +203,15 @@ img { display: block; max-width: 100%; }
   font-size: var(--shop-text-sm); color: var(--shop-text-3);
 }
 .crumb-item { display: inline-flex; align-items: center; gap: 0.375rem; }
-.crumb { color: var(--shop-text-3); text-decoration: none; padding: 0.625rem 0.25rem; }
+.crumb {
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  padding: 0 0.25rem; color: var(--shop-text-3); text-decoration: none;
+}
 .crumb:hover { color: var(--shop-brand); }
-.crumb-current { color: var(--shop-text); font-weight: 500; padding: 0.625rem 0; }
+.crumb-current {
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  color: var(--shop-text); font-weight: 500;
+}
 .crumb-sep { color: var(--shop-text-4); }
 
 /* ── Карточный грид (ЕДИНСТВЕННЫЙ: каталог + «Похожие») ──────
@@ -263,11 +269,11 @@ img { display: block; max-width: 100%; }
   display: flex; align-items: center; justify-content: center; color: var(--shop-text-4);
 }
 .product-photo img { width: 100%; height: 100%; object-fit: cover; }
-/* стрелки галереи — поверх фото, тап-таргет 2.5rem; тинт поверх снимка */
+/* стрелки галереи — поверх фото, тап-таргет 2.75rem; тинт поверх снимка */
 .gallery-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.5rem; height: 2.5rem; border-radius: var(--shop-radius-pill);
+  width: 2.75rem; height: 2.75rem; border-radius: var(--shop-radius-pill);
   border: 1px solid var(--shop-border);
   background: color-mix(in oklch, var(--shop-surface) 85%, transparent);
   color: var(--shop-text); font-size: var(--shop-text-xl); line-height: 1;
@@ -304,7 +310,7 @@ img { display: block; max-width: 100%; }
 .qty-stepper { display: inline-flex; align-items: center; gap: 0.375rem; }
 .qty-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.5rem; height: 2.5rem; padding: 0;
+  width: 2.75rem; height: 2.75rem; padding: 0;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); color: var(--shop-text-2);
   font-size: var(--shop-text-lg); line-height: 1; cursor: pointer;
@@ -327,7 +333,7 @@ img { display: block; max-width: 100%; }
 /* ── Кнопки ─────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.625rem 1.5rem; min-height: 2.5rem; border-radius: var(--shop-radius-md);
+  padding: 0.625rem 1.5rem; min-height: 2.75rem; border-radius: var(--shop-radius-md);
   border: 1px solid transparent; cursor: pointer;
   font-size: var(--shop-text-sm); font-weight: 500; font-family: inherit;
   transition: background-color 200ms var(--shop-ease), opacity 200ms var(--shop-ease);
@@ -346,7 +352,7 @@ img { display: block; max-width: 100%; }
 .pagination { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: var(--shop-section-y); }
 .page-link {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 2.5rem; height: 2.5rem; padding: 0 0.5rem;
+  min-width: 2.75rem; height: 2.75rem; padding: 0 0.5rem;
   border-radius: var(--shop-radius-sm); font-size: var(--shop-text-sm);
   color: var(--shop-text-2);
 }
@@ -357,7 +363,7 @@ img { display: block; max-width: 100%; }
    База: одна колонка (заказ → форма → итог); 48rem — заказ+форма
    слева, «Итого» справа. Строки корзины на телефоне — СТЕК:
    имя на своей строке, ниже «× количество … сумма …… крестик»;
-   крестик 2.5rem — тап-таргет, а не 28-й пиксель. */
+   крестик 2.75rem — тап-таргет, а не 28-й пиксель. */
 .checkout-grid { display: grid; gap: calc(var(--shop-section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
 .checkout-main { max-width: none; }
 .checkout-heading { margin-top: 0; }
@@ -368,14 +374,14 @@ img { display: block; max-width: 100%; }
   padding: 0.75rem 0; border-bottom: 1px solid var(--shop-border);
 }
 .cart-line-name { flex: 1 1 100%; min-width: 0; }
-/* степпер строки чекаута (D23): − qty + одной рамкой; тап-таргеты 2.5rem */
+/* степпер строки чекаута (D23): − qty + одной рамкой; тап-таргеты 2.75rem */
 .cart-line-stepper {
   order: 3; display: inline-flex; align-items: center; align-self: center;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); overflow: hidden;
 }
 .cart-line-stepper .qty-btn {
-  width: 2.5rem; height: 2.5rem;
+  width: 2.75rem; height: 2.75rem;
   border: 0; border-radius: 0; background: transparent;
 }
 .cart-line-stepper .qty-btn:active { background: var(--shop-surface-2); }
@@ -385,7 +391,7 @@ img { display: block; max-width: 100%; }
 .cart-line-remove {
   order: 5; margin-left: 0.5rem;
   flex: none; align-self: center;
-  width: 2.5rem; height: 2.5rem; line-height: 1;
+  width: 2.75rem; height: 2.75rem; line-height: 1;
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
   background: var(--shop-surface); color: var(--shop-text-3);
   font-size: var(--shop-text-md); cursor: pointer;

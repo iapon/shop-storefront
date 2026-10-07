@@ -161,6 +161,29 @@ function extractJsonLd(html) {
   }
 }
 
+/* ── Проба B-1 (критик r1): query-эхо не отражается сырым ────────────────
+   ?q= и ?cat= кэшируются рендером (TTL 300) — reflected XSS был бы
+   кэшируемым. Регрессия на КЛАСС: вектор из пробы критика в value и в
+   href; в выдаче допустимы только escape/url_encode-формы. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const vec = '"><script>alert(1)</script>';
+  const html = await renderMockPage(engine, 'catalog', null, { query: { ...q, q: vec, cat: '"><svg onload=alert(1)>' } });
+  check(!html.includes('<script>alert(1)'), 'B-1: сырой <script> из ?q= не попал в HTML');
+  check(!html.includes('<svg onload'), 'B-1: сырой вектор из ?cat= не попал в HTML');
+  check(html.includes('&lt;script&gt;'), 'B-1: ?q= отражён escape-формой (&lt;script&gt;)');
+  check(html.includes('value="&#34;&gt;&lt;script'), 'B-1: value-атрибут не покидается (кавычка закодирована, &#34;)');
+  const hrefOk = [...html.matchAll(/href="([^"]*)"/g)].every((m) => !m[1].includes('<') && !m[1].includes('"'));
+  check(hrefOk, 'B-1: ни один href не содержит сырых < или "');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL xss-echo: ' + fails.join(' | '));
+  } else {
+    console.log('OK   xss-echo (вектора ?q=/?cat= отражаются только escape/url_encode-формой)');
+  }
+}
+
 /* ── Поведенческая проба: тоггл темы (мини-DOM над static/js/theme.js) ────
    Контракт: клик меняет data-theme и пишет ОБЕ формы выбора — localStorage
    dynamica-theme И куку dynamica-theme с domain=.<родительский домен>
@@ -499,7 +522,7 @@ await smokeQtySteppers();
    переносится (flex-wrap: wrap) — иначе корзина с тумблером темы
    выталкиваются за 320 (это и была живая поломка 412/320);
    (4) грид каталога в базе — одна колонка minmax(0, 1fr) со ступенями
-   30rem/62rem (1→2→4); (5) тап-таргеты в базе ≥ 2.5rem (тумблер темы,
+   30rem/62rem (1→2→4); (5) тап-таргеты в базе ≥ 2.75rem = 44px, D31 (тумблер темы,
    крестик корзины, чип, страница пагинации, кнопки степпера);
    (6) инпуты в базе 16px (--shop-text-md) — Safari iOS не зумит страницу
    при фокусе. */
@@ -518,17 +541,17 @@ await smokeQtySteppers();
   check(/\.shop-header-inner\s*\{[^}]*flex-wrap:\s*wrap/.test(css), 'шапка в базе не переносится (flex-wrap: wrap)');
   check(/\.product-grid,\s*\.rel-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(css),
         'грид каталога в базе не одна текучая колонка minmax(0, 1fr)');
-  check(/\.icon-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'тумблер темы в базе уже 2.5rem');
-  check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.5rem/.test(css), 'крестик корзины в базе уже 2.5rem');
-  check(/\.chip\s*\{[^}]*min-height:\s*2\.5rem/.test(css), 'чип категорий в базе ниже 2.5rem');
-  check(/\.qty-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'кнопка степпера в базе ниже 2.5rem');
+  check(/\.icon-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'тумблер темы в базе уже 2.75rem (44px, D31)');
+  check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.75rem/.test(css), 'крестик корзины в базе уже 2.75rem (44px, D31)');
+  check(/\.chip\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'чип категорий в базе ниже 2.75rem (44px, D31)');
+  check(/\.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');
   check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--shop-text-md\)/.test(css),
         'инпуты в базе мельче 16px — iOS Safari зумит при фокусе');
   if (fails.length) {
     failed++;
     console.log('FAIL layout-mobile: ' + fails.join(' | '));
   } else {
-    console.log('OK   layout-mobile (min-width-only, база 1 колонка, шапка переносится, тап-таргеты 2.5rem, инпуты 16px)');
+    console.log('OK   layout-mobile (min-width-only, база 1 колонка, шапка переносится, тап-таргеты 2.75rem/44px, инпуты 16px)');
   }
 }
 
@@ -536,4 +559,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + ui-text + member-menu + layout-stretch + layout-mobile');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile');

@@ -75,8 +75,10 @@
   </nav>
 
   <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
-    {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat }}">{%- endif -%}
-    <input class="field-input search-input" type="search" name="q" value="{{ current_q }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+    {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
+    {%- comment -%} query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q=
+      и ?cat= кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1) {%- endcomment -%}
+    <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
     <label class="sort-label" for="cat-sort">
       <span class="sort-label-text">{{ t_sort_label }}</span>
       <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
@@ -124,7 +126,7 @@
   {%- if pages > 1 -%}
     <nav class="pagination" aria-label="{{ t_pagination_aria }}">
       {% for n in (1..pages) %}
-        {%- capture pg_href -%}__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
+        {%- capture pg_href -%}__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
         <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
       {% endfor %}
     </nav>

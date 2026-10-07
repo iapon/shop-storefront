@@ -14,7 +14,7 @@
 {%- include "partials/ui-text" -%}
 {%- assign eorder_id = results.order.createOrder.id -%}
 {%- assign eamount = results.calc.amount -%}
-<p>{{ t_email_greeting }}{% if json.customer.name %}, {{ json.customer.name }}{% endif %}!</p>
+<p>{{ t_email_greeting }}{% if json.customer.name %}, {{ json.customer.name | escape }}{% endif %}!</p>
 <p>{{ t_email_order_received }}</p>
 
 <h2>{{ t_order_no }} <span class="email-mono">{{ eorder_id }}</span></h2>

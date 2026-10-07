@@ -23,7 +23,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% if page_title %}{{ page_title }} — {{ shop_name }}{% else %}{{ shop_name }}{% endif %}</title>
+<title>{% if page_title %}{{ page_title | escape }} — {{ shop_name | escape }}{% else %}{{ shop_name | escape }}{% endif %}</title>
 {%- if page_noindex %}<meta name="robots" content="noindex">{% endif -%}
 {%- if page_desc %}<meta name="description" content="{{ page_desc | escape }}">{% endif -%}
 {%- if page_canon -%}

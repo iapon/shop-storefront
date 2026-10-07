@@ -71,7 +71,7 @@ category, `member|empty` для checkout, `empty` для account, `paid|not_foun
   `g_site.data.*`, … — см. моки в `mock/`, они повторяют их форму),
   `site.version` для кэш-бастинга статики и `host` (фоллбек canonical).
   CSS — мобильный-фёрст от 320px: базовые стили = малые экраны, улучшения
-  только через `@media (min-width: …)` (30/40/48/62rem), тап-таргеты ≥ 2.5rem,
+  только через `@media (min-width: …)` (30/40/48/62rem), тап-таргеты ≥ 2.75rem (44px),
   инпуты ≥ 16px, никаких `max-width`-медиазапросов (проверяет smoke).
 - Паттерн страницы:
   `{% include "partials/ui-text" %}` → `page_*` assigns → `{% capture content %}…{% endcapture %}`

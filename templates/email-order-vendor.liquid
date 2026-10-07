@@ -1,7 +1,10 @@
 {%- comment -%}
   email-order-vendor.liquid — письмо продавцу о новом заказе (D22).
   ТЕЛО письма: config.template = этот файл, config.layout = email-layout.
-  Адресат (to) задаётся нодой send_email в Сценариях — шаблон только рендерит.
+  Адресат (to) ноды — email МАГАЗИНА из настроек: to = expr
+  results.g_site.cfg[0].email (поле Email в «Настройках магазина», §2.3;
+  пусто → нода пишет ошибку в журнал, заказ не роняется — on_error: continue).
+  Шаблон только рендерит.
 
   ⚠ Адресация — только результаты flow (M1): results.calc.*, results.order.*,
   results.g_site.* (словарь t_* через partials/ui-text, ветка results),
@@ -26,10 +29,10 @@
 
 <h2>{{ t_email_customer_label }}</h2>
 <p class="email-meta">
-  {%- if json.customer.name %}{{ json.customer.name }}{% endif -%}
-  {%- if json.customer.email %} · {{ json.customer.email }}{% endif -%}
-  {%- if json.customer.phone %} · {{ t_email_phone_label }}: {{ json.customer.phone }}{% endif -%}
+  {%- if json.customer.name %}{{ json.customer.name | escape }}{% endif -%}
+  {%- if json.customer.email %} · {{ json.customer.email | escape }}{% endif -%}
+  {%- if json.customer.phone %} · {{ t_email_phone_label }}: {{ json.customer.phone | escape }}{% endif -%}
 </p>
 {%- if json.comment -%}
-<p class="email-meta">{{ t_email_comment_label }}: {{ json.comment }}</p>
+<p class="email-meta">{{ t_email_comment_label }}: {{ json.comment | escape }}</p>
 {%- endif -%}

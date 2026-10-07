@@ -157,6 +157,23 @@
 {%- assign t_row = ui_rows | find: "key", "email_customer_label" -%}{%- assign t_email_customer_label = t_row.value | default: "Покупатель" -%}
 {%- assign t_row = ui_rows | find: "key", "email_comment_label" -%}{%- assign t_email_comment_label = t_row.value | default: "Комментарий" -%}
 {%- assign t_row = ui_rows | find: "key", "email_phone_label" -%}{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
+{%- comment -%} ── UX-волна W6: фильтры-дравер, сортировка, чипы, тумблер темы ── {%- endcomment -%}
+{%- assign t_row = ui_rows | find: "key", "filters_open" -%}{%- assign t_filters_open = t_row.value | default: "Фильтры" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_reset" -%}{%- assign t_filters_reset = t_row.value | default: "Сбросить" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_close_aria" -%}{%- assign t_filters_close_aria = t_row.value | default: "Закрыть фильтры" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_show" -%}{%- assign t_filters_show = t_row.value | default: "Показать {{n}}" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_search" -%}{%- assign t_filters_search = t_row.value | default: "Поиск" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_categories" -%}{%- assign t_filters_categories = t_row.value | default: "Категории" -%}
+{%- assign t_row = ui_rows | find: "key", "filters_all" -%}{%- assign t_filters_all = t_row.value | default: "Все категории" -%}
+{%- assign t_row = ui_rows | find: "key", "sort_current" -%}{%- assign t_sort_current = t_row.value | default: "Сортировка: {{n}}" -%}
+{%- assign t_row = ui_rows | find: "key", "applied_clear" -%}{%- assign t_applied_clear = t_row.value | default: "Сбросить всё" -%}
+{%- assign t_row = ui_rows | find: "key", "applied_remove" -%}{%- assign t_applied_remove = t_row.value | default: "Убрать фильтр" -%}
+{%- assign t_row = ui_rows | find: "key", "theme_toggle_auto" -%}{%- assign t_theme_toggle_auto = t_row.value | default: "Тема: системная. Переключить" -%}
+{%- assign t_row = ui_rows | find: "key", "theme_toggle_light" -%}{%- assign t_theme_toggle_light = t_row.value | default: "Тема: светлая. Переключить" -%}
+{%- assign t_row = ui_rows | find: "key", "theme_toggle_dark" -%}{%- assign t_theme_toggle_dark = t_row.value | default: "Тема: тёмная. Переключить" -%}
+{%- assign t_row = ui_rows | find: "key", "description_more" -%}{%- assign t_description_more = t_row.value | default: "Ещё" -%}
+{%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}
+{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
 
 {%- assign eorder_id = results.order.createOrder.id -%}
 {%- assign eamount = results.calc.amount -%}

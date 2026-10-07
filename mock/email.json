@@ -1,0 +1,38 @@
+{
+  "_comment": "Мок контекста писем о заказе (волна A, D22). Форма = сырой tplCtx API-флоу БЕЗ hoist (M1): только results.* и json.* — results.calc (k_calc), results.order.createOrder (createOrder), results.g_site (shop_site_common). Письма рендерятся двухпроходом: тело → email-layout (content_for_layout).",
+  "results": {
+    "calc": {
+      "ok": true,
+      "lines": [
+        { "slug": "mug-linen", "title": "Кружка «Лён»", "price_kopecks": 99000, "qty": 2 },
+        { "slug": "planner-pine", "title": "Планинг «Сосна»", "price_kopecks": 34900, "qty": 1 }
+      ],
+      "total_kopecks": 232900,
+      "summary": "Кружка «Лён» × 2, Планинг «Сосна» × 1",
+      "amount": "232.90"
+    },
+    "order": { "createOrder": { "id": "b7e2c4a1-1111-4b6a-9a55-1e2f3a4b5c6d", "created_at": "2026-10-07T12:00:00Z" } },
+    "g_site": {
+      "cfg": [
+        {
+          "name": "Магазин витрины",
+          "slogan": "Керамика и текстиль",
+          "phone": "+7 900 000-00-00",
+          "email": "hi@example.ru",
+          "address": "Санкт-Петербург, наб. реки Карповки, 5",
+          "work_hours": "10:00–19:00",
+          "social_link": "https://t.me/example",
+          "legal": "ИП Иванов И. И., ИНН 7800000000",
+          "site_url": "https://shop.example.ru",
+          "og_image": null
+        }
+      ],
+      "ui": []
+    }
+  },
+  "json": {
+    "customer": { "name": "Иван Петров", "email": "ivan@example.ru", "phone": "+7 921 000-00-00" },
+    "comment": "Позвоните за час до доставки",
+    "website": ""
+  }
+}

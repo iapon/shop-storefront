@@ -1,5 +1,5 @@
 {
-  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар]; вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4.",
+  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4.",
   "found": {
     "p": {
       "data": {
@@ -10,9 +10,15 @@
             "slug": "mug-linen",
             "price_kopecks": 99000,
             "description": "Литая керамика, матовая глазурь. 350 мл, можно в посудомойку.\nСделано в мастерской на берегу Ладоги.",
+            "features": ["Материал: белая глина", "Объём: 350 мл", "Можно в посудомойку"],
             "stock": 12,
             "categories": ["ceramics"],
-            "photos": [{ "url": "" }]
+            "photos": [
+              { "url": "/static/photos/placeholder.svg" },
+              { "url": "/static/photos/placeholder.svg#2" }
+            ],
+            "meta_title": "Кружка «Лён» — керамика ручной работы",
+            "meta_description": "Литая керамика, матовая глазурь, 350 мл. Ручная работа."
           }
         ]
       }

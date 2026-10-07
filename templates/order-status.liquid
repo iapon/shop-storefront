@@ -2,36 +2,46 @@
   order-status.liquid — статус заказа (биндинг: o.data.order, 0..1).
   Один экран покрывает оба состояния: new → «Заказ принят» + подсказка про
   отмену; paid → «Заказ оплачен ✓»; нет заказа → «Заказ не найден».
-  Номер заказа — единственный font-mono на странице.
+  Номер заказа — единственный font-mono на странице. Персональные данные —
+  noindex. Тексты — словарь (подстановки {{amount}}/{{email}} — replace).
 {%- endcomment -%}
+{%- include "partials/ui-text" -%}
 {%- assign ord = o.data.order -%}
-{%- if ord -%}{%- assign page_title = "Заказ " | append: ord.id -%}{%- else -%}{%- assign page_title = "Заказ не найден" -%}{%- endif -%}
+{%- if ord -%}
+  {%- assign page_title = t_order_no | append: " " | append: ord.id -%}
+  {%- assign page_canon = "__SHOP_BASE__/order/" | append: ord.id -%}
+{%- else -%}
+  {%- assign page_title = t_order_not_found -%}
+{%- endif -%}
+{%- assign page_noindex = true -%}
 {%- capture content -%}
 <div class="status-screen">
   {%- if ord -%}
     {%- if ord.status == "paid" -%}
       <span class="status-badge success" aria-hidden="true">✓</span>
-      <h1 class="status-title">Заказ оплачен ✓</h1>
-      <p class="status-text">Спасибо! Мы получили оплату и приступаем к сборке. Подтверждение отправлено на {{ ord.customer_email }}.</p>
+      <h1 class="status-title">{{ t_order_paid }}</h1>
+      {%- assign op_txt = t_order_paid_text | replace: "{{email}}", ord.customer_email -%}
+      <p class="status-text">{{ op_txt }}</p>
     {%- elsif ord.status == "cancelled" -%}
       <span class="status-badge error" aria-hidden="true">×</span>
-      <h1 class="status-title">Заказ отменён</h1>
-      <p class="status-text">Если вы отменили заказ случайно — просто оформите его заново в каталоге.</p>
+      <h1 class="status-title">{{ t_order_cancelled }}</h1>
+      <p class="status-text">{{ t_order_cancelled_text }}</p>
     {%- else -%}
       <span class="status-badge brand" aria-hidden="true">…</span>
-      <h1 class="status-title">Заказ принят</h1>
-      <p class="status-text">Осталось оплатить {{ ord.amount | money }} ₽ — сейчас откроется платёжная страница ЮKassa. Статус обновится автоматически: просто обновите эту страницу через пару минут.</p>
-      <p class="status-text">Передумаете — напишите нам на почту поддержки до оплаты, и мы отменим заказ.</p>
+      <h1 class="status-title">{{ t_order_new }}</h1>
+      {%- assign on_txt = t_order_new_text | replace: "{{amount}}", ord.amount -%}
+      <p class="status-text">{{ on_txt }}</p>
+      <p class="status-text">{{ t_order_new_cancel_hint }}</p>
     {%- endif -%}
-    <p class="status-order-no">Заказ № {{ ord.id }}</p>
+    <p class="status-order-no">{{ t_order_no }} {{ ord.id }}</p>
     {%- if ord.items_summary -%}<p class="status-text text-3">{{ ord.items_summary }}</p>{%- endif -%}
-    <p class="status-help">Сохраните ссылку на эту страницу — она показывает актуальный статус заказа.</p>
-    <div class="status-actions"><a class="btn btn-secondary" href="__SHOP_BASE__/">Вернуться в каталог</a></div>
+    <p class="status-help">{{ t_order_save_link }}</p>
+    <div class="status-actions"><a class="btn btn-secondary" href="__SHOP_BASE__/">{{ t_back_to_catalog }}</a></div>
   {%- else -%}
     <span class="status-badge error" aria-hidden="true">∅</span>
-    <h1 class="status-title">Заказ не найден</h1>
-    <p class="status-text">Проверьте ссылку: возможно, номер заказа указан неверно.</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
+    <h1 class="status-title">{{ t_order_not_found }}</h1>
+    <p class="status-text">{{ t_order_not_found_text }}</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
   {%- endif -%}
 </div>
 {%- endcapture -%}

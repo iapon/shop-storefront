@@ -1,0 +1,105 @@
+{%- comment -%}
+  email-layout.liquid — общий каркас писем о заказе (D22). Передаётся ноде
+  send_email как config.layout: сайт-движок рендерит тело письма, затем
+  layout получает ТЕ ЖЕ биндинги плюс content_for_layout (rendered body).
+  Include легален (R1-F4).
+
+  ⚠ Ловушка адресации (M1): письма живут в API-флоу БЕЗ render-ноды — hoist
+  там НЕ выполняется, форма g_site.data.* в письме МЕРТВА. Только:
+    results.g_site.cfg[0] / results.g_site.ui / results.calc / results.order.*
+    json.customer.* (тело POST чекаута)
+  Словарь t_* — тот же partials/ui-text (он сам знает обе ветки адресации).
+
+  Стили — СТАНДАРТНЫЕ oklch-значения токенов витрины (светлая тема, 1:1 с
+  tokens.css) прямо здесь: письмо — автономный HTML, внешние CSS почтовики
+  вырезают; 320-база, одна колонка, табличная вёрстка каркаса.
+{%- endcomment -%}
+{%- include "partials/ui-text" -%}
+{%- comment -%} cfg/shop_name назначены partial ui-text (ветка results.g_site.cfg
+  в письме, ветка g_site.data.cfg на страницах) — здесь только используем. {%- endcomment -%}
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ shop_name }}</title>
+<style>
+  /* палитра = tokens.css (dynamica-light), oklch; fallback-декларации —
+     для движков без oklch */
+  body {
+    margin: 0; padding: 1rem 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+    color: oklch(20% 0.04 266); color: #333a47;
+    background: oklch(98% 0.005 247); background: #f7f8fa;
+  }
+  .email-wrap { width: 100%; max-width: 37.5rem; margin: 0 auto; }
+  .email-card {
+    background: oklch(100% 0 0); background: #ffffff;
+    border: 1px solid oklch(92% 0.01 247); border-color: #e5e8ee;
+    border-radius: 12px; overflow: hidden;
+  }
+  .email-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid oklch(92% 0.01 247); border-bottom-color: #e5e8ee;
+  }
+  .email-brand {
+    font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em;
+    color: oklch(20% 0.04 266); color: #333a47;
+  }
+  .email-slogan { margin-top: 0.125rem; font-size: 0.875rem; color: oklch(20% 0.04 266 / 0.5); color: #8b93a1; }
+  .email-content { padding: 1.5rem; }
+  .email-content h2 { font-size: 1.125rem; margin: 0 0 0.75rem; }
+  .email-content p { margin: 0 0 0.875rem; overflow-wrap: break-word; }
+  .email-items { width: 100%; border-collapse: collapse; margin: 0 0 1rem; }
+  .email-items th {
+    text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: oklch(20% 0.04 266 / 0.5); color: #8b93a1;
+    padding: 0.375rem 0; border-bottom: 1px solid oklch(92% 0.01 247); border-bottom-color: #e5e8ee;
+  }
+  .email-items td { padding: 0.5rem 0; border-bottom: 1px solid oklch(92% 0.01 247); border-bottom-color: #eef0f4; vertical-align: top; }
+  .email-items .num { text-align: right; white-space: nowrap; }
+  .email-total { font-size: 1rem; font-weight: 600; }
+  .email-meta { font-size: 0.875rem; color: oklch(20% 0.04 266 / 0.7); color: #5c6472; }
+  .email-mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.875rem; }
+  .email-footer {
+    padding: 1.25rem 1.5rem; font-size: 0.8125rem;
+    color: oklch(20% 0.04 266 / 0.5); color: #8b93a1;
+    border-top: 1px solid oklch(92% 0.01 247); border-top-color: #e5e8ee;
+  }
+  .email-footer p { margin: 0 0 0.25rem; }
+  .email-footer a { color: oklch(58% 0.22 273); color: #4f46e5; }
+</style>
+</head>
+<body>
+<table class="email-wrap" role="presentation" cellpadding="0" cellspacing="0">
+  <tr>
+    <td>
+      <table class="email-card" role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td class="email-header">
+            <div class="email-brand">{{ shop_name }}</div>
+            {%- if cfg.slogan -%}<div class="email-slogan">{{ cfg.slogan }}</div>{%- endif -%}
+          </td>
+        </tr>
+        <tr>
+          <td class="email-content">
+{{ content_for_layout }}
+          </td>
+        </tr>
+        <tr>
+          <td class="email-footer">
+            {%- if cfg.phone -%}<p>{{ t_field_phone }}: <a href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone }}</a></p>{%- endif -%}
+            {%- if cfg.email -%}<p>Email: <a href="mailto:{{ cfg.email }}">{{ cfg.email }}</a></p>{%- endif -%}
+            {%- if cfg.address -%}<p>{{ cfg.address }}{% if cfg.work_hours %} · {{ cfg.work_hours }}{% endif %}</p>{%- endif -%}
+            {%- if cfg.social_link -%}<p><a href="{{ cfg.social_link }}" rel="noopener">{{ cfg.social_link }}</a></p>{%- endif -%}
+            {%- if cfg.legal -%}<p>{{ cfg.legal }}</p>{%- endif -%}
+            <p>© {{ "now" | date: "%Y" }} {{ shop_name }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

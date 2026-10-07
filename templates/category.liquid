@@ -1,0 +1,98 @@
+{%- comment -%}
+  category.liquid — страница категории (НОВЫЙ, волна A; маршрут
+  __SHOP_BASE__/category/:slug, sitemap shop_categories_sitemap).
+  Биндинги (флоу shop_category): cat.data.categories (0..1 по слагу, со
+  select'ом parent { id title slug }), children.data.categories (потомки по
+  id родителя), prods.data.products, count.data.productsCount, g_site.
+  Не найдена → состояние в шаблоне (страница жива, 404 не роняет кэш).
+  Сортировка ?sort= согласована с каталогом (тот же белый список во флоу).
+  JSON-LD: CollectionPage + BreadcrumbList (partial крошек appends к
+  page_jsonld — порядок присвоения важен: сначала CollectionPage).
+{%- endcomment -%}
+{%- include "partials/ui-text" -%}
+{%- assign category = cat.data.categories | first -%}
+{%- comment -%} пустая строка TRUTHY — query.sort нормализуем в nil (см. catalog.liquid) {%- endcomment -%}
+{%- assign current_sort = query.sort | default: nil -%}
+{%- assign sort_suffix = nil -%}
+{%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
+{%- if category -%}
+  {%- assign page_title = category.meta_title | default: category.title -%}
+  {%- assign page_desc = category.meta_description | default: category.description | default: category.title -%}
+  {%- assign page_canon = "__SHOP_BASE__/category/" | append: category.slug -%}
+  {%- capture cat_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":{{ category.title | json }},"url":"{{ canon_base }}{{ page_canon }}"}</script>{%- endcapture -%}
+  {%- assign page_jsonld = cat_ld -%}
+{%- else -%}
+  {%- assign page_title = t_category_not_found -%}
+  {%- assign page_noindex = true -%}
+{%- endif -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  {%- if category -%}
+    <section class="category-hero">
+      {%- assign bc_current = category.title -%}
+      {%- if category.parent -%}
+        {%- assign bc_cat_title = category.parent.title -%}
+        {%- assign bc_cat_slug = category.parent.slug -%}
+      {%- endif -%}
+      {% include "partials/breadcrumbs" %}
+      {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
+      <h1 class="hero-title category-title">{{ category.title }}</h1>
+      {%- if category.description -%}<p class="hero-subtitle">{{ category.description }}</p>{%- endif -%}
+    </section>
+
+    {%- if children.data.categories.size > 0 -%}
+    <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
+      {%- for cc in children.data.categories -%}
+      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}">{{ cc.title }}</a>
+      {%- endfor -%}
+    </nav>
+    {%- endif -%}
+
+    {%- assign total = count.data.productsCount -%}
+    {%- assign cnt_txt = t_category_count | replace: "{{n}}", total -%}
+    <p class="results-note">{{ cnt_txt }}</p>
+
+    {%- if prods.data.products.size > 0 -%}
+    <form class="cat-tools" method="get" action="__SHOP_BASE__/category/{{ category.slug }}" data-cat-tools>
+      <label class="sort-label" for="category-sort">
+        <span class="sort-label-text">{{ t_sort_label }}</span>
+        <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select>
+          <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
+          <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
+          <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+        </select>
+      </label>
+    </form>
+
+    <div class="product-grid">
+      {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
+    </div>
+
+    {%- comment -%} та же формула страниц, что в каталоге (w3-№5): см. catalog.liquid {%- endcomment -%}
+    {%- assign page_size = 12 -%}
+    {%- assign page_size_m1 = page_size | minus: 1 -%}
+    {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
+    {%- assign page_no = query.page | plus: 0 -%}
+    {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
+    {%- if pages > 1 -%}
+      <nav class="pagination" aria-label="{{ t_pagination_aria }}">
+        {% for n in (1..pages) %}
+          {%- capture pg_href -%}__SHOP_BASE__/category/{{ category.slug }}?{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
+          <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
+        {% endfor %}
+      </nav>
+    {%- endif -%}
+    {%- else -%}
+    <p class="empty-note">{{ t_catalog_empty }}</p>
+    {%- endif -%}
+  {%- else -%}
+  <div class="status-screen" style="padding-left:0;padding-right:0;">
+    <span class="status-badge error" aria-hidden="true">∅</span>
+    <h1 class="status-title">{{ t_category_not_found }}</h1>
+    <p class="status-text">{{ t_category_not_found_text }}</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
+  </div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

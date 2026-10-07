@@ -1,22 +1,21 @@
 {%- comment -%}
-  partials/product-card.liquid — карточка товара (используется каталогом и «Похожими»).
-  Ожидает товар в переменной p (скоуп include разделяется с вызывающим шаблоном).
+  partials/product-card.liquid — карточка товара (используется каталогом,
+  категорией и «Похожими»). Ожидает товар в переменной p (скоуп include
+  разделяется с вызывающим шаблоном). Бейдж наличия — partial stock-badge
+  (порог и тексты в одном месте); волна B добавит сюда сердечко избранного.
 {%- endcomment -%}
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
     {%- if p.photos and p.photos.size > 0 -%}
       <img src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy">
     {%- else -%}
-      <span>нет фото</span>
+      <span>{{ t_no_photo }}</span>
     {%- endif -%}
   </div>
   <div class="product-card-body">
     <h3 class="product-card-title">{{ p.title }}</h3>
     <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
-    {%- if p.stock <= 0 -%}
-      <span class="badge badge-error">Нет в наличии</span>
-    {%- elsif p.stock <= 5 -%}
-      <span class="badge badge-warning">Осталось {{ p.stock }}</span>
-    {%- endif -%}
+    {%- assign stock_qty = p.stock -%}
+    {% include "partials/stock-badge" %}
   </div>
 </a>

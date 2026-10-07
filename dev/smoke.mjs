@@ -1,6 +1,6 @@
 // Smoke: liquidjs рендерит все страницы витрины с моками БЕЗ исключений,
-// плюс поведенческие пробы статики (тоггл темы меняет data-theme и пишет
-// ОБЕ формы выбора — localStorage и куку с domain).
+// плюс поведенческие пробы статики (тоггл темы, корзина со степперами) и
+// волны A: крошки/JSON-LD/OG/canonical, словарь-фоллбек, степперы qty.
 // Запуск: npm run smoke (из dev/) — падает с ненулевым кодом при ошибке рендера
 // или отсутствии ключевых маркеров в HTML.
 import { createEngine, renderMockPage, SHOP_BASE, withShopBase } from './harness.mjs';
@@ -9,13 +9,19 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const engine = createEngine();
-const q = { cat: '', page: '' };
+const q = { cat: '', page: '', q: '', sort: '' };
 
 const cases = [
-  ['catalog', null, ['Кружка «Лён»', '990.00', 'Керамика', 'product-card', 'Каталог', 'pagination', '&amp;page=3']],
-  ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии']],
+  ['catalog', null, ['Кружка «Лён»', '990.00', 'product-card', 'Каталог', 'pagination', 'chip-count', 'Тарелки', 'cat-tools', 'data-sort-select']],
+  ['catalog', null, ['Кружка «Лён»', '990.00', 'product-card', 'Каталог', 'pagination', 'chip-count', 'cat-tools', 'data-sort-select'], { query: { ...q, cat: 'ceramics' } }],
+  ['catalog', null, ['Найдено: 26', 'value="кружка-тест"', 'q='], { query: { ...q, q: 'кружка-тест' } }],
+  ['catalog', null, ['value="price_asc" selected', 'sort=price_asc&amp;page=2'], { query: { ...q, sort: 'price_asc', page: '2' } }],
+  ['category', 'found', ['Керамика', 'Посуда и декор', 'Товаров: 26', 'Тарелки', 'product-card', 'data-sort-select', 'category/ceramics?page=3']],
+  ['category', 'nested', ['Керамика', 'Тарелки', 'category/ceramics', 'Товаров: 1']],
+  ['category', 'not_found', ['Категория не найдена']],
+  ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
   ['product', 'not_found', ['Товар не найден']],
-  ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину']],
+  ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"']],
   ['checkout', 'member', ['Ваш заказ', '1490.00']],
   ['checkout', 'empty', ['Корзина пуста']],
   ['cart', 'guest', ['Ваш заказ', '990.00']],
@@ -26,14 +32,16 @@ const cases = [
   ['account', 'empty', ['Заказов пока нет']],
   ['login', null, ['Вход', 'action="/login"', 'type="password"']],
   ['register', null, ['Регистрация', 'action="/register"', 'Создать аккаунт']],
-  ['404', null, ['Страница не найдена']],
+  ['404', null, ['Страница не найдена', 'noindex']],
+  ['email-customer', null, ['Магазин витрины', 'Заказ №', '232.90', 'Кружка «Лён» × 2', 'Состав заказа', 'https://shop.example.ru/shop/order/']],
+  ['email-vendor', null, ['Новый заказ', '232.90', 'Иван Петров', 'ivan@example.ru', 'Позвоните за час до доставки']],
 ];
 
 let failed = 0;
-for (const [mock, variant, markers] of cases) {
-  const label = mock + (variant ? '/' + variant : '');
+for (const [mock, variant, markers, overrides] of cases) {
+  const label = mock + (variant ? '/' + variant : '') + (overrides?.query?.cat ? `?cat=${overrides.query.cat}` : '') + (overrides?.query?.q ? `?q=` : '') + (overrides?.query?.sort ? `?sort=` : '');
   try {
-    const html = await renderMockPage(engine, mock, variant, { query: { ...q } });
+    const html = await renderMockPage(engine, mock, variant, overrides ? { query: { ...q, ...overrides.query } } : { query: { ...q } });
     // Гигиена базы магазина: сентинел не доезжает до выдачи — в живом HTML
     // все ссылки на страницы магазина несут базу (dev: /shop, прод: ответ
     // шага store_path). Статика платформы (/static/…) — исключение: её
@@ -74,6 +82,82 @@ for (const [mock, variant, markers] of cases) {
     console.log('FAIL shop-base: ' + bad.join(' | '));
   } else {
     console.log(`OK   shop-base (сентинел в источниках, ${SHOP_BASE} в выдаче)`);
+  }
+}
+
+/* ── Проба словаря-фоллбека и словаря-переопределения (D25) ───────────────
+   Пустой g_site (cfg/ui пусты) → вшитые фоллбеки partials/ui-text, страница
+   жива; заполненный → имя магазина из shop_config, строка из ui_text
+   («Купить» вместо «В корзину») вытесняет фоллбек. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const empty = await renderMockPage(engine, 'product', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [], ui: [] } },
+  });
+  check(empty.includes('В корзину'), 'пустой g_site: кнопка несёт вшитый фоллбек «В корзину»');
+  check(empty.includes('Товар не найден') === false, 'пустой g_site: страница товара жива');
+  check(empty.includes('>Магазин<'), 'пустой g_site: шапка несёт фоллбек имени «Магазин»');
+  const filled = await renderMockPage(engine, 'product', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Тест-магазин' }], ui: [{ key: 'add_to_cart', value: 'Купить' }] } },
+  });
+  check(filled.includes('Купить'), 'словарь: строка ui_text вытесняет фоллбек');
+  check(!filled.includes('В корзину'), 'словарь: фоллбек «В корзину» скрыт переопределением');
+  check(filled.includes('Тест-магазин'), 'словарь: имя магазина из shop_config в шапке/title');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL ui-text: ' + fails.join(' | '));
+  } else {
+    console.log('OK   ui-text (пустой словарь → фоллбеки и живая страница; заполненный → переопределение)');
+  }
+}
+
+/* ── Проба SEO-пакета волны A (D26): canonical/OG/JSON-LD ────────────────
+   Фоллбек site_url → https://{{ host }}; на странице товара — JSON-LD
+   Product+Offer+BreadcrumbList (парсится), OG-пакет с og:image из первого
+   фото; на категории — CollectionPage; 404 — noindex и без canonical. */
+function extractJsonLd(html) {
+  const out = [];
+  const re = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+  let m;
+  while ((m = re.exec(html))) out.push(m[1]);
+  return out;
+}
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const host = 'https://localhost:5173';
+  const cat = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  const prod = await renderMockPage(engine, 'product', null, { query: { ...q } });
+  const catPage = await renderMockPage(engine, 'category', 'found', { query: { ...q } });
+  const p404 = await renderMockPage(engine, '404', null, { query: { ...q } });
+  check(cat.includes(`<link rel="canonical" href="${host}${SHOP_BASE}/">`), `catalog: canonical = site_url-фоллбек ${host}`);
+  check(cat.includes(`property="og:url" content="${host}${SHOP_BASE}/"`), 'catalog: og:url');
+  check(cat.includes('property="og:site_name" content="Магазин витрины"'), 'catalog: og:site_name из shop_config');
+  check(prod.includes(`<link rel="canonical" href="${host}${SHOP_BASE}/product/mug-linen">`), 'product: canonical карточки');
+  check(prod.includes('property="og:type" content="product"'), 'product: og:type=product');
+  check(prod.includes(`property="og:image" content="${host}/static/photos/placeholder.svg"`), 'product: относительный og:image абсолютизирован');
+  const prodLd = extractJsonLd(prod).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('product: JSON-LD не парсится: ' + e.message + ' :: ' + s.slice(0, 120)); return null; } }).filter(Boolean);
+  check(prodLd.some((o) => o['@type'] === 'Product' && o.offers?.price === '990.00' && o.offers?.priceCurrency === 'RUB'
+    && o.offers?.availability === 'https://schema.org/InStock'), 'product: JSON-LD Product+Offer (цена/валюта/наличие)');
+  check(prodLd.some((o) => o['@type'] === 'Product' && Array.isArray(o.image) && o.image.length === 2), 'product: JSON-LD Product.image[] — все фото');
+  const bc = prodLd.find((o) => o['@type'] === 'BreadcrumbList');
+  check(bc && bc.itemListElement.length === 3
+    && bc.itemListElement[0].item === `${host}${SHOP_BASE}/`
+    && bc.itemListElement[1].item === `${host}${SHOP_BASE}/category/ceramics`
+    && bc.itemListElement[2].name === 'Кружка «Лён»',
+    'breadcrumbs: цепочка Главная → Категория → Товар и в разметке, и в JSON-LD');
+  const catLd = extractJsonLd(catPage).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('category: JSON-LD не парсится: ' + e.message); return null; } }).filter(Boolean);
+  check(catLd.some((o) => o['@type'] === 'CollectionPage'), 'category: JSON-LD CollectionPage');
+  check(catLd.some((o) => o['@type'] === 'BreadcrumbList'), 'category: JSON-LD BreadcrumbList');
+  check(p404.includes('noindex') && !p404.includes('rel="canonical"'), '404: noindex, canonical нет');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL seo-pack: ' + fails.join(' | '));
+  } else {
+    console.log('OK   seo-pack (canonical/og:host-фоллбек, JSON-LD Product/Offer/CollectionPage/BreadcrumbList парсятся, 404 noindex)');
   }
 }
 
@@ -223,6 +307,7 @@ async function smokeCartReplace() {
     addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
     querySelectorAll: () => [],
     querySelector: () => null,
+    body: null,
   };
   const click = (attrs) => {
     for (const fn of listeners.click ?? []) {
@@ -258,6 +343,101 @@ async function smokeCartReplace() {
   }
 }
 await smokeCartReplace();
+
+/* ── Поведенческая проба степперов количества (D23) ───────────────────────
+   Карточка: data-qty-step="+1/-1" крутит существующий [data-cart-qty]
+   (контракт add(slug, qty) не меняется). Строки чекаута: data-cart-qty-inc/dec
+   → setQty(slug, qty±1) — replace-семантика полным массивом; inc гасится
+   data-stock'ом; dec до нуля убирает строку. */
+async function smokeQtySteppers() {
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const calls = [];
+  const respond = (items) => Promise.resolve({ ok: true, json: () => Promise.resolve({ items }) });
+  const fetchMock = (url, opts) => {
+    const method = (opts && opts.method) || 'GET';
+    let items = [{ slug: 'mug', qty: 2 }, { slug: 'tot', qty: 1 }];
+    if (method === 'POST') items = JSON.parse(opts.body).items;
+    calls.push({ url, method, items });
+    return respond(items);
+  };
+
+  // Карточка товара: степпер вокруг инпута (data-qty-step крутит [data-cart-qty]).
+  const qtyInput = { value: '1' };
+  const stepperBox = { querySelector: (sel) => (sel === '[data-cart-qty]' ? qtyInput : null) };
+  const mkBtn = (attrs) => ({
+    attrs,
+    getAttribute(k) { return attrs[k] ?? null; },
+    closest(sel) { return sel === '[data-cart-stepper]' ? stepperBox : null; },
+  });
+  const addBtn = mkBtn({ 'data-cart-add': 'mug' });
+  const stepBtn = mkBtn({ 'data-qty-step': '+1' });
+  const incBtn = mkBtn({ 'data-cart-qty-inc': 'mug', 'data-stock': '5' });
+  const decBtn = mkBtn({ 'data-cart-qty-dec': 'tot' });
+  const MAP = {
+    '[data-cart-add]': addBtn,
+    '[data-qty-step]': stepBtn,
+    '[data-cart-qty-inc]': incBtn,
+    '[data-cart-qty-dec]': decBtn,
+  };
+  const listeners = {};
+  const document = {
+    addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+    querySelectorAll: () => [],
+    querySelector(sel) { return sel === '[data-cart-qty]' ? qtyInput : null; },
+    body: { getAttribute: () => null },
+  };
+  const click = (btn) => {
+    for (const fn of listeners.click ?? []) {
+      fn({ preventDefault() {}, target: { closest: (sel) => (MAP[sel] === btn ? btn : (sel === '[data-cart-stepper]' ? stepperBox : null)) } });
+    }
+  };
+  const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'cart.js'), 'utf8'));
+  new Function('document', 'window', 'fetch', src)(document, { location: {} }, fetchMock);
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  await tick(); await tick(); // гидратация GET: [{mug:2},{tot:1}]
+
+  // 1) карточный степпер: +1 мутирует инпут (2), сам не шлёт POST
+  click(stepBtn);
+  check(qtyInput.value === 2, `карточный степпер не мутировал qty: ${qtyInput.value}`);
+  check(!calls.some((c) => c.method === 'POST'), 'карточный степпер не должен слать POST (шлёт только add)');
+
+  // 2) add читает инпут: mug 2 (состояние) + 2 (инпут) = 4 в POST
+  click(addBtn);
+  await tick(); await tick();
+  let post = calls.find((c) => c.method === 'POST');
+  check(post && post.items.find((l) => l.slug === 'mug')?.qty === 4,
+    `add после степпера несёт mug qty=4: ${post && JSON.stringify(post.items)}`);
+
+  // 3) строка чекаута inc: mug 4 → 5 (data-stock=5)
+  click(incBtn);
+  await tick(); await tick();
+  post = calls.filter((c) => c.method === 'POST').pop();
+  check(post && post.items.find((l) => l.slug === 'mug')?.qty === 5,
+    `inc строки: mug qty=5 ожидалась, приехало ${post && JSON.stringify(post.items)}`);
+
+  // 4) inc сверх остатка гасится: mug уже 5 = data-stock → POST без роста
+  click(incBtn);
+  await tick(); await tick();
+  post = calls.filter((c) => c.method === 'POST').pop();
+  check(post && post.items.find((l) => l.slug === 'mug')?.qty === 5,
+    `inc сверх data-stock должен гаситься (qty=5), приехало ${post && JSON.stringify(post.items)}`);
+
+  // 5) dec до нуля убирает строку (replace-семантика)
+  click(decBtn);
+  await tick(); await tick();
+  post = calls.filter((c) => c.method === 'POST').pop();
+  check(post && !post.items.some((l) => l.slug === 'tot'),
+    `dec до нуля убирает строку tot: ${post && JSON.stringify(post.items)}`);
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL qty-steppers: ' + fails.join(' | '));
+  } else {
+    console.log('OK   qty-steppers (карточка крутит инпут без POST; inc/dec строк — replace, data-stock гасит, 0 удаляет)');
+  }
+}
+await smokeQtySteppers();
 
 /* ── Проба member-контура: шапка переключается по member (SSR) ────────────
    Контракт (ЛК): гость видит «Войти»/«Регистрация», вошедший — «Кабинет»/
@@ -320,8 +500,9 @@ await smokeCartReplace();
    выталкиваются за 320 (это и была живая поломка 412/320);
    (4) грид каталога в базе — одна колонка minmax(0, 1fr) со ступенями
    30rem/62rem (1→2→4); (5) тап-таргеты в базе ≥ 2.5rem (тумблер темы,
-   крестик корзины, чип, страница пагинации); (6) инпуты в базе 16px
-   (--shop-text-md) — Safari iOS не зумит страницу при фокусе. */
+   крестик корзины, чип, страница пагинации, кнопки степпера);
+   (6) инпуты в базе 16px (--shop-text-md) — Safari iOS не зумит страницу
+   при фокусе. */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
     // Контракт — по КОДУ: комментарии не должны влиять на пробу
@@ -340,6 +521,7 @@ await smokeCartReplace();
   check(/\.icon-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'тумблер темы в базе уже 2.5rem');
   check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.5rem/.test(css), 'крестик корзины в базе уже 2.5rem');
   check(/\.chip\s*\{[^}]*min-height:\s*2\.5rem/.test(css), 'чип категорий в базе ниже 2.5rem');
+  check(/\.qty-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'кнопка степпера в базе ниже 2.5rem');
   check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--shop-text-md\)/.test(css),
         'инпуты в базе мельче 16px — iOS Safari зумит при фокусе');
   if (fails.length) {
@@ -354,4 +536,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log(`smoke done: render ${cases.length}/${cases.length} OK + theme-toggle + cart-replace + layout-stretch + layout-mobile`);
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + ui-text + member-menu + layout-stretch + layout-mobile');

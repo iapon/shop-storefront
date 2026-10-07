@@ -1,35 +1,39 @@
 {%- comment -%}
   login.liquid — страница входа (GET /login; POST обрабатывает сценарий login:
   bcrypt-проверка + кука member). failed=1 в query — неверный email или пароль.
-  Вошедшему покупателю здесь нечего делать — покажем вежливую подсказку.
+  Вошедшему покупателю здесь нечего делать — вежливая подсказка.
+  member-контур живёт на КОРНЕ сайта; noindex (персональный контур).
 {%- endcomment -%}
-{%- assign page_title = "Вход" -%}
+{%- include "partials/ui-text" -%}
+{%- assign page_title = t_login_title -%}
+{%- assign page_canon = "/login" -%}
+{%- assign page_noindex = true -%}
 {%- capture content -%}
 <div class="shop-container section-y auth-narrow">
   <div class="status-screen" style="padding-left:0;padding-right:0;">
     <span class="status-badge brand" aria-hidden="true">👤</span>
     {%- if member and member.id -%}
-      <h1 class="status-title">Вы уже вошли</h1>
-      <p class="status-text">Можно перейти в кабинет — там ваши заказы.</p>
-      <div class="status-actions"><a class="btn btn-primary btn-lg" href="/account">Кабинет</a></div>
+      <h1 class="status-title">{{ t_login_already }}</h1>
+      <p class="status-text">{{ t_login_already_text }}</p>
+      <div class="status-actions"><a class="btn btn-primary btn-lg" href="/account">{{ t_header_account }}</a></div>
     {%- else -%}
-      <h1 class="status-title">Вход</h1>
-      <p class="status-text">С заказами, сохранённой корзиной и историей покупок.</p>
+      <h1 class="status-title">{{ t_login_title }}</h1>
+      <p class="status-text">{{ t_login_subtitle }}</p>
       {%- if query.failed == "1" -%}
-        <p class="form-error" data-visible role="alert">Неверный email или пароль — попробуйте ещё раз.</p>
+        <p class="form-error" data-visible role="alert">{{ t_login_failed }}</p>
       {%- endif -%}
       <form class="auth-form" method="post" action="/login" novalidate>
         <div class="field">
-          <label class="field-label" for="lg-email">Email</label>
-          <input class="field-input" id="lg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
+          <label class="field-label" for="lg-email">{{ t_field_email }}</label>
+          <input class="field-input" id="lg-email" name="email" type="email" required autocomplete="email" placeholder="{{ t_ph_email }}">
         </div>
         <div class="field">
-          <label class="field-label" for="lg-password">Пароль</label>
+          <label class="field-label" for="lg-password">{{ t_field_password }}</label>
           <input class="field-input" id="lg-password" name="password" type="password" required autocomplete="current-password">
         </div>
-        <button class="btn btn-primary btn-lg" type="submit">Войти</button>
+        <button class="btn btn-primary btn-lg" type="submit">{{ t_header_login }}</button>
       </form>
-      <p class="field-hint" style="margin-top:1rem;">Нет аккаунта? <a href="/register">Зарегистрируйтесь</a> — корзина гостя переедет в ваш кабинет.</p>
+      <p class="field-hint" style="margin-top:1rem;">{{ t_login_no_account }} <a href="/register">{{ t_to_register }}</a> {{ t_login_register_hint }}</p>
     {%- endif -%}
   </div>
 </div>

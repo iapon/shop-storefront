@@ -1,24 +1,30 @@
 {%- comment -%}
   checkout.liquid — оформление заказа. Биндинги: prods.data.products (товары
   корзины), results.ci.items (позиции серверной корзины: флоу парсит json-строку
-  items узлом k_ci — Liquid не читает JSON-строки), site.params. Позиции и суммы
-  приходят с сервера; пусто/нет идентификатора → «Корзина пуста». JS перехватывает
-  сабмит → POST __SHOP_BASE__/api/checkout (сентинел заменяется путём магазина).
-  Форма: honeypot-поле website (скрытое от человека, css .hp-field).
-  Позицию убирает кнопка data-cart-remove="slug", корзину целиком —
-  data-cart-clear: cart.js шлёт ПОЛНЫЙ массив на POST __SHOP_BASE__/api/cart
-  (replace-семантика) и перезагружает страницу — SSR-состояние канонично.
+  items узлом k_ci — Liquid не читает JSON-строки), site.params, g_site.
+  Позиции и суммы приходят с сервера; пусто/нет идентификатора → «Корзина
+  пуста». JS перехватывает сабмит → POST __SHOP_BASE__/api/checkout (сентинел
+  заменяется путём магазина). Форма: honeypot-поле website (скрытое от
+  человека, css .hp-field; метка honeypot'а намеренно не словарная — она не
+  для человека).
+  Количество крутяt степперы data-cart-qty-inc/dec (D23: replace-семантика —
+  cart.js шлёт ПОЛНЫЙ массив на POST __SHOP_BASE__/api/cart и перезагружает
+  страницу — SSR-состояние канонично), убирает кнопка data-cart-remove="slug",
+  корзину целиком — data-cart-clear.
 {%- endcomment -%}
-{%- assign page_title = "Оформление заказа" -%}
+{%- include "partials/ui-text" -%}
+{%- assign page_title = t_checkout_title -%}
+{%- assign page_canon = "__SHOP_BASE__/checkout" -%}
+{%- assign page_noindex = true -%}
 {%- assign ci_items = results.ci.items -%}
 {%- capture content -%}
 <div class="shop-container section-y">
-  <h1 class="product-title">Оформление заказа</h1>
+  <h1 class="product-title">{{ t_checkout_title }}</h1>
 
   {%- if ci_items and ci_items.size > 0 -%}
   <div class="checkout-grid">
-    <div class="shop-prose" style="max-width:none;">
-      <h2 class="rel-heading" style="margin-top:0;">Ваш заказ</h2>
+    <div class="shop-prose checkout-main">
+      <h2 class="rel-heading checkout-heading">{{ t_checkout_your_order }}</h2>
       <ul class="cart-lines">
         {%- assign total_k = 0 -%}
         {%- for i in ci_items -%}
@@ -33,22 +39,29 @@
               <span class="cart-line-name">
                 {{ line.title }}
                 {%- if line.stock <= 0 -%}
-                  <span class="badge badge-error">нет в наличии</span>
+                  <span class="badge badge-error">{{ t_out_of_stock }}</span>
                 {%- elsif i.qty > line.stock -%}
-                  <span class="badge badge-warning">в наличии только {{ line.stock }}</span>
+                  {%- assign so_txt = t_stock_only | replace: "{{n}}", line.stock -%}
+                  <span class="badge badge-warning">{{ so_txt }}</span>
                 {%- endif -%}
               </span>
-              <span class="cart-line-qty">× {{ i.qty }}</span>
+              <span class="cart-line-stepper qty-stepper">
+                <button class="qty-btn" type="button" data-cart-qty-dec="{{ i.slug }}"
+                        aria-label="{{ t_qty_dec_aria }}">−</button>
+                <span class="cart-line-qty">{{ i.qty }}</span>
+                <button class="qty-btn" type="button" data-cart-qty-inc="{{ i.slug }}" data-stock="{{ line.stock }}"
+                        aria-label="{{ t_qty_inc_aria }}">+</button>
+              </span>
               <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
               <button class="cart-line-remove" type="button" data-cart-remove="{{ i.slug }}"
-                      aria-label="Убрать «{{ line.title }}» из корзины" title="Убрать">×</button>
+                      aria-label="{{ t_cart_remove_aria }}: {{ line.title }}" title="{{ t_cart_remove_aria }}">×</button>
             </li>
           {%- endif -%}
         {%- endfor -%}
       </ul>
-      <button class="cart-clear" type="button" data-cart-clear>Очистить корзину</button>
+      <button class="cart-clear" type="button" data-cart-clear>{{ t_cart_clear }}</button>
 
-      <h2 class="rel-heading">Контакты</h2>
+      <h2 class="rel-heading">{{ t_checkout_contacts }}</h2>
       <form class="shop-prose" data-checkout-form novalidate>
         <div class="form-error" data-form-error role="alert"></div>
         {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
@@ -57,29 +70,29 @@
           <label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
         <div class="field">
-          <label class="field-label" for="co-name">Имя *</label>
-          <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="Иван Петров">
+          <label class="field-label" for="co-name">{{ t_field_name }} *</label>
+          <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="{{ t_ph_name }}">
         </div>
         <div class="field">
-          <label class="field-label" for="co-email">Email *</label>
-          <input class="field-input" id="co-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
-          <p class="field-hint">На этот email придёт подтверждение заказа.</p>
+          <label class="field-label" for="co-email">{{ t_field_email }} *</label>
+          <input class="field-input" id="co-email" name="email" type="email" required autocomplete="email" placeholder="{{ t_ph_email }}">
+          <p class="field-hint">{{ t_field_email_hint }}</p>
         </div>
         <div class="field">
-          <label class="field-label" for="co-phone">Телефон</label>
-          <input class="field-input" id="co-phone" name="phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00">
+          <label class="field-label" for="co-phone">{{ t_field_phone }}</label>
+          <input class="field-input" id="co-phone" name="phone" type="tel" autocomplete="tel" placeholder="{{ t_ph_phone }}">
         </div>
         <div class="field">
-          <label class="field-label" for="co-comment">Комментарий к заказу</label>
+          <label class="field-label" for="co-comment">{{ t_field_comment }}</label>
           <textarea class="field-textarea" id="co-comment" name="comment" rows="3"></textarea>
         </div>
-        <button class="btn btn-primary btn-lg" type="submit">Перейти к оплате</button>
-        <p class="field-hint">Оплата через ЮKassa: после нажатия вы перейдёте на платёжную страницу.</p>
+        <button class="btn btn-primary btn-lg" type="submit">{{ t_checkout_pay }}</button>
+        <p class="field-hint">{{ t_checkout_pay_hint }}</p>
       </form>
     </div>
 
     <aside>
-      <h2 class="rel-heading" style="margin-top:0;">Итого</h2>
+      <h2 class="rel-heading checkout-heading">{{ t_checkout_summary }}</h2>
       {%- for i in ci_items -%}
         {%- assign line = nil -%}
         {%- for pr in prods.data.products -%}
@@ -90,17 +103,17 @@
           <div class="summary-row"><span>{{ line.title }} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
         {%- endif -%}
       {%- endfor -%}
-      <div class="summary-total"><span>К оплате</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>
-      <p class="field-hint" style="margin-top:1rem;">Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.</p>
+      <div class="summary-total"><span>{{ t_total_to_pay }}</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>
+      <p class="field-hint summary-note">{{ t_checkout_agree }}</p>
     </aside>
   </div>
 
   {%- else -%}
   <div class="status-screen" style="padding-left:0;padding-right:0;">
     <span class="status-badge brand" aria-hidden="true">🛒</span>
-    <h2 class="status-title">Корзина пуста</h2>
-    <p class="status-text">Добавьте товары из каталога — они сохранятся, даже если вы ещё не зарегистрированы.</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
+    <h2 class="status-title">{{ t_cart_empty }}</h2>
+    <p class="status-text">{{ t_cart_empty_text }}</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
   </div>
   {%- endif -%}
 </div>

@@ -1,0 +1,43 @@
+{%- comment -%}
+  email-order-customer.liquid — письмо покупателю о новом заказе (D22).
+  ТЕЛО письма: нода send_email несёт config.template = этот файл и
+  config.layout = email-layout (каркас со шапкой/контактами — там).
+
+  ⚠ Адресация — только результаты flow (M1, hoist в API-флоу не выполняется):
+    results.calc.lines / results.calc.amount  — k_calc (result_key calc)
+    results.order.createOrder.id              — createOrder (result_key order)
+    results.g_site.cfg / results.g_site.ui    — shop_site_common (result_key g_site)
+    json.customer.name                        — тело POST чекаута
+  Контракт result_key'ей обязан совпадать с флоу shop_checkout_api (см. отчёт
+  волны A, раздел «Контракт писем»).
+{%- endcomment -%}
+{%- include "partials/ui-text" -%}
+{%- assign eorder_id = results.order.createOrder.id -%}
+{%- assign eamount = results.calc.amount -%}
+<p>{{ t_email_greeting }}{% if json.customer.name %}, {{ json.customer.name }}{% endif %}!</p>
+<p>{{ t_email_order_received }}</p>
+
+<h2>{{ t_order_no }} <span class="email-mono">{{ eorder_id }}</span></h2>
+<p class="email-meta">{{ t_email_awaiting_payment }}</p>
+
+<h2>{{ t_email_items_title }}</h2>
+<table class="email-items" cellpadding="0" cellspacing="0">
+  <tr>
+    <th>{{ t_checkout_your_order }}</th>
+    <th class="num">{{ t_checkout_summary }}</th>
+  </tr>
+  {%- for l in results.calc.lines -%}
+  {%- assign line_sum = l.price_kopecks | times: l.qty -%}
+  <tr>
+    <td>{{ l.title }} × {{ l.qty }}</td>
+    <td class="num">{{ line_sum | times: 0.01 | money }} ₽</td>
+  </tr>
+  {%- endfor -%}
+</table>
+<p class="email-total">{{ t_total_to_pay }}: {{ eamount }} ₽</p>
+
+{%- comment -%} ссылка на статус — только когда владелец заполнил site_url:
+  в письме нет host-фоллбека (запроса нет), пустая настройка → честный текст. {%- endcomment -%}
+{%- if cfg.site_url -%}
+<p><a href="{{ cfg.site_url }}__SHOP_BASE__/order/{{ eorder_id }}">{{ t_email_order_link }}</a></p>
+{%- endif -%}

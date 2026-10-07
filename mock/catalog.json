@@ -1,21 +1,33 @@
 {
-  "_comment": "Мок данных каталога для dev-харнесса. Форма = GraphQL envelope: биндинг <key>.data.<field>. Страница=1, cat=''",
+  "_comment": "Мок данных каталога для dev-харнесса. Форма = GraphQL envelope: биндинг <key>.data.<field>. Страница=1, cat=''. all.data.products — ≤100 товаров для счётчиков чипов (D27); у категорий parent { id slug } — дерево чипов (D18), cat-4 — потомок cat-1. site_url='' — canonical/og:url уходят на фоллбек https://{{ host }} (D26).",
   "cats": {
     "data": {
       "categories": [
-        { "id": "cat-1", "title": "Керамика", "slug": "ceramics" },
-        { "id": "cat-2", "title": "Текстиль", "slug": "textile" },
-        { "id": "cat-3", "title": "Канцелярия", "slug": "stationery" }
+        { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
+        { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null },
+        { "id": "cat-3", "title": "Канцелярия", "slug": "stationery", "parent": null },
+        { "id": "cat-4", "title": "Тарелки", "slug": "plates", "parent": { "id": "cat-1", "slug": "ceramics" } }
       ]
     }
   },
   "prods": {
     "data": {
       "products": [
-        { "id": "p-1", "title": "Кружка «Лён»", "slug": "mug-linen", "price_kopecks": 99000, "stock": 12, "photos": [{ "url": "" }] },
-        { "id": "p-2", "title": "Тоут-баг «Полотно»", "slug": "tote-canvas", "price_kopecks": 149000, "stock": 3, "photos": [] },
-        { "id": "p-3", "title": "Планинг «Сосна»", "slug": "planner-pine", "price_kopecks": 34900, "stock": 4, "photos": [] },
-        { "id": "p-4", "title": "Свеча «Хвоя»", "slug": "candle-fir", "price_kopecks": 129000, "stock": 0, "photos": [] }
+        { "id": "p-1", "title": "Кружка «Лён»", "slug": "mug-linen", "price_kopecks": 99000, "stock": 12, "photos": [{ "url": "/static/photos/placeholder.svg" }], "categories": ["ceramics"] },
+        { "id": "p-2", "title": "Тоут-баг «Полотно»", "slug": "tote-canvas", "price_kopecks": 149000, "stock": 3, "photos": [], "categories": ["textile"] },
+        { "id": "p-3", "title": "Планинг «Сосна»", "slug": "planner-pine", "price_kopecks": 34900, "stock": 4, "photos": [], "categories": ["stationery"] },
+        { "id": "p-4", "title": "Свеча «Хвоя»", "slug": "candle-fir", "price_kopecks": 129000, "stock": 0, "photos": [], "categories": ["ceramics"] }
+      ]
+    }
+  },
+  "all": {
+    "data": {
+      "products": [
+        { "slug": "mug-linen", "categories": ["ceramics"] },
+        { "slug": "tote-canvas", "categories": ["textile"] },
+        { "slug": "planner-pine", "categories": ["stationery"] },
+        { "slug": "candle-fir", "categories": ["ceramics"] },
+        { "slug": "plate-pebble", "categories": ["ceramics", "plates"] }
       ]
     }
   },

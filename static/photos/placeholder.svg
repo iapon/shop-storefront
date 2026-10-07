@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="no photo">
+  <!-- placeholder.svg — общий фоллбек пустой галереи товара (§7):
+       текстовый SVG, нейтральные тона токенов (oklch + hex-fallback
+       для движков без oklch); тема-нейтрален (грузится через <img>). -->
+  <style>
+    .bg { fill: oklch(98% 0.005 247); fill: #f7f8fa; }
+    .fg { fill: none; stroke: oklch(80% 0.01 247); stroke: #c7ccd6; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+    .dot { fill: oklch(80% 0.01 247); fill: #c7ccd6; }
+  </style>
+  <rect class="bg" width="800" height="1000"/>
+  <g class="fg">
+    <rect x="230" y="330" width="340" height="340" rx="28"/>
+    <circle class="dot" cx="325" cy="425" r="26"/>
+    <path d="M 250 630 L 365 505 L 445 590 L 505 530 L 560 590"/>
+  </g>
+</svg>

@@ -4,10 +4,11 @@ Liquid-шаблоны, статика и дев-харнесс витрины. �
 админки платформы; этот репозиторий — только витрина/тема.
 
 ```
-templates/   # 10 liquid-файлов — источник правды разметки (магазин + ЛК:
-             # login/register/account; ЛК-страницы на КОРНЕ сайта — /login,
-             # /register, /account, /logout — платформенная конвенция member-системы)
-static/      # css/tokens.css (тема), css/shop.css, js/cart.js, js/theme.js, favicon.svg
+templates/   # 17 liquid-файлов — источник правды разметки (магазин + ЛК:
+             # login/register/account на КОРНЕ сайта — платформенная
+             # конвенция member-системы; письма о заказе — email-тройка)
+static/      # css/tokens.css (тема), css/shop.css, js/cart.js, js/theme.js,
+             # favicon.svg, photos/placeholder.svg (фоллбек пустой галереи)
 mock/        # фикстуры данных страниц для дев-харнесса
 dev/         # Vite-харнесс: liquidjs + шимы платформенных фильтров + smoke
 ```
@@ -18,38 +19,77 @@ dev/         # Vite-харнесс: liquidjs + шимы платформенны
 cd dev
 npm install
 npm run dev        # http://localhost:5173/?mock=catalog
-npm run smoke      # рендер всех страниц с моками, без исключений
+npm run smoke      # рендер всех страниц + пробы темы/корзины/степперов/SEO/словаря
 npm run build      # сборка харнесса
 ```
 
-Роутер харнесса: `/?mock=catalog|product|checkout|cart|order|account|login|register|404`
-(варианты: `&variant=not_found` для product, `member|empty` для checkout,
-`empty` для account, `paid|not_found` для order). Реальные пути витрины тоже
-работают: `/`, `/product/:slug`, `/checkout`, `/order/:id`, `/account`,
-`/login`, `/register`, любой несовпавший путь — 404. Шапка читает `member`
-(SSR): гость — «Войти/Регистрация», вошедший — «Кабинет» + POST-форма «Выйти»
-(в проде member-запросы никогда не берутся из HTML-кэша — меню всегда своё).
-API корзины (`GET/POST /api/cart`, `POST /api/checkout`) эмулируется в памяти;
-режим member — кука `dev_member=1`.
+Роутер харнесса: `/?mock=catalog|category|product|checkout|cart|order|account|login|register|404|email-customer|email-vendor`
+(варианты: `&variant=not_found` для product, `found|nested|not_found` для
+category, `member|empty` для checkout, `empty` для account, `paid|not_found`
+для order; письма рендерятся двухпроходом тело→layout). Реальные пути витрины
+тоже работают: `/`, `/category/:slug`, `/product/:slug`, `/checkout`,
+`/order/:id`, `/account`, `/login`, `/register`, любой несовпавший путь — 404.
+Шапка читает `member` (SSR): гость — «Войти/Регистрация», вошедший —
+«Кабинет» + POST-форма «Выйти». API корзины (`GET/POST /api/cart`,
+`POST /api/checkout`) эмулируется в памяти; режим member — кука `dev_member=1`.
 
-Дев-рендер — liquidjs с шимами платформенных фильтров (`dev/harness.mjs`);
-финальная инстанс любой правки — превью-хост платформы.
+Дев-рендер — liquidjs с шимами платформенных фильтров (`dev/harness.mjs`:
+`money`, `date_ru`, `uuid`, `where`, `sum`, `find`, `json`); финальная инстанс
+любой правки — превью-хост платформы.
+
+## Тексты и настройки — из админки (не из шаблонов)
+
+Витрина не хранит ни названия магазина, ни контактов, ни интерфейсных строк:
+
+- **Настройки магазина** (сущность `shop_config`, одна запись): название,
+  слоган, телефон, email, адрес, часы работы, соцссылка, реквизиты,
+  `site_url` (канонический домен для canonical/OG), og-картинка. Шаблоны
+  читают их из биндинга `g_site` (`g_site.data.cfg[0]`), фоллбеки — «Магазин»
+  и пустые контакты.
+- **Строки витрины** (сущность `ui_text`, ключ→значение): все интерфейсные
+  тексты («В корзину», «Корзина пуста», бейджи…). Читаются штатным `find` по
+  `g_site.data.ui`; единственное место фоллбеков — `templates/partials/ui-text.liquid`
+  (в остальных шаблонах только переменные `t_*`). Ключ совпадает с именем
+  переменной без приставки `t_` (`add_to_cart` → `t_add_to_cart`); подстановки
+  в строках — литералы `{{n}}`/`{{amount}}`/`{{email}}`, их подставляет шаблон
+  (`replace`).
+- **Письма** (`email-layout` + `email-order-customer` + `email-order-vendor`)
+  живут в API-сценарии оформления: hoist render-ноды там не выполняется,
+  поэтому адресация в письмах — только `results.g_site.*` и `json.*`
+  (partials/ui-text сам знает обе ветки адресации).
+- JS-строки (ошибки оформления в cart.js) приходят мостом `data-msg-*` на
+  `<body>` (шаблон рендерит из словаря), в JS — вшитый фоллбек.
 
 ## Правки стилей и разметки
 
-- **Тема/бренд — только `static/css/tokens.css`.** Все цвета, радиусы, тени,
-  шкала текста и контейнеры — переменные `--shop-*`; тёмная тема — тот же
-  файл, блок `[data-theme="dynamica-dark"]`. Название магазина —
-  `${SHOP_NAME}` в `templates/base.liquid` (заменяется при установке; руками —
-  просто впишите название).
+- **Тема/бренд — только `static/css/tokens.css`.** Все цвета (oklch), радиусы,
+  тени, шкала текста и контейнеры — переменные `--shop-*`; тёмная тема — тот же
+  файл, блок `[data-theme="dynamica-dark"]`.
 - **Разметка** — правьте `templates/*.liquid` и `static/css/shop.css`.
   Шаблоны рендерятся Liquid-движком платформы: доступные переменные — это
-  биндинги страниц (`p.data.products`, `results.ci.items`, … — см. моки в
-  `mock/`, они повторяют их форму) и `site.version` для кэш-бастинга статики
-  (`/static/...?v={{ site.version }}`).
-- Паттерн страницы: `{% capture content %}…{% endcapture %}{% include "base" %}`.
-- Проверка: `npm run smoke` (рендер 11 страниц + пробы темы и корзины),
-  затем превью на платформе.
+  биндинги страниц (`p.data.products`, `results.ci.items`, `cat.data.categories`,
+  `g_site.data.*`, … — см. моки в `mock/`, они повторяют их форму),
+  `site.version` для кэш-бастинга статики и `host` (фоллбек canonical).
+  CSS — мобильный-фёрст от 320px: базовые стили = малые экраны, улучшения
+  только через `@media (min-width: …)` (30/40/48/62rem), тап-таргеты ≥ 2.5rem,
+  инпуты ≥ 16px, никаких `max-width`-медиазапросов (проверяет smoke).
+- Паттерн страницы:
+  `{% include "partials/ui-text" %}` → `page_*` assigns → `{% capture content %}…{% endcapture %}`
+  → `{% include "base" %}` (include делит скоуп — словарь и `canon_base`
+  назначает partials/ui-text). Крошки — `partials/breadcrumbs` (рендерит nav +
+  JSON-LD BreadcrumbList); бейдж наличия — `partials/stock-badge` (порог «мало» = 5).
+- Проверка: `npm run smoke`, затем превью на платформе.
+
+## SEO
+
+`base.liquid` строит canonical/og:url из `shop_config.site_url`
+(пустой → фоллбек `https://{{ host }}` — живой домен запроса) + `page_canon`
+страницы. OG-пакет: title/description/type/url/image (картинка — первое фото
+товара или og_image из настроек; относительный путь абсолютизируется).
+JSON-LD: Product+Offer (цена/валюта RUB/наличие по stock) на карточке,
+CollectionPage + BreadcrumbList на категории, BreadcrumbList на карточке —
+каждый объект в своём `<script type="application/ld+json">` (строки
+экранирует фильтр `json`). 404 и персональные страницы — noindex.
 
 ## `__SHOP_BASE__` — путь магазина
 
@@ -67,8 +107,9 @@ API корзины (`GET/POST /api/cart`, `POST /api/checkout`) эмулируе
 
 **Ручной пуш шаблонов** (мимо визарда): перед `flowctl files push` замените
 `__SHOP_BASE__` на фактический путь магазина в `templates/` и `static/js/cart.js`,
-например `__SHOP_BASE__` → `/shop`. Проверка: `node dev/check-base-refs.mjs`
-(падает, если в templates/static осталась абсолютная ссылка от корня вне `/static/*`).
+например `__SHOP_BASE__` → `/shop`. Проверки: `node dev/check-base-refs.mjs`
+(падает, если в templates/static осталась абсолютная ссылка от корня вне `/static/*`)
+и `node dev/check-hygiene.mjs` (в публичном репо нет платформенных внутренностей).
 
 ## Деплой шаблонов в свой проект
 

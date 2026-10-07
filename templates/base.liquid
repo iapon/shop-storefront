@@ -1,19 +1,55 @@
 {%- comment -%}
   base.liquid — оболочка витрины. Паттерн страницы:
-  {% capture content %}…{% endcapture %}{% include "base" %} —
-  include делит скоуп, поэтому content/page_title/page_desc видны отсюда.
-  Название магазина: сентинел ${SHOP_NAME} заменяется при установке магазина;
-  руками — просто впишите название в assign ниже.
+  {% include "partials/ui-text" %}
+  {% assign page_title = … %} {% assign page_canon = "__SHOP_BASE__/…" %}
+  {% capture content %}…{% endcapture %}{% include "base" %}
+  include делит скоуп, поэтому content/page_*/t_*/cfg/canon_base видны
+  отсюда (их назначает partials/ui-text — см. его заголовок).
+
+  Название магазина и контакты — из shop_config (сущность «Настройки
+  магазина», биндинг g_site: cfg.name, D25): правятся в контенте, в шаблоне
+  не замораживаются. Фоллбек «Магазин» — когда запись не заполнена.
+
+  SEO-пакет (D26): canonical/og:url = cfg.site_url (пустой → живой host
+  запроса) + page_canon страницы; og:image — page_og_image страницы (первое
+  фото товара) или cfg.og_image; JSON-LD страницы приходит в page_jsonld
+  (страница + partials/breadcrumbs). Слоты данных для JS — data-msg-* на
+  body: тексты из словаря, cart.js читает атрибуты со своим вшитым
+  фоллбеком (мост D25).
 {%- endcomment -%}
-{%- assign shop_name = "${SHOP_NAME}" -%}
-{%- if shop_name == "${SHOP_NAME}" -%}{%- assign shop_name = "Магазин" -%}{%- endif -%}
+{%- include "partials/ui-text" -%}
 <!doctype html>
 <html lang="ru" data-theme="dynamica-light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% if page_title %}{{ page_title }} — {{ shop_name }}{% else %}{{ shop_name }}{% endif %}</title>
-{%- if page_desc %}<meta name="description" content="{{ page_desc }}">{% endif -%}
+{%- if page_noindex %}<meta name="robots" content="noindex">{% endif -%}
+{%- if page_desc %}<meta name="description" content="{{ page_desc | escape }}">{% endif -%}
+{%- if page_canon -%}
+<link rel="canonical" href="{{ canon_base }}{{ page_canon }}">
+{%- endif -%}
+{%- comment -%} OG-пакет: картинка — page_og_image страницы, иначе cfg.og_image;
+  относительный путь абсолютизируем через canon_base {%- endcomment -%}
+{%- assign og_img = page_og_image | default: cfg.og_image.url -%}
+{%- if og_img and og_img != blank -%}
+  {%- unless og_img contains "://" -%}{%- assign og_img = canon_base | append: og_img -%}{%- endunless -%}
+{%- endif -%}
+<meta property="og:site_name" content="{{ shop_name | escape }}">
+<meta property="og:title" content="{% if page_title %}{{ page_title | escape }}{% else %}{{ shop_name | escape }}{% endif %}">
+{%- if page_desc %}<meta property="og:description" content="{{ page_desc | escape }}">{% endif -%}
+<meta property="og:type" content="{% if page_og_type %}{{ page_og_type }}{% else %}website{% endif %}">
+{%- if page_canon -%}
+<meta property="og:url" content="{{ canon_base }}{{ page_canon }}">
+{%- endif -%}
+{%- if og_img and og_img != blank -%}
+<meta property="og:image" content="{{ og_img }}">
+<meta name="twitter:card" content="summary_large_image">
+{%- endif -%}
+{%- comment -%} слоты JSON-LD (D26): страницы и partial крошек кладут в
+  page_jsonld ГОТОВЫЕ <script type="application/ld+json">-блоки (каждый
+  объект — в своём теге: склейка объектов в один тег ломает парсинг) {%- endcomment -%}
+{{ page_jsonld }}
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ site.version }}">
 <link rel="stylesheet" href="/static/css/tokens.css?v={{ site.version }}">
 <link rel="stylesheet" href="/static/css/shop.css?v={{ site.version }}">
@@ -38,7 +74,10 @@
 <script src="/static/js/theme.js?v={{ site.version }}" defer></script>
 <script src="/static/js/cart.js?v={{ site.version }}" defer></script>
 </head>
-<body>
+<body
+  data-msg-fill="{{ t_js_fill_form | escape }}"
+  data-msg-cart-invalid="{{ t_js_cart_invalid | escape }}"
+  data-msg-checkout-failed="{{ t_js_checkout_failed | escape }}">
 {%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
   /checkout (позиции парсит флоу в results.ci — Liquid не читает JSON-строки);
   на остальных страницах счётчик равен 0 и мгновенно гидратируется
@@ -59,13 +98,13 @@
       /login /register /account /logout — НЕ под базой магазина). Вошедшему —
       кабинет и выход (POST-форма: logout — POST-сценарий); гостю — вход/регистрация. {%- endcomment -%}
     {%- if member and member.id -%}
-      <a class="header-link" href="/account">Кабинет</a>
+      <a class="header-link" href="/account">{{ t_header_account }}</a>
       <form class="header-logout" method="post" action="/logout">
-        <button class="header-link header-logout-btn" type="submit">Выйти</button>
+        <button class="header-link header-logout-btn" type="submit">{{ t_header_logout }}</button>
       </form>
     {%- else -%}
-      <a class="header-link" href="/login">Войти</a>
-      <a class="header-link" href="/register">Регистрация</a>
+      <a class="header-link" href="/login">{{ t_header_login }}</a>
+      <a class="header-link" href="/register">{{ t_header_register }}</a>
     {%- endif -%}
     <a class="cart-counter" href="__SHOP_BASE__/checkout" data-empty="{% if cart_count > 0 %}0{% else %}1{% endif %}">
       <span aria-hidden="true">🛒</span>
@@ -82,7 +121,24 @@
 </main>
 <footer class="shop-footer">
   <div class="shop-container shop-footer-inner">
-    © {{ "now" | date: "%Y" }} {{ shop_name }} · Работает на DynapiCMS
+    <div class="footer-grid">
+      <div class="footer-col">
+        <p class="footer-brand">© {{ "now" | date: "%Y" }} {{ shop_name }}{% if cfg.slogan %} · {{ cfg.slogan }}{% endif %}</p>
+        {%- if cfg.address -%}<p class="footer-line">{{ cfg.address }}</p>{%- endif -%}
+        {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours }}</p>{%- endif -%}
+      </div>
+      {%- if cfg.phone or cfg.email or cfg.social_link -%}
+      <div class="footer-col">
+        {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone }}</a></p>{%- endif -%}
+        {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email }}">{{ cfg.email }}</a></p>{%- endif -%}
+        {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" }}</a></p>{%- endif -%}
+      </div>
+      {%- endif -%}
+      {%- if cfg.legal -%}
+      <div class="footer-col footer-legal">{{ cfg.legal }}</div>
+      {%- endif -%}
+    </div>
+    <p class="footer-powered">{{ t_footer_powered }}</p>
   </div>
 </footer>
 </body>

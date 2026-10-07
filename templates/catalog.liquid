@@ -1,37 +1,113 @@
 {%- comment -%}
-  catalog.liquid — главная/каталог. Биндинги: cats.data.categories,
-  prods.data.products, count.data.productsCount, query.cat, query.page.
+  catalog.liquid — главная/каталог. Биндинги: cats.data.categories (со
+  select'ом parent { id slug } — дерево), prods.data.products,
+  count.data.productsCount, all.data.products (≤100 — счётчики чипов, D27),
+  query.cat/query.page/query.q/query.sort.
   Корзинных данных в HTML нет — счётчик гидратирует JS.
   Карточный грид на странице РОВНО ОДИН (анти-card-soup).
 {%- endcomment -%}
+{%- include "partials/ui-text" -%}
+{%- comment -%} пустая строка в Liquid TRUTHY — query-параметры нормализуем
+   в nil через default: nil (поведение одинаково у osteele/liquid и liquidjs),
+   иначе href'ы плодят cat=&q=&sort= {%- endcomment -%}
+{%- assign current_cat = query.cat | default: nil -%}
+{%- assign current_q = query.q | default: nil -%}
+{%- assign current_sort = query.sort | default: nil -%}
+{%- assign sort_suffix = nil -%}
+{%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
+{%- assign cat_row = nil -%}
+{%- if current_cat != blank -%}
+  {%- assign cat_row = cats.data.categories | find: "slug", current_cat -%}
+{%- endif -%}
+{%- if cat_row -%}
+  {%- assign page_title = cat_row.title -%}
+  {%- assign page_desc = cat_row.meta_description | default: cat_row.title -%}
+{%- else -%}
+  {%- assign page_title = t_catalog_title -%}
+{%- endif -%}
+{%- assign page_canon = "__SHOP_BASE__/" -%}
 {%- capture content -%}
-{%- assign current_cat = query.cat -%}
+{%- assign q_enc = current_q | default: "" | url_encode -%}
 <section class="hero">
   <div class="shop-container">
-    <span class="hero-kicker">Каталог</span>
-    <h1 class="hero-title">Выберите товар</h1>
-    <p class="hero-subtitle">Доставка по всей России. Оплата картой онлайн через ЮKassa.</p>
+    <span class="hero-kicker">{{ t_catalog_kicker }}</span>
+    <h1 class="hero-title">{% if cat_row %}{{ cat_row.title }}{% else %}{{ t_catalog_title }}{% endif %}</h1>
+    {%- if cat_row and cat_row.description -%}
+      <p class="hero-subtitle">{{ cat_row.description }}</p>
+    {%- else -%}
+      <p class="hero-subtitle">{{ t_catalog_subtitle }}</p>
+    {%- endif -%}
   </div>
 </section>
 
 <div class="shop-container">
-  <nav class="chip-row" aria-label="Категории">
-    <a class="chip" href="__SHOP_BASE__/" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
-    {% for c in cats.data.categories %}
-      <a class="chip" href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }}</a>
-    {% endfor %}
+  {%- if cat_row -%}
+    {%- assign bc_cat_title = cat_row.title -%}
+    {%- assign bc_cat_slug = cat_row.slug -%}
+    {%- if cat_row.parent -%}
+      {%- assign bc_parent_title = cat_row.parent.title -%}
+      {%- assign bc_parent_slug = cat_row.parent.slug -%}
+    {%- endif -%}
+    {% include "partials/breadcrumbs" %}
+    {%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}{%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
+  {%- endif -%}
+
+  <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
+    <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>{{ t_chip_all }}</a>
+    {%- comment -%} дерево: корни (parent пуст), внутри — потомки вторым уровнем.
+      Если в выборке нет parent (запрос не расширён) — все считаются корнями:
+      плоский список, как в v1.5.4 (мягкая деградация). Счётчик чипа —
+      Liquid-подсчёт по all.data.products, кап 100 (D27). {%- endcomment -%}
+    {%- for c in cats.data.categories -%}
+      {%- unless c.parent -%}
+      {%- assign chip_n = 0 -%}
+      {%- for p in all.data.products -%}{%- if p.categories contains c.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
+      <a class="chip" href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
+        {%- for cc in cats.data.categories -%}
+          {%- if cc.parent and cc.parent.id == c.id -%}
+          {%- assign chip_n = 0 -%}
+          {%- for p in all.data.products -%}{%- if p.categories contains cc.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
+          <a class="chip chip-child" href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endunless -%}
+    {%- endfor -%}
   </nav>
 
+  <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
+    {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat }}">{%- endif -%}
+    <input class="field-input search-input" type="search" name="q" value="{{ current_q }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+    <label class="sort-label" for="cat-sort">
+      <span class="sort-label-text">{{ t_sort_label }}</span>
+      <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
+        <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
+        <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
+        <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+      </select>
+    </label>
+    <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
+  </form>
+  <script>
+  /* сортировка применяется сразу — select сам сабмитит GET-форму (D20);
+     статичный query-текст, инъекции не проходят (белый список — во флоу) */
+  (function () {
+    var s = document.querySelector('[data-sort-select]');
+    if (s) s.addEventListener('change', function () { if (s.form) s.form.submit(); });
+  })();
+  </script>
+
   {%- assign total = count.data.productsCount -%}
-  {%- assign page_size = 12 -%}
-  {%- assign page_no = query.page | plus: 0 -%}
-  {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
+  {%- if current_q -%}
+    {%- assign found_txt = t_results_found | replace: "{{n}}", total -%}
+    <p class="results-note">{{ found_txt }}</p>
+  {%- endif -%}
+
   {%- if prods.data.products.size > 0 -%}
     <div class="product-grid">
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
   {%- else -%}
-    <p class="empty-note">Здесь пока пусто — загляните позже или выберите другую категорию.</p>
+    <p class="empty-note">{{ t_catalog_empty }}</p>
   {%- endif -%}
 
   {%- comment -%} ceil(total / page_size) = floor((total + page_size - 1) / page_size):
@@ -40,16 +116,16 @@
      число страниц и прятал последние товары. | floor обязателен: liquidjs
      делит нацело-неточно (3.0833), а диапазон (1..3.0833) рисует лишнюю
      страницу; osteele/liquid в проде floor-делит сам — floor идемпотентен. {%- endcomment -%}
+  {%- assign page_size = 12 -%}
   {%- assign page_size_m1 = page_size | minus: 1 -%}
   {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
+  {%- assign page_no = query.page | plus: 0 -%}
+  {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
   {%- if pages > 1 -%}
-    <nav class="pagination" aria-label="Страницы">
+    <nav class="pagination" aria-label="{{ t_pagination_aria }}">
       {% for n in (1..pages) %}
-        {%- if current_cat -%}
-          <a class="page-link" href="__SHOP_BASE__/?cat={{ current_cat }}&amp;page={{ n }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
-        {%- else -%}
-          <a class="page-link" href="__SHOP_BASE__/?page={{ n }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
-        {%- endif -%}
+        {%- capture pg_href -%}__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
+        <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
       {% endfor %}
     </nav>
   {%- endif -%}

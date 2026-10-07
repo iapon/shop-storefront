@@ -22,6 +22,13 @@
 
   var state = { items: [] }; // [{slug: string, qty: number}]
 
+  /* Мост текстов (D25): шаблон рендерит data-msg-* на <body> из словаря
+     ui_text; здесь — чтение атрибута с вшитым фоллбеком. */
+  function msg(name, fallback) {
+    var v = document.body ? document.body.getAttribute('data-msg-' + name) : null;
+    return v || fallback;
+  }
+
   function renderCounter() {
     var n = 0;
     for (var i = 0; i < state.items.length; i++) n += Number(state.items[i].qty) || 0;
@@ -79,9 +86,9 @@
   }
 
   /* Позиции чекаута рендерит сервер (SSR-состояние канонично): после
-     удаления позиции или очистки перезагружаем страницу — пустая корзина
-     честно превращается во вежливое пустое состояние, суммы пересчитываются
-     на сервере. Счётчик в шапке обновляется и до перезагрузки. */
+     изменения/удаления позиции или очистки перезагружаем страницу — пустая
+     корзина честно превращается во вежливое пустое состояние, суммы
+     пересчитываются на сервере. Счётчик в шапке обновляется и до перезагрузки. */
   function refreshCartPage() {
     if (document.querySelector('[data-checkout-form]')) window.location.reload();
   }
@@ -103,6 +110,42 @@
       var qty = qtyEl ? qtyEl.value : 1;
       btn.disabled = true;
       add(slug, qty).then(function () { btn.disabled = false; });
+      return;
+    }
+    /* Степпер количества на карточке (D23): крутит существующий
+       [data-cart-qty], контракт add(slug, qty) не меняется. */
+    var stp = ev.target.closest('[data-qty-step]');
+    if (stp) {
+      ev.preventDefault();
+      var box = stp.closest('[data-cart-stepper]') || document;
+      var inp = box.querySelector('[data-cart-qty]');
+      if (!inp) return;
+      var cur = Math.max(1, Math.floor(Number(inp.value) || 1));
+      inp.value = cur + Number(stp.getAttribute('data-qty-step') || 0);
+      if (Number(inp.value) < 1) inp.value = 1;
+      return;
+    }
+    /* Степперы строк чекаута (D23): replace-семантика — setQty полным
+       массивом; data-stock гасит бессмысленный заход за остаток
+       (серверный гард остаётся истиной). */
+    var inc = ev.target.closest('[data-cart-qty-inc]');
+    if (inc) {
+      ev.preventDefault();
+      var s1 = inc.getAttribute('data-cart-qty-inc');
+      var line1 = find(s1);
+      var q1 = ((line1 ? Number(line1.qty) : 0) || 0) + 1;
+      var cap = Number(inc.getAttribute('data-stock')) || 0;
+      if (cap > 0 && q1 > cap) q1 = cap;
+      setQty(s1, q1).then(refreshCartPage);
+      return;
+    }
+    var dec = ev.target.closest('[data-cart-qty-dec]');
+    if (dec) {
+      ev.preventDefault();
+      var s2 = dec.getAttribute('data-cart-qty-dec');
+      var line2 = find(s2);
+      var q2 = ((line2 ? Number(line2.qty) : 1) || 1) - 1;
+      setQty(s2, q2).then(refreshCartPage); // qty 0 = строка исчезает (replace)
       return;
     }
     var rm = ev.target.closest('[data-cart-remove]');
@@ -131,8 +174,8 @@
     ev.preventDefault();
     var errBox = form.querySelector('[data-form-error]');
     var btn = form.querySelector('button[type="submit"]');
-    function fail(msg) {
-      if (errBox) { errBox.textContent = msg; errBox.setAttribute('data-visible', '1'); }
+    function fail(msgText) {
+      if (errBox) { errBox.textContent = msgText; errBox.setAttribute('data-visible', '1'); }
       if (btn) btn.disabled = false;
     }
     function val(name) {
@@ -150,7 +193,7 @@
     if (errBox) errBox.removeAttribute('data-visible');
     if (btn) btn.disabled = true;
     if (!payload.customer.name || !payload.customer.email) {
-      fail('Заполните имя и email.');
+      fail(msg('fill', 'Заполните имя и email.'));
       return;
     }
     fetch(SHOP_BASE + '/api/checkout', {
@@ -162,9 +205,9 @@
       .then(function (resp) {
         if (resp && resp.ok && resp.redirect) { window.location.assign(resp.redirect); return; }
         fail(resp && resp.error === 'cart_invalid'
-          ? 'Корзина недоступна или пуста — обновите страницу.'
-          : 'Не удалось оформить заказ. Попробуйте ещё раз.');
+          ? msg('cart-invalid', 'Корзина недоступна или пуста — обновите страницу.')
+          : msg('checkout-failed', 'Не удалось оформить заказ. Попробуйте ещё раз.'));
       })
-      .catch(function () { fail('Не удалось оформить заказ. Попробуйте ещё раз.'); });
+      .catch(function () { fail(msg('checkout-failed', 'Не удалось оформить заказ. Попробуйте ещё раз.')); });
   });
 })();

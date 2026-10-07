@@ -1,15 +1,18 @@
 {%- comment -%}
   404.liquid — кастомная страница 404: платформа отдаёт её для всех
   несовпавших URL, если у проекта опубликован маршрут /404.
+  noindex (ошибочная страница не канонизируется), тексты — словарь.
 {%- endcomment -%}
-{%- assign page_title = "Страница не найдена" -%}
+{%- include "partials/ui-text" -%}
+{%- assign page_title = t_notfound_title -%}
+{%- assign page_noindex = true -%}
 {%- capture content -%}
 <div class="status-screen">
   <span class="status-badge error" aria-hidden="true">404</span>
-  <h1 class="status-title">Страница не найдена</h1>
-  <p class="status-text">Такой страницы нет — возможно, товар распродан или ссылка устарела.</p>
-  <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
-  <p class="status-help">Ошибка 404 — вы можете сообщить о битой ссылке в поддержку.</p>
+  <h1 class="status-title">{{ t_notfound_title }}</h1>
+  <p class="status-text">{{ t_notfound_text }}</p>
+  <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
+  <p class="status-help">{{ t_notfound_help }}</p>
 </div>
 {%- endcapture -%}
 {% include "base" %}

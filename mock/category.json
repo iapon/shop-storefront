@@ -1,0 +1,71 @@
+{
+  "_comment": "Мок страницы категории (волна A). found — корневая категория с потомком: cat.data.categories (0..1 по слагу, select parent { id title slug }), children.data.categories (потомки по id родителя), prods/count — те же, что в каталоге (где по категории). nested — подкатегория: крошки Главная → Родитель → Категория. not_found — cat пуст, рендерится состояние в шаблоне.",
+  "found": {
+    "cat": {
+      "data": {
+        "categories": [
+          {
+            "id": "cat-1",
+            "title": "Керамика",
+            "slug": "ceramics",
+            "description": "Посуда и декор из белой глины — кружки, тарелки, блюда ручной работы.",
+            "parent": null,
+            "meta_title": "Керамика ручной работы — купить",
+            "meta_description": "Кружки, тарелки и блюда из белой глины. Ручная работа, доставка по России."
+          }
+        ]
+      }
+    },
+    "children": {
+      "data": {
+        "categories": [
+          { "id": "cat-4", "title": "Тарелки", "slug": "plates" }
+        ]
+      }
+    },
+    "prods": {
+      "data": {
+        "products": [
+          { "id": "p-1", "title": "Кружка «Лён»", "slug": "mug-linen", "price_kopecks": 99000, "stock": 12, "photos": [{ "url": "/static/photos/placeholder.svg" }] },
+          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 3, "photos": [] }
+        ]
+      }
+    },
+    "count": { "data": { "productsCount": 26 } },
+    "site": { "version": 7, "params": { "slug": "ceramics" }, "query": {} }
+  },
+  "nested": {
+    "cat": {
+      "data": {
+        "categories": [
+          {
+            "id": "cat-4",
+            "title": "Тарелки",
+            "slug": "plates",
+            "description": "Плоские и глубокие тарелки — каждая на гончарном круге.",
+            "parent": { "id": "cat-1", "title": "Керамика", "slug": "ceramics" },
+            "meta_title": "",
+            "meta_description": ""
+          }
+        ]
+      }
+    },
+    "children": { "data": { "categories": [] } },
+    "prods": {
+      "data": {
+        "products": [
+          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 8, "photos": [] }
+        ]
+      }
+    },
+    "count": { "data": { "productsCount": 1 } },
+    "site": { "version": 7, "params": { "slug": "plates" }, "query": {} }
+  },
+  "not_found": {
+    "cat": { "data": { "categories": [] } },
+    "children": { "data": { "categories": [] } },
+    "prods": { "data": { "products": [] } },
+    "count": { "data": { "productsCount": 0 } },
+    "site": { "version": 7, "params": { "slug": "gone-cat" }, "query": {} }
+  }
+}

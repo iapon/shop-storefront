@@ -20,6 +20,28 @@ export const mockDir = join(root, 'mock');
    Корень «/» остаётся будущему лендингу — страницы магазина живут под /shop. */
 export const SHOP_BASE = '/shop';
 
+/* Дефолтный g_site дев-среды (D25): shop_config + ui_text. Демо-имя магазина
+   доказывает чтение cfg; словарь пуст — все строки страниц идут из вшитых
+   фоллбеков partials/ui-text (так же, как у магазина до заполнения словаря).
+   Проба словаря (админка переопределяет строку) — в smoke с оверрайдом. */
+export const G_SITE_DEFAULT = {
+  data: {
+    cfg: [{
+      name: 'Магазин витрины',
+      slogan: 'Керамика и текстиль',
+      phone: '+7 900 000-00-00',
+      email: 'hi@example.ru',
+      address: 'Санкт-Петербург, наб. реки Карповки, 5',
+      work_hours: '10:00–19:00',
+      social_link: 'https://t.me/example',
+      legal: 'ИП Иванов И. И., ИНН 7800000000',
+      site_url: '',
+      og_image: null
+    }],
+    ui: []
+  }
+};
+
 /** Замена сентинела __SHOP_BASE__ (html отрендеренных страниц, js статики). */
 export function withShopBase(text) {
   return String(text).split('__SHOP_BASE__').join(SHOP_BASE);
@@ -96,6 +118,17 @@ export function registerPlatformFilters(engine) {
       ? arr.reduce((s, x) => s + (Number(key ? x?.[key] : x) || 0), 0)
       : 0
   );
+  // find — семантика платформы (liquid_filters.go findFilter): первый
+  // элемент с равенством строк; nil-вход и промах → nil (словарь ui_text
+  // читается только им — partials/ui-text).
+  engine.registerFilter('find', (arr, key, expected) => {
+    if (!Array.isArray(arr)) return null;
+    const hit = arr.find((x) => x && String(x?.[key]) === String(expected));
+    return hit ?? null;
+  });
+  // json — стандартный фильтр osteele/liquid (standard_filters.go):
+  // JSON-маршалинг значения; используется в JSON-LD шаблонов (D26).
+  engine.registerFilter('json', (v) => JSON.stringify(v ?? null));
 }
 
 export function createEngine() {
@@ -114,6 +147,7 @@ export function loadMock(name) {
 const PAGE_FOR_MOCK = {
   catalog: { template: 'catalog', mock: 'catalog', pick: null },
   product: { template: 'product', mock: 'product', pick: 'found' },
+  category: { template: 'category', mock: 'category', pick: 'found' },
   checkout: { template: 'checkout', mock: 'checkout', pick: 'guest' },
   cart: { template: 'checkout', mock: 'cart', pick: 'guest' }, // отдельной страницы корзины нет: та же типографика
   order: { template: 'order-status', mock: 'order-status', pick: 'new' },
@@ -125,6 +159,7 @@ const PAGE_FOR_MOCK = {
 
 const PATH_ROUTES = [
   { re: /^\/$/, mock: 'catalog' },
+  { re: /^\/category\/[^/]+\/?$/, mock: 'category' },
   { re: /^\/checkout\/?$/, mock: 'checkout' },
   { re: /^\/product\/[^/]+\/?$/, mock: 'product' },
   { re: /^\/order\/[^/]+\/?$/, mock: 'order' },
@@ -133,7 +168,9 @@ const PATH_ROUTES = [
   { re: /^\/register\/?$/, mock: 'register' }
 ];
 
-/* Контекст страницы = вариант мока + site/query. */
+/* Контекст страницы = вариант мока + site/query + дефолты витрины
+   (g_site из настроек магазина — мок может переопределить; host —
+   first-class переменная продового рендера, D26-фоллбек canonical). */
 export async function renderMockPage(engine, mockName, variant, overrides = {}) {
   let template;
   let ctx;
@@ -154,6 +191,15 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
       site: checkoutMock.guest.site,
       query: {}
     };
+  } else if (mockName === 'email-customer' || mockName === 'email-vendor') {
+    // письма — двухпроход, как продовой send_email (config.template +
+    // config.layout): тело → layout c content_for_layout (D22/M1).
+    const emailMock = loadMock('email');
+    ctx = variant && emailMock[variant] ? emailMock[variant] : emailMock;
+    template = mockName === 'email-customer' ? 'email-order-customer' : 'email-order-vendor';
+    const body = await engine.renderFile(template, ctx);
+    const wrapped = await engine.renderFile('email-layout', { ...ctx, content_for_layout: body });
+    return withShopBase(wrapped);
   } else {
     const spec = PAGE_FOR_MOCK[mockName] || PAGE_FOR_MOCK.catalog;
     template = spec.template;
@@ -161,6 +207,8 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
     ctx = variant && mock[variant] ? mock[variant] : spec.pick ? mock[spec.pick] ?? {} : mock;
   }
   ctx = {
+    host: 'localhost:5173',
+    g_site: G_SITE_DEFAULT,
     ...ctx,
     ...overrides,
     site: { version: 7, params: {}, query: {}, ...(ctx.site || {}) }
@@ -269,7 +317,12 @@ export function harnessMiddleware(engine) {
         mockName = hit ? hit.mock : null;
         if (!mockName) mockName = '404';
       }
-      const query = { cat: url.searchParams.get('cat') || '', page: url.searchParams.get('page') || '' };
+      const query = {
+        cat: url.searchParams.get('cat') || '',
+        page: url.searchParams.get('page') || '',
+        q: url.searchParams.get('q') || '',
+        sort: url.searchParams.get('sort') || ''
+      };
       const html = await renderMockPage(engine, mockName, variant, { query });
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(html);

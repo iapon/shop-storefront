@@ -1,46 +1,137 @@
 {%- comment -%}
   product.liquid — карточка товара (биндинги: p.data.products — текущий,
-  rel.data.products — похожие ≤4, site.params.slug).
-  Не найден → состояние в шаблоне.
+  rel.data.products — похожие ≤4, site.params.slug; g_site — словарь).
+  Волна A: галерея photos-массива (главное + миниатюры, свайп/стрелки),
+  степпер количества ±, бейджи наличия из partial, features string[],
+  хлебные крошки, meta_title/meta_description с фоллбеком, JSON-LD
+  Product+Offer. Не найден → состояние в шаблоне.
 {%- endcomment -%}
+{%- include "partials/ui-text" -%}
 {%- assign product = p.data.products | first -%}
-{%- if product -%}{%- assign page_title = product.title -%}{%- assign page_desc = product.title | append: " — купить в интернет-магазине" -%}{%- endif -%}
+{%- if product -%}
+  {%- assign page_title = product.meta_title | default: product.title -%}
+  {%- assign pd_suffix = t_product_meta_suffix -%}
+  {%- assign page_desc = product.meta_description | default: product.description | default: "" -%}
+  {%- if page_desc == blank -%}{%- assign page_desc = product.title | append: " — " | append: pd_suffix -%}{%- endif -%}
+  {%- assign page_canon = "__SHOP_BASE__/product/" | append: product.slug -%}
+  {%- assign page_og_type = "product" -%}
+  {%- assign first_photo = product.photos | first -%}
+  {%- assign page_og_image = first_photo.url -%}
+{%- else -%}
+  {%- assign page_title = t_product_not_found -%}
+  {%- assign page_noindex = true -%}
+{%- endif -%}
 {%- capture content -%}
 <div class="shop-container section-y">
   {%- if product -%}
   <div class="product-page">
-    <div class="product-photo">
-      {%- if product.photos and product.photos.size > 0 -%}
-        <img src="{{ product.photos[0].url }}" alt="{{ product.title }}">
-      {%- else -%}
-        <span>нет фото</span>
+    {%- assign p_cat_slug = product.categories | first -%}
+    {%- comment -%} JSON-LD Product ДО включения крошек: partial breadcrumbs
+      ДОБАВЛЯЕТ BreadcrumbList к page_jsonld (порядок append'ов). Строки
+      вычищаются от кавычек/бэкслешей — ld-блок обязан парситься всегда;
+      offers.price — базовая цена (вариантные цены — волна B, платит k_calc). {%- endcomment -%}
+    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}}</script>{%- endcapture -%}
+    {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
+    {%- assign bc_current = product.title -%}
+    {%- if p_cat_slug -%}
+      {%- assign bc_cat_title = p_cat_slug | capitalize -%}
+      {%- assign bc_cat_slug = p_cat_slug -%}
+    {%- else -%}
+      {%- assign bc_cat_title = t_breadcrumbs_catalog -%}
+      {%- assign bc_cat_slug = "" -%}
+    {%- endif -%}
+    {% include "partials/breadcrumbs" %}
+    {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
+    <div class="product-page-cols">
+    <div class="product-gallery" data-gallery>
+      <div class="product-photo">
+        {%- if product.photos and product.photos.size > 0 -%}
+        <img data-gallery-main src="{{ product.photos[0].url }}" alt="{{ product.title }}" width="800" height="1000">
+        {%- else -%}
+        <img data-gallery-main src="/static/photos/placeholder.svg" alt="{{ t_no_photo }}" width="800" height="1000">
+        {%- endif -%}
+        {%- if product.photos and product.photos.size > 1 -%}
+        <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="{{ t_qty_dec_aria }}">‹</button>
+        <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="{{ t_qty_inc_aria }}">›</button>
+        {%- endif -%}
+      </div>
+      {%- if product.photos and product.photos.size > 1 -%}
+      <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title }}">
+        {%- for ph in product.photos -%}
+        <button class="gallery-thumb{% if forloop.first %} is-active{% endif %}" type="button"
+                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title }} — {{ forloop.index }}">
+          <img src="{{ ph.url }}" alt="" loading="lazy" width="96" height="120">
+        </button>
+        {%- endfor -%}
+      </div>
       {%- endif -%}
     </div>
-    <div>
+    <div class="product-info">
       <h1 class="product-title">{{ product.title }}</h1>
       <div class="product-price">{{ product.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
       <div class="buy-row">
         {%- if product.stock > 0 -%}
-          {%- if product.stock <= 5 -%}
-            <span class="badge badge-warning">Осталось {{ product.stock }}</span>
-          {%- else -%}
-            <span class="badge badge-success">В наличии: {{ product.stock }}</span>
-          {%- endif -%}
-          <input class="qty-input" type="number" min="1" value="1" inputmode="numeric"
-                 aria-label="Количество" data-cart-qty>
-          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}">В корзину</button>
+          {%- assign stock_qty = product.stock -%}
+          {% include "partials/stock-badge" %}
+          <div class="qty-stepper" data-cart-stepper>
+            <button class="qty-btn" type="button" data-qty-step="-1" aria-label="{{ t_qty_dec_aria }}">−</button>
+            <input class="qty-input" type="number" min="1" value="1" inputmode="numeric"
+                   aria-label="{{ t_qty_aria }}" data-cart-qty>
+            <button class="qty-btn" type="button" data-qty-step="1" aria-label="{{ t_qty_inc_aria }}">+</button>
+          </div>
+          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}">{{ t_add_to_cart }}</button>
         {%- else -%}
-          <span class="badge badge-error">Нет в наличии</span>
+          {%- assign stock_qty = 0 -%}
+          {% include "partials/stock-badge" %}
         {%- endif -%}
       </div>
       {%- if product.description -%}
       <div class="product-desc">{{ product.description }}</div>
       {%- endif -%}
+      {%- if product.features and product.features.size > 0 -%}
+      <h2 class="features-heading">{{ t_features_title }}</h2>
+      <ul class="feature-list">
+        {%- for f in product.features -%}<li class="feature-item">{{ f }}</li>{%- endfor -%}
+      </ul>
+      {%- endif -%}
+    </div>
     </div>
   </div>
 
+  <script>
+  /* галерея: миниатюра/стрелка меняет src главного фото (SSR-первое фото —
+     без JS тоже видно); стрелки циклично шагают по photos-массиву */
+  (function () {
+    var main = document.querySelector('[data-gallery-main]');
+    var thumbs = document.querySelectorAll('[data-gallery-thumb]');
+    if (!main || !thumbs.length) return;
+    var urls = [];
+    for (var i = 0; i < thumbs.length; i++) urls.push(thumbs[i].getAttribute('data-gallery-thumb'));
+    function activate(idx) {
+      if (idx < 0) idx = urls.length - 1;
+      if (idx >= urls.length) idx = 0;
+      main.src = urls[idx];
+      for (var j = 0; j < thumbs.length; j++) thumbs[j].classList.toggle('is-active', j === idx);
+      var act = thumbs[idx];
+      if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
+    for (var k = 0; k < thumbs.length; k++) {
+      (function (idx) {
+        thumbs[idx].addEventListener('click', function () { activate(idx); });
+      })(k);
+    }
+    var cur = 0;
+    document.querySelectorAll('[data-gallery-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        cur = (cur + Number(btn.getAttribute('data-gallery-step')) + urls.length) % urls.length;
+        activate(cur);
+      });
+    });
+  })();
+  </script>
+
     {%- if rel.data.products.size > 0 -%}
-    <h2 class="rel-heading">Похожие товары</h2>
+    <h2 class="rel-heading">{{ t_related_title }}</h2>
     <div class="rel-grid">
       {% for p in rel.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
@@ -49,9 +140,9 @@
   {%- else -%}
   <div class="status-screen" style="padding-left:0;padding-right:0;">
     <span class="status-badge error" aria-hidden="true">∅</span>
-    <h1 class="status-title">Товар не найден</h1>
-    <p class="status-text">Возможно, он распродан или снят с продажи.</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
+    <h1 class="status-title">{{ t_product_not_found }}</h1>
+    <p class="status-text">{{ t_product_not_found_text }}</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
   </div>
   {%- endif -%}
 </div>

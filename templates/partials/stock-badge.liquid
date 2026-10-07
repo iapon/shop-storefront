@@ -1,0 +1,17 @@
+{%- comment -%}
+  partials/stock-badge.liquid — бейджи наличия (D24), общий для карточки,
+  грида и (волна B) вариантов. Вход: stock_qty (число) — вызывающий
+  назначает `{% assign stock_qty = product.stock %}` / `p.stock` перед
+  include. Порог «Мало» — 5 (унифицирован D24); меняется здесь, в одном
+  месте. Тексты — словарь (t_* из partials/ui-text), подстановки {{n}} —
+  штатным replace.
+{%- endcomment -%}
+{%- if stock_qty <= 0 -%}
+  <span class="badge badge-error">{{ t_out_of_stock }}</span>
+{%- elsif stock_qty <= 5 -%}
+  {%- assign badge_txt = t_low_stock | replace: "{{n}}", stock_qty -%}
+  <span class="badge badge-warning">{{ badge_txt }}</span>
+{%- else -%}
+  {%- assign badge_txt = t_in_stock | replace: "{{n}}", stock_qty -%}
+  <span class="badge badge-success">{{ badge_txt }}</span>
+{%- endif -%}

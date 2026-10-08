@@ -1,0 +1,66 @@
+{%- comment -%}
+  offer.liquid — документная страница «Договор оферты» (W9 F8). Ставится
+  визардом ТОЛЬКО когда владелец загрузил PDF («Договор оферты» в шагах
+  установки); маршрут __SHOP_BASE__/offer; ссылка в футере — по флагу
+  cfg.has_offer (письменно включает визард). PDF лежит в статике сайта
+  (/static/docs/offer.pdf) — страница даёт открыть его в просмотрщике
+  (печать — из просмотрщика PDF) и скачать; встроенный просмотрщик —
+  <object> с фоллбеком на ссылку (мобильные браузеры не все инлайнят PDF).
+  Тексты — константы шаблона (интерфейс витрины); футер/шапка — общие.
+{%- endcomment -%}
+{%- comment -%}
+  БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
+  Принцип витрины: данные текут только ВНИЗ; partial = чистая функция
+  входов (движок include не поднимает присваивания включателю —
+  osteele/liquid). Каноническая копия блока —
+  dev/site-config-bootstrap.liquid; смок проверяет байт-равенство во всех
+  entry-шаблонах. НЕ включать через {% include %} — присваивания не
+  доедут до включателя.
+
+  Две ветки адресации:
+    render-страницы: g_site.data.cfg (hoist result_key g_site)
+    письма/API:      results.g_site.cfg (сырой tplCtx flow)
+  Владельцу: поля правятся в админке (Контент → «Настройки магазина» —
+  одна запись с именованными полями; словарь строк-подстановок витрины
+  ликвидирован в W8).
+  Пустое поле = вшитый фоллбек шаблона: cfg-поля читаются на месте с
+  default-фоллбеком (cfg.cta_add_to_cart → «В корзину»), интерфейсные
+  подписи без cfg-поля — константы шаблона; умеющие правят в шаблонах.
+{%- endcomment -%}
+{%- assign cfg = g_site.data.cfg | first -%}
+{%- if cfg == blank -%}{%- assign cfg = results.g_site.cfg | first -%}{%- endif -%}
+{%- assign shop_name = cfg.name | default: "Магазин" -%}
+{%- assign ph_n = "{{n}}" -%}{%- assign ph_amount = "{{amount}}" -%}{%- assign ph_email = "{{email}}" -%}
+{%- comment -%} canon_base — канонический базовый URL (D26): site_url из
+  настроек (нормализация домена, scheme константой — витрина за TLS),
+  фоллбек — живой host запроса (first-class переменная страничных шаблонов;
+  в письмах host нет — там site_url из results.g_site.cfg напрямую). {%- endcomment -%}
+{%- assign canon_base = cfg.site_url | strip -%}
+{%- if canon_base == blank -%}
+  {%- assign canon_base = "https://" | append: host -%}
+{%- elsif canon_base contains "://" -%}
+  {%- assign cb_segs = canon_base | split: "//" -%}
+  {%- assign cb_host = cb_segs[1] | split: "/" | first -%}
+  {%- assign canon_base = cb_segs[0] | append: "//" | append: cb_host -%}
+{%- else -%}
+  {%- assign canon_base = "https://" | append: canon_base -%}
+{%- endif -%}
+
+
+{%- assign page_title = "Договор оферты" -%}
+{%- assign page_desc = "Договор оферты магазина " | append: shop_name -%}
+{%- assign page_canon = "__SHOP_BASE__/offer" -%}
+{%- capture content -%}
+<div class="shop-container section-y doc-page">
+  <h1 class="product-title">Договор оферты</h1>
+  <p class="doc-text">Действующие условия продажи товаров в интернете-магазине «{{ shop_name | escape }}». Документ открыт в формате PDF — его можно распечатать прямо из просмотрщика.</p>
+  <div class="doc-actions">
+    <a class="btn btn-primary" href="/static/docs/offer.pdf" target="_blank" rel="noopener">Открыть PDF</a>
+    <a class="btn btn-secondary" href="/static/docs/offer.pdf" download>Скачать</a>
+  </div>
+  <object class="doc-frame" data="/static/docs/offer.pdf" type="application/pdf" aria-label="Договор оферты (PDF)">
+    <p class="doc-text">Просмотр PDF недоступен в этом браузере — <a href="/static/docs/offer.pdf">откройте документ по ссылке</a>.</p>
+  </object>
+</div>
+{%- endcapture -%}
+{% include "base" %}

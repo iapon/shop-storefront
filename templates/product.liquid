@@ -102,12 +102,13 @@
       <div class="product-photo">
         {%- if product.photos and product.photos.size > 0 -%}
         <img data-gallery-main src="{{ product.photos[0].url }}" alt="{{ product.title }}" width="800" height="1000">
+        <img data-gallery-fade class="gallery-img-fade" src="{{ product.photos[0].url }}" alt="" aria-hidden="true" width="800" height="1000">
         {%- else -%}
         <img data-gallery-main src="/static/photos/placeholder.svg" alt="нет фото" width="800" height="1000">
         {%- endif -%}
         {%- if product.photos and product.photos.size > 1 -%}
-        <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Уменьшить количество">‹</button>
-        <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Увеличить количество">›</button>
+        <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Предыдущее фото">‹</button>
+        <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Следующее фото">›</button>
         {%- endif -%}
       </div>
       {%- if product.photos and product.photos.size > 1 -%}
@@ -134,12 +135,16 @@
                    aria-label="Количество" data-cart-qty>
             <button class="qty-btn" type="button" data-qty-step="1" aria-label="Увеличить количество">+</button>
           </div>
-          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
+          {%- comment -%} W9 (F6a): data-stock — карман остатка для cart.js:
+            попытка добавить больше гасится до остатка С сообщением
+            (регион data-cart-note под строкой покупки), не молча. {%- endcomment -%}
+          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}" data-stock="{{ product.stock }}">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
         {%- else -%}
           {%- assign p = product -%}
           {% include "partials/stock-badge" %}
         {%- endif -%}
       </div>
+      <p class="cart-note" data-cart-note role="status" aria-live="polite"></p>
       {%- if product.description -%}
       <div class="product-desc">{{ product.description }}</div>
       {%- endif -%}
@@ -154,10 +159,15 @@
   </div>
 
   <script>
-  /* галерея: миниатюра/стрелка меняет src главного фото (SSR-первое фото —
-     без JS тоже видно); стрелки циклично шагают по photos-массиву */
+  /* галерея: миниатюра/стрелка меняет главное фото (SSR-первое фото —
+     без JS тоже видно); стрелки циклично шагают по photos-массиву.
+     W9 (F10): смена — мягкий кросс-фейд ~200ms двумя слоями img
+     (новое фото проявляется верхним слоем, затем нижний получает тот же
+     src и верхний гасится мгновенно); при prefers-reduced-motion CSS
+     выключает transition — смена src остаётся мгновенной. */
   (function () {
     var main = document.querySelector('[data-gallery-main]');
+    var fade = document.querySelector('[data-gallery-fade]');
     var thumbs = document.querySelectorAll('[data-gallery-thumb]');
     if (!main || !thumbs.length) return;
     var urls = [];
@@ -165,10 +175,18 @@
     function activate(idx) {
       if (idx < 0) idx = urls.length - 1;
       if (idx >= urls.length) idx = 0;
-      main.src = urls[idx];
+      var url = urls[idx];
       for (var j = 0; j < thumbs.length; j++) thumbs[j].classList.toggle('is-active', j === idx);
       var act = thumbs[idx];
       if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      if (!fade || main.getAttribute('src') === url) { main.src = url; return; }
+      /* кросс-фейд: верхний слой проявляет новое фото */
+      fade.src = url;
+      fade.setAttribute('data-visible', '1');
+      window.setTimeout(function () {
+        main.src = url;
+        fade.removeAttribute('data-visible');
+      }, 220);
     }
     for (var k = 0; k < thumbs.length; k++) {
       (function (idx) {

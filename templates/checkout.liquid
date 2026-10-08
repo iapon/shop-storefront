@@ -1,7 +1,8 @@
 {%- comment -%}
   checkout.liquid — оформление заказа. Биндинги: prods.data.products (товары
-  корзины), results.ci.items (позиции серверной корзины: флоу парсит json-строку
-  items узлом k_ci — Liquid не читает JSON-строки), site.params, g_site.
+  корзины, с фото для миниатюр строк — W9 F3), results.ci.items (позиции
+  серверной корзины: флоу парсит json-строку items узлом k_ci — Liquid не
+  читает JSON-строки), site.params, g_site.
   Позиции и суммы приходят с сервера; пусто/нет идентификатора → «Корзина
   пуста». JS перехватывает сабмит → POST __SHOP_BASE__/api/checkout (сентинел
   заменяется путём магазина). Форма: honeypot-поле website (скрытое от
@@ -10,7 +11,10 @@
   Количество крутяt степперы data-cart-qty-inc/dec (D23: replace-семантика —
   cart.js шлёт ПОЛНЫЙ массив на POST __SHOP_BASE__/api/cart и перезагружает
   страницу — SSR-состояние канонично), убирает кнопка data-cart-remove="slug",
-  корзину целиком — data-cart-clear.
+  корзину целиком — data-cart-clear. Перебор остатка (W9 F6): строка
+  подсвечивается (cart-line-over) с бейджем «В наличии: N», «+» гасится
+  data-stock'ом с сообщением, серверный чекаут отвечает stock_exceeded —
+  cart.js показывает то же сообщение в data-form-error.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -73,30 +77,52 @@
           {%- if line -%}
             {%- assign line_sum = line.price_kopecks | times: i.qty -%}
             {%- assign total_k = total_k | plus: line_sum -%}
-            <li class="cart-line">
-              <span class="cart-line-name">
-                {{ line.title }}
+            {%- comment -%} W9 (F6б): строка с перебором остатка — warning-тинт
+               и явное «В наличии: N» (перебор блокирует чекаут на сервере —
+               сообщение о блокировке выдаёт cart.js из ответа flow). {%- endcomment -%}
+            {%- assign line_over = false -%}
+            {%- if line.stock > 0 and i.qty > line.stock -%}{%- assign line_over = true -%}{%- endif -%}
+            <li class="cart-line{% if line_over %} cart-line-over{% endif %}">
+              {%- comment -%} W9 (F3): миниатюра товара (квадрат 3.5rem, радиус
+                 карточки); пустая photos → плейсхолдер surface-2. Миниатюра и
+                 название — тихие ссылки на карточку товара (фото приезжают
+                 из products запроса чекаут-флоу). {%- endcomment -%}
+              {%- assign line_photo = line.photos | first -%}
+              {%- if line_photo and line_photo.url -%}
+              <a class="cart-line-thumb" href="__SHOP_BASE__/product/{{ line.slug }}" tabindex="-1" aria-hidden="true">
+                <img src="{{ line_photo.url }}" alt="" loading="lazy" width="112" height="112">
+              </a>
+              {%- else -%}
+              <span class="cart-line-thumb cart-line-thumb-empty" aria-hidden="true"></span>
+              {%- endif -%}
+              <div class="cart-line-info">
+                <a class="cart-line-name" href="__SHOP_BASE__/product/{{ line.slug }}">{{ line.title }}</a>
+                <span class="cart-line-price">{{ line.price_kopecks | times: 0.01 | money }} ₽ × {{ i.qty }}</span>
                 {%- if line.stock <= 0 -%}
                   <span class="badge badge-error">Нет в наличии</span>
-                {%- elsif i.qty > line.stock -%}
-                  {%- assign so_txt = "в наличии только " | append: line.stock -%}
-                  <span class="badge badge-warning">{{ so_txt }}</span>
+                {%- elsif line_over -%}
+                  <span class="badge badge-warning">{{ "В наличии: " | append: line.stock }}</span>
                 {%- endif -%}
-              </span>
-              <span class="cart-line-stepper qty-stepper">
-                <button class="qty-btn" type="button" data-cart-qty-dec="{{ i.slug }}"
-                        aria-label="Уменьшить количество">−</button>
-                <span class="cart-line-qty">{{ i.qty }}</span>
-                <button class="qty-btn" type="button" data-cart-qty-inc="{{ i.slug }}" data-stock="{{ line.stock }}"
-                        aria-label="Увеличить количество">+</button>
-              </span>
-              <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
+              </div>
+              <div class="cart-line-controls">
+                <span class="cart-line-stepper qty-stepper">
+                  <button class="qty-btn" type="button" data-cart-qty-dec="{{ i.slug }}"
+                          aria-label="Уменьшить количество">−</button>
+                  <span class="cart-line-qty">{{ i.qty }}</span>
+                  <button class="qty-btn" type="button" data-cart-qty-inc="{{ i.slug }}" data-stock="{{ line.stock }}"
+                          aria-label="Увеличить количество">+</button>
+                </span>
+                <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
+              </div>
               <button class="cart-line-remove" type="button" data-cart-remove="{{ i.slug }}"
                       aria-label="Убрать из корзины: {{ line.title }}" title="Убрать из корзины">×</button>
             </li>
           {%- endif -%}
         {%- endfor -%}
       </ul>
+      {%- comment -%} W9 (F6a): живой регион предупреждений корзины — clamp
+         количества до остатка и ошибки записи не молчат (cart.js пишет сюда). {%- endcomment -%}
+      <p class="cart-note" data-cart-note role="status" aria-live="polite"></p>
       <button class="cart-clear" type="button" data-cart-clear>Очистить корзину</button>
 
       <h2 class="rel-heading">Контакты</h2>
@@ -142,7 +168,9 @@
         {%- endif -%}
       {%- endfor -%}
       <div class="summary-total"><span>К оплате</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>
-      <p class="field-hint summary-note">Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.</p>
+      {%- comment -%} W9 (F8): упоминание условий — ссылкой, когда тоС загружен
+         (cfg.has_tos), иначе обычный текст (мёртвых ссылок нет). {%- endcomment -%}
+      <p class="field-hint summary-note">{%- if cfg.has_tos -%}Нажимая «Перейти к оплате», вы соглашаетесь с <a href="__SHOP_BASE__/tos">условиями продажи</a>.{%- else -%}Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.{%- endif -%}</p>
     </aside>
   </div>
 

@@ -78,10 +78,17 @@
 <script src="/static/js/theme.js?v={{ site.version }}" defer></script>
 <script src="/static/js/cart.js?v={{ site.version }}" defer></script>
 </head>
+{%- comment -%} W9 (F6): шаблон сообщения о переборе остатка — литерал {{n}}
+   внутри assign Liquid не съедает (паттерн ph_n/data-apply-tpl, W8); в
+   атрибут body попадает готовая строка, cart.js подставляет число вместо
+   {{n}}. {%- endcomment -%}
+{%- assign stock_only_tpl = "В наличии только {{n}} шт." -%}
 <body
   data-msg-fill="Заполните имя и email."
   data-msg-cart-invalid="Корзина недоступна или пуста — обновите страницу."
   data-msg-checkout-failed="Не удалось оформить заказ. Попробуйте ещё раз."
+  data-msg-save-failed="Не удалось обновить корзину — проверьте связь и попробуйте ещё раз."
+  data-stock-tpl="{{ stock_only_tpl | escape }}"
   data-theme-aria-auto="Тема: системная. Переключить"
   data-theme-aria-light="Тема: светлая. Переключить"
   data-theme-aria-dark="Тема: тёмная. Переключить">
@@ -154,6 +161,12 @@
           {%- endif -%}
         </nav>
       </details>
+      {%- comment -%} W9 (F2.2): бургер закрыт по умолчанию — ГАРД. Источник
+        «открытой панели на свежей загрузке» — восстановление состояния
+        <details> браузером (soft-reload/BFCache возвращает details[open],
+        панель «Кабинет/Выйти» висит поверх hero). Скрипт на этапе парсинга
+        снимает ЧУЖОЙ open; клики юзера происходят позже и не затрагиваются. {%- endcomment -%}
+      <script>(function () { var d = document.currentScript.previousElementSibling; if (d && d.tagName === 'DETAILS' && d.hasAttribute('open')) d.removeAttribute('open'); })();</script>
     </div>
   </div>
 </header>
@@ -168,11 +181,17 @@
         {%- if cfg.address -%}<p class="footer-line">{{ cfg.address | escape }}</p>{%- endif -%}
         {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours | escape }}</p>{%- endif -%}
       </div>
-      {%- if cfg.phone or cfg.email or cfg.social_link -%}
+      {%- if cfg.phone or cfg.email or cfg.social_link or cfg.has_offer or cfg.has_tos -%}
       <div class="footer-col">
         {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone | escape }}</a></p>{%- endif -%}
         {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email | escape }}">{{ cfg.email | escape }}</a></p>{%- endif -%}
         {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link | escape }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" | escape }}</a></p>{%- endif -%}
+        {%- comment -%} W9 (F8): юридические документы — ТОЛЬКО при включённых
+           флагах (cfg.has_offer/has_tos пишет визард, когда владелец загрузил
+           PDF; пусто/false = ссылок нет, мёртвых ссылок не бывает). Страницы
+           живут под базой магазина (визард вешает ${store_path}/offer|tos). {%- endcomment -%}
+        {%- if cfg.has_offer -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/offer">Оферта</a></p>{%- endif -%}
+        {%- if cfg.has_tos -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/tos">Условия обслуживания</a></p>{%- endif -%}
       </div>
       {%- endif -%}
       {%- if cfg.legal -%}

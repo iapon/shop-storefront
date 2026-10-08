@@ -88,11 +88,15 @@
 {%- assign ac_sort = sort_suffix -%}
 
 {%- comment -%} ── Hero каталога (канон лендинга, W7): центрированный блок,
-  фон — градиент тинта акцента; крошки — тихой строкой слева; kicker-пилюля
-  (только корню каталога), H1 по clamp-формуле канона; счётчик товаров —
-  ОТДЕЛЬНОЙ строкой под H1 (разнос владельца «H1 слипся со счётчиком»);
-  описание — lead. Живёт ВНЕ data-catalog-ui: скрипт №15 («Ещё») ищет
-  data-cat-desc по document. {%- endcomment -%}
+  фон — градиент тинта акцента; крошки — тихой строкой слева; H1 по
+  clamp-формуле канона; описание — lead. Живёт ВНЕ data-catalog-ui:
+  скрипт №15 («Ещё») ищет data-cat-desc по document.
+  W9 (F4): счётчик «Товаров: N» УБРАН из hero (одинокая строка под H1
+  выглядела непонятным элементом) — теперь он над гридом, слева (ряд
+  тулбара перегружать не стали). Киккер — ТОЛЬКО когда владелец задал
+  cfg.hero_kicker (дефолтного «Каталог» больше нет: H1 по умолчанию
+  «Каталог» — пара без дубля слова; поле киккера осталось опциональным,
+  например «Магазин» / «Новинки сезона»). {%- endcomment -%}
 <section class="cat-hero">
   <div class="shop-container">
     {%- if cat_row -%}
@@ -107,9 +111,10 @@
       {% include "partials/breadcrumbs" %}
       {%- assign bc_current = nil -%}{%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
     {%- endif -%}
-    {%- unless cat_row -%}<span class="kicker">{{ cfg.hero_kicker | default: "Каталог" | escape }}</span>{%- endunless -%}
-    <h1 class="cat-title">{% if cat_row %}{{ cat_row.title }}{% else %}{{ cfg.hero_title | default: "Выберите товар" | escape }}{% endif %}</h1>
-    <span class="cat-count" data-cat-count>{{ cnt_txt }}</span>
+    {%- unless cat_row -%}
+      {%- if cfg.hero_kicker != blank -%}<span class="kicker">{{ cfg.hero_kicker | escape }}</span>{%- endif -%}
+    {%- endunless -%}
+    <h1 class="cat-title">{% if cat_row %}{{ cat_row.title }}{% else %}{{ cfg.hero_title | default: "Каталог" | escape }}{% endif %}</h1>
     {%- if cat_row and cat_row.description -%}
       {%- comment -%} №15: короткое описание сверху (2 строки + «Ещё»),
         полное SEO-описание — под гридом {%- endcomment -%}
@@ -187,7 +192,10 @@
     {%- endfor -%}
   </nav>
 
+  {%- comment -%} W9 (F4): счётчик товаров — тихой строкой НАД гридом слева
+    (из hero убран; владельческий разнос «одинокой строки под H1»). {%- endcomment -%}
   {%- if prods.data.products.size > 0 -%}
+    <p class="cat-count" data-cat-count>{{ cnt_txt }}</p>
     <div class="product-grid">
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>

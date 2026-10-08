@@ -9,7 +9,11 @@
    API витрины (все пути — под базой магазина SHOP_BASE):
    GET  <base>/api/cart          → {items: [{slug, qty}]}
    POST <base>/api/cart          → {items: [{slug, qty}]}   (полный replace)
-   POST <base>/api/checkout      → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
+   POST <base>/api/checkout      → {ok: true, redirect: "<url>"}
+                                 | {ok: false, error: "stock_exceeded", slug, max}
+                                 | {ok: false, error: "payment_failed", order_id}
+                                 | {ok: false, error: "cart_invalid"}
+   POST <base>/api/retry-payment → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
  */
 (function () {
   'use strict';
@@ -39,6 +43,30 @@
     });
   }
 
+  /* W9 (F6a): живой регион предупреждений корзины ([data-cart-note] на
+     странице товара и в чекауте). Появляется при clamp количества до
+     остатка и при неудачной записи корзины — витрина не молчит. */
+  var noteTimer = null;
+  function note(text) {
+    var el = document.querySelector('[data-cart-note]');
+    if (!el) return;
+    el.textContent = text;
+    el.setAttribute('data-visible', '1');
+    if (noteTimer) clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () {
+      el.removeAttribute('data-visible');
+      el.textContent = '';
+    }, 4000);
+  }
+
+  /* «В наличии только N шт.»: шаблон строки рендерит в data-stock-tpl на
+     body (литерал {{n}} доезжает через assign — паттерн ph_n); здесь
+     подставляем число. Фоллбек вшит. */
+  function stockOnlyMsg(n) {
+    var tpl = document.body ? document.body.getAttribute('data-stock-tpl') : null;
+    return (tpl || 'В наличии только {{n}} шт.').replace('{{n}}', String(n));
+  }
+
   function apiCart(method, body) {
     return fetch(SHOP_BASE + '/api/cart', {
       method: method,
@@ -55,7 +83,12 @@
     return apiCart('POST', { items: state.items }).then(function (resp) {
       if (resp && Array.isArray(resp.items)) state.items = resp.items; // канон — сервер
       renderCounter();
-    }).catch(function () { /* сеть недоступна: состояние в памяти остаётся истиной вкладки */ });
+    }).catch(function () {
+      /* W9 (F9): неудача записи больше НЕ молчит — раньше тихий провал
+         возвращал после перезагрузки прежний SSR-cart, и «×» выглядел
+         сломанным. Состояние в памяти остаётся истиной вкладки. */
+      note(msg('save-failed', 'Не удалось обновить корзину — проверьте связь и попробуйте ещё раз.'));
+    });
   }
 
   function find(slug) {
@@ -63,11 +96,19 @@
     return null;
   }
 
-  function add(slug, qty) {
-    qty = Math.max(1, Math.floor(Number(qty) || 1));
+  /* cap — остаток товара (data-stock кнопки «В корзину», 0 = неизвестен):
+     попытка добавить больше гасится до остатка С сообщением (F6a), не молча. */
+  function add(slug, qty, cap) {
+    qty = Math.max(1, Math.floor(Number(qty)) || 1);
     var line = find(slug);
-    if (line) line.qty += qty;
-    else state.items.push({ slug: slug, qty: qty });
+    var next = (line ? line.qty : 0) + qty;
+    cap = Number(cap) || 0;
+    if (cap > 0 && next > cap) {
+      next = cap;
+      note(stockOnlyMsg(cap));
+    }
+    if (line) line.qty = next;
+    else state.items.push({ slug: slug, qty: next });
     return save();
   }
 
@@ -108,8 +149,9 @@
       var slug = btn.getAttribute('data-cart-add');
       var qtyEl = document.querySelector('[data-cart-qty]');
       var qty = qtyEl ? qtyEl.value : 1;
+      var cap = Number(btn.getAttribute('data-stock')) || 0; // W9 F6a: карман остатка
       btn.disabled = true;
-      add(slug, qty).then(function () { btn.disabled = false; });
+      add(slug, qty, cap).then(function () { btn.disabled = false; });
       return;
     }
     /* Степпер количества на карточке (D23): крутит существующий
@@ -127,7 +169,8 @@
     }
     /* Степперы строк чекаута (D23): replace-семантика — setQty полным
        массивом; data-stock гасит бессмысленный заход за остаток
-       (серверный гард остаётся истиной). */
+       (серверный гард остаётся истиной). W9 (F6a): гашение НЕ молча —
+       появляется «В наличии только N шт.» (data-cart-note). */
     var inc = ev.target.closest('[data-cart-qty-inc]');
     if (inc) {
       ev.preventDefault();
@@ -135,7 +178,7 @@
       var line1 = find(s1);
       var q1 = ((line1 ? Number(line1.qty) : 0) || 0) + 1;
       var cap = Number(inc.getAttribute('data-stock')) || 0;
-      if (cap > 0 && q1 > cap) q1 = cap;
+      if (cap > 0 && q1 > cap) { q1 = cap; note(stockOnlyMsg(cap)); }
       setQty(s1, q1).then(refreshCartPage);
       return;
     }
@@ -204,6 +247,21 @@
     }).then(function (r) { return r.json().catch(function () { throw new Error('bad json'); }); })
       .then(function (resp) {
         if (resp && resp.ok && resp.redirect) { window.location.assign(resp.redirect); return; }
+        /* W9 (F7): платёж не прошёл (тестовые/недействительные ключи ЮKassa) —
+           заказ СОЗДАН; честный путь ведёт на страницу заказа с экраном
+           «Платёж не прошёл» и кнопкой «Повторить оплату». */
+        if (resp && resp.error === 'payment_failed' && resp.order_id) {
+          window.location.assign(SHOP_BASE + '/order/' + encodeURIComponent(resp.order_id) + '?payment=failed');
+          return;
+        }
+        /* W9 (F6в): перебор остатка блокирует оформление С СООБЩЕНИЕМ
+           («В наличии только N шт.» — тот же текст, что у строки), не молча. */
+        if (resp && resp.error === 'stock_exceeded') {
+          var max = Number(resp.max) || 0;
+          fail(max > 0 ? stockOnlyMsg(max) : msg('stock', 'В корзине больше, чем есть в наличии — уменьшите количество.'));
+          if (btn) btn.disabled = false;
+          return;
+        }
         fail(resp && resp.error === 'cart_invalid'
           ? msg('cart-invalid', 'Корзина недоступна или пуста — обновите страницу.')
           : msg('checkout-failed', 'Не удалось оформить заказ. Попробуйте ещё раз.'));

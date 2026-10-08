@@ -21,11 +21,12 @@ const cases = [
   ['category', 'not_found', ['Категория не найдена']],
   ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
   ['product', 'not_found', ['Товар не найден']],
-  ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"']],
+  ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии']],
   ['checkout', 'member', ['Ваш заказ', '1490.00']],
   ['checkout', 'empty', ['Корзина пуста']],
   ['cart', 'guest', ['Ваш заказ', '990.00']],
   ['order', 'new', ['Заказ принят']],
+  ['order', 'new_failed', ['Платёж не прошёл', 'Повторить оплату', 'data-retry-payment=', 'data-retry-hint', 'Проверьте ключи ЮKassa'], { query: { ...q, payment: 'failed' } }],
   ['order', 'paid', ['Заказ оплачен']],
   ['order', 'not_found', ['Заказ не найден']],
   ['account', null, ['Мои заказы', '232.90', 'оплачен', 'ожидает оплаты', 'href="/shop/order/', 'Кружка «Лён» × 2']],
@@ -702,6 +703,344 @@ const mediaBlock = (cssSrc, header) => {
   }
 }
 
+/* ── Проба W9 (F2): 320 без переполнения — контракт по исходникам ────
+   (1) .toolbar-mobile несёт min-width: 0 — иначе flex-ряд не сжимается ниже
+       min-content («Сортировка: Сначала новые» ~204px распирала тулбар до
+       325px и выталкивала documentElement в h-scroll на 320; живой DOM-
+       замер w9-user/05); подпись кнопки держит ellipsis.
+   (2) .shop-footer-inner возвращает горизонтальный гаттер (F1: padding
+       2rem 0 перебивал .shop-container — текст прилипал к краям).
+   (3) бургер закрыт по умолчанию: в base.liquid нет open-атрибута, а
+       гардинный скрипт (снятие восстановленного браузером [open]) стоит
+       сразу после </details> — панель «Кабинет/Выйти» не висит поверх hero
+       на свежей загрузке (soft-reload восстанавливает состояние details).
+   (4) шапка на 320 — одна строка: компактный зазор 0.5rem + компактный
+       inline-паддинг пилюли корзины (лого ~110px + иконки 138px < 280px). */
+{
+  const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const css = readFileSync(join(rootDir, 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const baseSrc = readFileSync(join(rootDir, 'templates', 'base.liquid'), 'utf8')
+    .replace(/\{%-?\s*comment[\s\S]*?endcomment\s*-?%\}/g, ''); // считаем код, не комментарии
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const tbRule = /\.toolbar-mobile\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/min-width:\s*0/.test(tbRule), 'F2: .toolbar-mobile без min-width: 0 — ряд не сжимается, 320 уходит в h-scroll');
+  check(/\.toolbar-btn\s*\{[^}]*min-width:\s*0/.test(css) && /\.toolbar-btn > span\s*\{[^}]*text-overflow:\s*ellipsis/.test(css), 'F2: подпись кнопки тулбара без ellipsis-ужатия');
+  const ftRule = /\.shop-footer-inner\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/padding:\s*2rem\s+var\(--gutter\)/.test(ftRule), 'F1: .shop-footer-inner потерял горизонтальный гаттер');
+  check(!/<details class="nav-burger"[^>]*\bopen\b/.test(baseSrc), 'F2: у бургера есть open-атрибут в разметке');
+  const detailsEnd = baseSrc.indexOf('</details>');
+  const guardIdx = baseSrc.indexOf("d.hasAttribute('open')");
+  check(detailsEnd > -1 && guardIdx > detailsEnd && guardIdx - detailsEnd < 200, 'F2: гардинный скрипт бургера не стоит сразу после </details>');
+  const hiRule = /\.shop-header-inner\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/gap:\s*0\.5rem/.test(hiRule), 'F2: шапка не ужата до одной строки на 320 (нет компактного gap)');
+  const ccRule = /\.cart-counter\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/padding:\s*0\.375rem\s+0\.5rem/.test(ccRule), 'F2: пилюля корзины не ужата (inline-паддинг 0.5rem)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-f2-320: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-f2-320 (тулбар min-width:0+ellipsis, футер с гаттером, бургер закрыт гардом, шапка 320 в одну строку)');
+  }
+}
+
+/* ── Проба W9 (F4): счётчик из hero — над гридом; киккер/Н1 без дубля ──
+   hero каталога больше не рендерит «Товаров: N» (одинокая строка под H1),
+   счётчик живёт перед .product-grid; H1 по умолчанию «Каталог», киккер —
+   ТОЛЬКО явный cfg.hero_kicker (дефолтной пары «Каталог + Каталог» нет). */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  const heroEnd = catHtml.indexOf('</section>');
+  const countInHero = catHtml.slice(0, heroEnd).includes('data-cat-count');
+  check(!countInHero, 'F4: счётчик всё ещё в hero каталога');
+  const countIdx = catHtml.indexOf('data-cat-count');
+  const gridIdx = catHtml.indexOf('product-grid');
+  check(countIdx > -1 && gridIdx > -1 && countIdx < gridIdx, 'F4: счётчик не над гридом');
+  check(catHtml.includes('>Товаров: 26<'), 'F4: текст счётчика потерян');
+  const noKicker = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Магазин витрины', hero_kicker: '', hero_title: '' }] } },
+  });
+  check(!noKicker.includes('class="kicker"'), 'F4: пустой hero_kicker не должен рендерить киккер');
+  check(/<h1 class="cat-title">Каталог<\/h1>/.test(noKicker), 'F4: дефолтный H1 не «Каталог»');
+  const catPage = await renderMockPage(engine, 'category', 'found', { query: { ...q } });
+  const catHeroEnd = catPage.indexOf('</section>');
+  check(!catPage.slice(0, catHeroEnd).includes('data-cat-count'), 'F4: счётчик всё ещё в hero категории');
+  const cCountIdx = catPage.indexOf('data-cat-count');
+  const cGridIdx = catPage.indexOf('product-grid');
+  check(cCountIdx > -1 && cGridIdx > -1 && cCountIdx < cGridIdx, 'F4 (категория): счётчик не над гридом');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-f4-counter: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-f4-counter (счётчик над гридом в каталоге и категории; киккер только по cfg, дефолт H1 «Каталог»)');
+  }
+}
+
+/* ── Проба W9 (F3/F6): строки чекаута + перебор остатка ──────────────
+   Строка заказа: миниатюра-ссылка, название-ссылка на карточку, разбивка
+   «цена × кол-во», сумма, «×» рядом (grid-области). Перебор: строка с
+   warning-тинтом и бейджем «В наличии: N». Пустая photos → плейсхолдер. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const html = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q } });
+  check(/<a class="cart-line-thumb" href="\/shop\/product\/mug-linen"[^>]*>\s*<img src="\/static\/photos\/placeholder\.svg"/.test(html), 'F3: миниатюра строки не ссылка на карточку с img');
+  check(/<a class="cart-line-name" href="\/shop\/product\/mug-linen">Кружка «Лён»<\/a>/.test(html), 'F3: название строки не ссылка на карточку');
+  check(html.includes('990.00 ₽ × 2'), 'F3: нет разбивки «цена × кол-во» в строке');
+  const cssSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  check(/\.cart-line\s*\{[^}]*grid-template-areas/.test(cssSrc), 'F3: строка корзины не grid-раскладка (миниатюра/инфо/× рядом)');
+  check(/\.cart-line-over\s*\{[^}]*background:\s*var\(--warn-tint\)/.test(cssSrc), 'F6: нет warning-тинта строки перебора');
+  const over = await renderMockPage(engine, 'checkout', 'guest', {
+    query: { ...q },
+    results: { ci: { items: [{ slug: 'mug-linen', qty: 99 }, { slug: 'planner-pine', qty: 1 }] } },
+  });
+  check(over.includes('cart-line-over'), 'F6: перебор не подсвечивает строку');
+  check(over.includes('В наличии: 12'), 'F6: перебор не показывает «В наличии: N»');
+  check(over.includes('990.00 ₽ × 99'), 'F6: разбивка перебранной строки потеряна');
+  // пустая photos → плейсхолдер surface-2 (span вместо img)
+  const noPhoto = await renderMockPage(engine, 'checkout', 'guest', {
+    query: { ...q },
+    prods: { data: { products: [{ id: 'p-1', title: 'Кружка «Лён»', slug: 'mug-linen', price_kopecks: 99000, stock: 12 }] } },
+  });
+  check(noPhoto.includes('cart-line-thumb-empty'), 'F3: пустая photos не даёт плейсхолдер миниатюры');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-f3-f6-lines: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-f3-f6-lines (миниатюра/ссылки/разбивка; перебор: тинт + «В наличии: N»; пустая photos → плейсхолдер)');
+  }
+}
+
+/* ── Поведенческая проба W9 (F6a/в + F7 + F9): cart.js ─────────────────
+   add с data-stock гасится до остатка С записью в [data-cart-note];
+   inc строки сверх data-stock — тоже; сабмит чекаута: stock_exceeded →
+   «В наличии только N шт.» в form-error; payment_failed → редирект на
+   /order/<id>?payment=failed; удалить позицию «×» — POST полного массива
+   без позиции (контракт не дрейфовал); неудача записи корзины — заметка,
+   не молчание. */
+async function smokeW9Cart() {
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const TICKS = 6;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+
+  function mkDom({ items, noteEl, errBox, locationSpy, checkoutResp }) {
+    const calls = [];
+    const listeners = {};
+    const note = { textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const err = { textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const document = {
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      addEventListenerSubmit: null,
+      querySelectorAll: () => [],
+      querySelector(sel) {
+        if (sel === '[data-cart-note]') return noteEl ? note : null;
+        if (sel === '[data-form-error]') return errBox ? err : null;
+        return null;
+      },
+      body: {
+        attrs: { 'data-stock-tpl': 'В наличии только {{n}} шт.' },
+        getAttribute(k) { return this.attrs[k] ?? null; },
+      },
+    };
+    const loc = locationSpy || { assign(u) { loc.assigned = u; } };
+    const fetchMock = (url, opts) => {
+      const method = (opts && opts.method) || 'GET';
+      let resp;
+      if (method === 'GET') resp = { items: JSON.parse(JSON.stringify(items)) };
+      else if (url.endsWith('/api/checkout')) resp = checkoutResp;
+      else resp = { items: JSON.parse(opts.body).items };
+      calls.push({ url, method, body: opts && opts.body ? JSON.parse(opts.body) : null, resp });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) });
+    };
+    const click = (attrs) => {
+      for (const fn of listeners.click ?? []) {
+        fn({
+          preventDefault() {},
+          target: {
+            closest: (sel) => (sel in attrs ? {
+              // карта клика ключована селекторами; getAttribute спрашивают
+              // уже по ИМЕНИ атрибута — резолвим обе формы
+              getAttribute: (k) => attrs[k] ?? attrs['[' + k + ']'],
+            } : null),
+          },
+        });
+      }
+    };
+    const submit = (form) => {
+      for (const fn of listeners.submit ?? []) {
+        fn({ preventDefault() {}, target: { closest: (sel) => (sel === '[data-checkout-form]' ? form : null) } });
+      }
+    };
+    const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'cart.js'), 'utf8'));
+    new Function('document', 'window', 'fetch', src)(document, { location: loc, setTimeout }, fetchMock);
+    return { calls, click, submit, note, err, tick: async () => { for (let i = 0; i < TICKS; i++) await tick(); } };
+  }
+
+  // 1) add сверх остатка: clamp до 5 + заметка «В наличии только 5 шт.»
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 5 }], noteEl: true });
+    await d.tick();
+    d.click({ '[data-cart-add]': 'mug', 'data-stock': '5' }); // +1 → 6, clamp до 5
+    await d.tick();
+    const post = d.calls.find((c) => c.method === 'POST');
+    check(post && post.body.items.find((l) => l.slug === 'mug')?.qty === 5,
+      `F6a: add сверх остатка не гасится до 5: ${post && JSON.stringify(post.body.items)}`);
+    check(d.note.textContent === 'В наличии только 5 шт.' && d.note.attrs['data-visible'] === '1',
+      `F6a: clamp без сообщения: «${d.note.textContent}»`);
+  }
+
+  // 2) inc строки сверх data-stock: clamp + заметка
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 5 }], noteEl: true });
+    await d.tick();
+    d.click({ '[data-cart-qty-inc]': 'mug', 'data-stock': '5' });
+    await d.tick();
+    const post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && post.body.items.find((l) => l.slug === 'mug')?.qty === 5, 'F6a: inc строки сверх остатка не гасится');
+    check(d.note.textContent === 'В наличии только 5 шт.', `F6a: inc без сообщения: «${d.note.textContent}»`);
+  }
+
+  // 3) «×» удаляет позицию: POST полного массива БЕЗ неё (F9, контракт w3)
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 2 }, { slug: 'tot', qty: 1 }], noteEl: true });
+    await d.tick();
+    d.click({ '[data-cart-remove]': 'mug' });
+    await d.tick();
+    const post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && JSON.stringify(post.body.items) === JSON.stringify([{ slug: 'tot', qty: 1 }]),
+      `F9: «×» шлёт не полный массив без позиции: ${post && JSON.stringify(post.body.items)}`);
+  }
+
+  // 4) неудача записи корзины — заметка, не молчание (F9-хардненинг)
+  {
+    const calls = [];
+    const listeners = {};
+    const note = { textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const document = {
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      querySelectorAll: () => [],
+      querySelector: (sel) => (sel === '[data-cart-note]' ? note : null),
+      body: { attrs: {}, getAttribute: () => null },
+    };
+    const fetchMock = (url, opts) => {
+      calls.push({ url, method: (opts && opts.method) || 'GET' });
+      if ((opts && opts.method) === 'POST') return Promise.reject(new Error('network'));
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [{ slug: 'mug', qty: 1 }] }) });
+    };
+    const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'cart.js'), 'utf8'));
+    new Function('document', 'window', 'fetch', src)(document, { location: {}, setTimeout }, fetchMock);
+    for (let i = 0; i < TICKS; i++) await tick();
+    for (const fn of listeners.click ?? []) fn({ preventDefault() {}, target: { closest: (sel) => (sel === '[data-cart-remove]' ? { getAttribute: () => 'mug' } : null) } });
+    for (let i = 0; i < TICKS; i++) await tick();
+    check(note.textContent.includes('Не удалось обновить корзину') && note.attrs['data-visible'] === '1',
+      `F9: тихий провал записи — заметки нет: «${note.textContent}»`);
+  }
+
+  // 5) сабмит чекаута: stock_exceeded → сообщение с max; payment_failed → /order/<id>?payment=failed
+  {
+    const d = mkDom({
+      items: [{ slug: 'mug', qty: 2 }],
+      noteEl: true, errBox: true,
+      checkoutResp: { ok: false, error: 'stock_exceeded', slug: 'mug', max: 7 },
+    });
+    await d.tick();
+    d.submit({
+      querySelector(sel) {
+        if (sel === '[data-form-error]') return d.err;
+        if (sel === 'button[type="submit"]') return { disabled: false };
+        const m = /\[name="(.+)"\]/.exec(sel);
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '' };
+        return null;
+      },
+    });
+    await d.tick();
+    check(d.err.textContent === 'В наличии только 7 шт.', `F6в: сабмит при переборе без сообщения: «${d.err.textContent}»`);
+
+    const loc = { assigned: null, assign(u) { this.assigned = u; } };
+    const d3 = mkDom({
+      items: [{ slug: 'mug', qty: 2 }], noteEl: true, errBox: true, locationSpy: loc,
+      checkoutResp: { ok: false, error: 'payment_failed', order_id: 'abc-123' },
+    });
+    await d3.tick();
+    d3.submit({
+      querySelector(sel) {
+        if (sel === '[data-form-error]') return d3.err;
+        if (sel === 'button[type="submit"]') return { disabled: false };
+        const m = /\[name="(.+)"\]/.exec(sel);
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '' };
+        return null;
+      },
+    });
+    await d3.tick();
+    check(loc.assigned === '/shop/order/abc-123?payment=failed',
+      `F7: payment_failed не ведёт на /order/<id>?payment=failed: ${loc.assigned}`);
+  }
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-stock-cart: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-stock-cart (add/inc clamp c сообщением; «×» = replace без позиции; провал записи не молчит; stock_exceeded → «В наличии только N шт.»; payment_failed → /order/<id>?payment=failed)');
+  }
+}
+await smokeW9Cart();
+
+/* ── Проба W9 (F10): кросс-фейды гейтятся prefers-reduced-motion ────── */
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  check(/\.gallery-img-fade\s*\{[^}]*transition:\s*opacity\s+200ms/.test(css), 'F10: у слоя кросс-фейда галереи нет opacity-перехода');
+  const reduceBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\}\s*\}/g)].map((m) => m[0]);
+  const reduceAll = reduceBlocks.join('\n');
+  check(/\.gallery-img-fade\s*\{[^}]*transition:\s*none/.test(reduceAll), 'F10: галерейный кросс-фейд не гейтится reduce');
+  check(/\.product-card-photo img\s*\{[^}]*transition:\s*none/.test(reduceAll), 'F10: hover-кросс-фейд карточки не гейтится reduce');
+  const prodSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'product.liquid'), 'utf8');
+  check(prodSrc.includes('data-gallery-fade') && prodSrc.includes("fade.setAttribute('data-visible', '1')"), 'F10: галерея товара не переключается двумя слоями');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-f10-fade: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-f10-fade (кросс-фейд галереи двумя слоями; оба кросс-фейда выключаются при reduce)');
+  }
+}
+
+/* ── Проба W9 (F8): футер — ссылки оферты/тоС только по флагам ──────── */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const plain = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  check(!plain.includes('href="/shop/offer"') && !plain.includes('href="/shop/tos"'), 'F8: без флагов в футере мёртвые ссылки');
+  const both = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Магазин витрины', has_offer: true, has_tos: true }] } },
+  });
+  check(both.includes('href="/shop/offer"') && both.includes('>Оферта<'), 'F8: has_offer=true не даёт ссылку «Оферта»');
+  check(both.includes('href="/shop/tos"') && both.includes('>Условия обслуживания<'), 'F8: has_tos=true не даёт ссылку «Условия»');
+  const onlyOffer = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Магазин витрины', has_offer: true }] } },
+  });
+  check(onlyOffer.includes('href="/shop/offer"') && !onlyOffer.includes('href="/shop/tos"'), 'F8: has_tos=false тянет мёртвую ссылку «Условия»');
+  const checkoutHtml = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q } });
+  check(checkoutHtml.includes('соглашаетесь с условиями продажи') && !checkoutHtml.includes('href="/shop/tos"'), 'F8: строка согласия чекаута без has_tos — обычный текст');
+  const checkoutTos = await renderMockPage(engine, 'checkout', 'guest', {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Магазин витрины', has_tos: true }] } },
+  });
+  check(checkoutTos.includes('href="/shop/tos"'), 'F8: строка согласия чекаута не ссылает тоС при has_tos');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w9-f8-footer: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w9-f8-footer (ссылки оферты/тоС строго по флагам; строка согласия чекаута линкуется только при has_tos)');
+  }
+}
+
 /* ── Проба W7: канон лендинг-визарда ──────────────────────────────────
    (1) Политика горизонтальных линий (ЖЁСТКО, разнос владельца): в
        shop.css ровно ДВЕ hairline — border-bottom шапки и border-top
@@ -872,7 +1211,7 @@ const mediaBlock = (cssSrc, header) => {
   }
   const bootstrap = readFileSync(join(rootDir, 'dev', 'site-config-bootstrap.liquid'), 'utf8');
   const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
-    'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
+    'login.liquid', 'offer.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid', 'tos.liquid',
     'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
   // Регион бутстрапа в entry-шаблоне: ровно canon.length байт от старт-маркера
   // — обязан быть байт-в-байт равен канону (простой includes не ловит
@@ -900,4 +1239,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w7-canon + w6-ux + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity');

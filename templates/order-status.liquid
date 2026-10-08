@@ -45,6 +45,18 @@
 
 
 {%- assign ord = o.data.order -%}
+{%- comment -%} W9 (F7): платёж не прошёл — checkout-flow отвечает
+   payment_failed (тестовые/недействительные ключи ЮKassa), заказ СОЗДАН со
+   статусом new; cart.js ведёт покупателя на /order/<id>?payment=failed.
+   Экран: внятный «Платёж не прошёл» + «Повторить оплату» (пересоздаёт
+   платёж через /api/retry-payment, тот же заказ) + подсказка владельцу
+   про ключи. Флаг читается из query (?payment=failed; маршрут TTL 0 —
+   кэширования нет). {%- endcomment -%}
+{%- assign shop_base = "__SHOP_BASE__" -%}
+{%- assign pay_failed = false -%}
+{%- if ord and ord.status != "paid" and ord.status != "cancelled" and query.payment == "failed" -%}
+  {%- assign pay_failed = true -%}
+{%- endif -%}
 {%- if ord -%}
   {%- assign page_title = "Заказ №" | append: " " | append: ord.id -%}
   {%- assign page_canon = "__SHOP_BASE__/order/" | append: ord.id -%}
@@ -55,7 +67,19 @@
 {%- capture content -%}
 <div class="status-screen">
   {%- if ord -%}
-    {%- if ord.status == "paid" -%}
+    {%- if pay_failed -%}
+      <span class="status-badge error" aria-hidden="true">✕</span>
+      <h1 class="status-title">Платёж не прошёл</h1>
+      <p class="status-text">Заказ сохранён, но оплатить его не удалось — деньги с карты не списаны. Попробуйте ещё раз или оформите заказ заново в каталоге.</p>
+      {%- comment -%} Повторить оплату: пересоздаёт платёж ЮKassa для ЭТОГО
+         заказа (тот же amount из строки заказа). Неудача — подсказка
+         владельцу про ключи (тестовые креды = ожидаемое поведение). {%- endcomment -%}
+      <div class="status-actions">
+        <button class="btn btn-primary btn-lg" type="button" data-retry-payment="{{ ord.id }}">Повторить оплату</button>
+        <a class="btn btn-secondary btn-lg" href="__SHOP_BASE__/">В каталог</a>
+      </div>
+      <p class="status-help" data-retry-hint data-visible="0">Проверьте ключи ЮKassa (Shop ID и секретный ключ) в настройках магазина — платёж отклонён платёжным провайдером. Если вы покупатель: попробуйте позже или обратитесь в поддержку магазина.</p>
+    {%- elsif ord.status == "paid" -%}
       <span class="status-badge success" aria-hidden="true">✓</span>
       <h1 class="status-title">Заказ оплачен ✓</h1>
       {%- comment -%} email покупателя — его же ввод: escape вместе со словарной строкой {%- endcomment -%}
@@ -75,7 +99,7 @@
     <p class="status-order-no">Заказ № {{ ord.id }}</p>
     {%- if ord.items_summary -%}<p class="status-text text-3">{{ ord.items_summary }}</p>{%- endif -%}
     <p class="status-help">Сохраните ссылку на эту страницу — она показывает актуальный статус заказа.</p>
-    <div class="status-actions"><a class="btn btn-secondary" href="__SHOP_BASE__/">Вернуться в каталог</a></div>
+    {%- unless pay_failed -%}<div class="status-actions"><a class="btn btn-secondary" href="__SHOP_BASE__/">Вернуться в каталог</a></div>{%- endunless -%}
   {%- else -%}
     <span class="status-badge error" aria-hidden="true">∅</span>
     <h1 class="status-title">Заказ не найден</h1>
@@ -83,5 +107,36 @@
     <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
   {%- endif -%}
 </div>
+
+{%- if pay_failed -%}
+<script>
+/* W9 (F7): «Повторить оплату» — POST /api/retry-payment пересоздаёт платёж
+   ЮKassa для ЭТОГО заказа; успех → редирект на confirmation_url, отказ →
+   подсказка про ключи (data-retry-hint), кнопка возвращается. */
+(function () {
+  var btn = document.querySelector('[data-retry-payment]');
+  if (!btn) return;
+  var hint = document.querySelector('[data-retry-hint]');
+  var base = '{{ shop_base }}';
+  btn.addEventListener('click', function () {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    if (hint) hint.removeAttribute('data-visible');
+    fetch(base + '/api/retry-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ order_id: btn.getAttribute('data-retry-payment') })
+    }).then(function (r) { return r.json().catch(function () { throw new Error('bad json'); }); })
+      .then(function (resp) {
+        if (resp && resp.ok && resp.redirect) { window.location.assign(resp.redirect); return; }
+        if (hint) hint.setAttribute('data-visible', '1');
+        btn.disabled = false;
+      })
+      .catch(function () { if (hint) hint.setAttribute('data-visible', '1'); btn.disabled = false; });
+  });
+})();
+</script>
+{%- endif -%}
 {%- endcapture -%}
 {% include "base" %}

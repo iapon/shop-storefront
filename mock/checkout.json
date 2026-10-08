@@ -2,49 +2,130 @@
   "_comment": "Мок данных страницы чекаута: prods.data.products (товары корзины) + results.ci.items (позиции серверной корзины — флоу парсит json-строку items узлом k_ci, Liquid не читает JSON-строки). cart.data.carts показывает «сырую» строку (json-поле приезжает СТРОКОЙ — P0-1). guest — гость, member — сессия; empty — нет идентификатора/пустая корзина («Корзина пуста»).",
   "guest": {
     "results": {
-      "ci": { "items": [ { "slug": "mug-linen", "qty": 2 }, { "slug": "planner-pine", "qty": 1 } ] }
+      "ci": {
+        "items": [
+          {
+            "slug": "mug-linen",
+            "qty": 2
+          },
+          {
+            "slug": "planner-pine",
+            "qty": 1
+          }
+        ]
+      }
     },
     "cart": {
       "data": {
         "carts": [
-          { "id": "cart-anon-1", "items": "[{\"slug\":\"mug-linen\",\"qty\":2},{\"slug\":\"planner-pine\",\"qty\":1}]" }
+          {
+            "id": "cart-anon-1",
+            "items": "[{\"slug\":\"mug-linen\",\"qty\":2},{\"slug\":\"planner-pine\",\"qty\":1}]"
+          }
         ]
       }
     },
     "prods": {
       "data": {
         "products": [
-          { "id": "p-1", "title": "Кружка «Лён»", "slug": "mug-linen", "price_kopecks": 99000, "stock": 12 },
-          { "id": "p-3", "title": "Планинг «Сосна»", "slug": "planner-pine", "price_kopecks": 34900, "stock": 4 }
+          {
+            "id": "p-1",
+            "title": "Кружка «Лён»",
+            "slug": "mug-linen",
+            "price_kopecks": 99000,
+            "stock": 12,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          },
+          {
+            "id": "p-3",
+            "title": "Планинг «Сосна»",
+            "slug": "planner-pine",
+            "price_kopecks": 34900,
+            "stock": 4,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          }
         ]
       }
     },
-    "site": { "version": 7, "params": {}, "query": {} }
+    "site": {
+      "version": 7,
+      "params": {},
+      "query": {}
+    }
   },
   "member": {
     "results": {
-      "ci": { "items": [ { "slug": "tote-canvas", "qty": 1 } ] }
+      "ci": {
+        "items": [
+          {
+            "slug": "tote-canvas",
+            "qty": 1
+          }
+        ]
+      }
     },
     "cart": {
       "data": {
         "carts": [
-          { "id": "cart-member-1", "items": "[{\"slug\":\"tote-canvas\",\"qty\":1}]" }
+          {
+            "id": "cart-member-1",
+            "items": "[{\"slug\":\"tote-canvas\",\"qty\":1}]"
+          }
         ]
       }
     },
     "prods": {
       "data": {
         "products": [
-          { "id": "p-2", "title": "Тоут-баг «Полотно»", "slug": "tote-canvas", "price_kopecks": 149000, "stock": 3 }
+          {
+            "id": "p-2",
+            "title": "Тоут-баг «Полотно»",
+            "slug": "tote-canvas",
+            "price_kopecks": 149000,
+            "stock": 3,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          }
         ]
       }
     },
-    "site": { "version": 7, "params": {}, "query": {} }
+    "site": {
+      "version": 7,
+      "params": {},
+      "query": {}
+    }
   },
   "empty": {
-    "results": { "ci": { "items": [] } },
-    "cart": { "data": { "carts": [] } },
-    "prods": { "data": { "products": [] } },
-    "site": { "version": 7, "params": {}, "query": {} }
+    "results": {
+      "ci": {
+        "items": []
+      }
+    },
+    "cart": {
+      "data": {
+        "carts": []
+      }
+    },
+    "prods": {
+      "data": {
+        "products": []
+      }
+    },
+    "site": {
+      "version": 7,
+      "params": {},
+      "query": {}
+    }
   }
 }

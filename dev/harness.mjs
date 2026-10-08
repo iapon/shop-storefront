@@ -39,7 +39,7 @@ export const G_SITE_DEFAULT = {
       legal: 'ИП Иванов И. И., ИНН 7800000000',
       site_url: '',
       og_image: null,
-      hero_kicker: 'Каталог',
+      hero_kicker: '',
       hero_title: '',
       hero_subtitle: '',
       cta_add_to_cart: '',

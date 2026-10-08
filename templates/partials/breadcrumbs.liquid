@@ -1,10 +1,20 @@
 {%- comment -%}
   partials/breadcrumbs.liquid — единый рендер хлебных крошек + JSON-LD
-  BreadcrumbList (D26/D18). ЧИСТАЯ ФУНКЦИЯ: ноль assign/capture (принцип
-  «данные текут только вниз» — движок include не поднимает присваивания
-  включателю). Оба выхода эмитятся в месте вызова: nav + инлайновый
-  <script type="application/ld+json"> (JSON-LD в body валиден и читается
-  Google'ом и Яндексом; capture вверх не нужен).
+  BreadcrumbList (D26/D18, W6 №1-5). ЧИСТАЯ ФУНКЦИЯ: ноль assign/capture
+  (принцип «данные текут только вниз» — движок include не поднимает
+  присваивания включателю). Оба выхода эмитятся в месте вызова: nav +
+  инлайновый <script type="application/ld+json"> (JSON-LD в body валиден
+  и читается Google'ом и Яндексом; capture вверх не нужен).
+
+  W6 №2: разделитель — CSS ::before на .crumb-item + .crumb-item (не
+  DOM-текст: скринридеры его не читают). W6 №4: список — одна строка
+  (nowrap + overflow-x), скрипт ниже автоскроллит к ТЕКУЩЕМУ элементу
+  (виден конец цепочки); на ≥48rem CSS возвращает перенос — скролл не
+  нужен, скрипт безвреден (scrollLeft по content, который не скроллится).
+
+  Тексты ВСЕГДА человекочитаемые названия (W6 №1): вход несёт title'ы —
+  slug живёт только в href. Источник DOM и JSON-LD — один Liquid-объект
+  (одни и те же переменные), расхождение исключено.
 
   Вход (задаёт вызывающий шаблон, лишние уровни просто не назначены):
     bc_parent_title / bc_parent_slug — родитель категории (опционально, всегда ссылка);
@@ -22,34 +32,39 @@
   URL крошек — сентинел __SHOP_BASE__ (как во всей витрине); в JSON-LD —
   абсолютные: canon_base (site_url, фоллбек https://{{ host }}) + тот же путь.
   Позиции в JSON-LD — статические числа по факту наличия уровней (вложенные
-  conditionals, без аккумуляторов). Кавычки/бэкслеши в заголовках уходят в
+  conditionals, без аккумуляторов). У ПОСЛЕДНЕГО элемента поля item НЕТ
+  (требование Google BreadcrumbList). Кавычки/бэкслеши в заголовках уходят в
   фильтр | json — ld-строка обязана парситься всегда.
 {%- endcomment -%}
 {%- if bc_parent_title or bc_cat_title or bc_current -%}
 <nav class="breadcrumbs" aria-label="{{ t_breadcrumbs_aria }}">
-  <ol class="crumb-list">
+  <ol class="crumb-list" data-crumb-list>
     <li class="crumb-item">
       <a class="crumb" href="__SHOP_BASE__/">{{ t_breadcrumbs_home }}</a>
     </li>
     {%- if bc_parent_title -%}
     <li class="crumb-item">
-      <span class="crumb-sep" aria-hidden="true">/</span>
       <a class="crumb" href="__SHOP_BASE__/category/{{ bc_parent_slug }}">{{ bc_parent_title }}</a>
     </li>
     {%- endif -%}
     {%- if bc_cat_title -%}
     <li class="crumb-item">
-      <span class="crumb-sep" aria-hidden="true">/</span>
       <a class="crumb" href="__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}">{{ bc_cat_title }}</a>
     </li>
     {%- endif -%}
     {%- if bc_current -%}
     <li class="crumb-item">
-      <span class="crumb-sep" aria-hidden="true">/</span>
       <span class="crumb crumb-current" aria-current="page">{{ bc_current }}</span>
     </li>
     {%- endif -%}
   </ol>
 </nav>
+<script>
+/* мобайл: цепочка в одной строке — автоскролл к текущему (последнему) элементу */
+(function () {
+  var list = document.querySelector('[data-crumb-list]');
+  if (list) list.scrollLeft = list.scrollWidth;
+})();
+</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":{{ t_breadcrumbs_home | json }},"item":"{{ canon_base }}__SHOP_BASE__/"}{%- if bc_parent_title -%},{"@type":"ListItem","position":2,"name":{{ bc_parent_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/category/{{ bc_parent_slug }}"}{%- endif -%}{%- if bc_cat_title -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}3{%- else -%}2{%- endif -%},"name":{{ bc_cat_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}"}{%- endif -%}{%- if bc_current -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}{%- if bc_cat_title -%}4{%- else -%}3{%- endif -%}{%- else -%}{%- if bc_cat_title -%}3{%- else -%}2{%- endif -%}{%- endif -%},"name":{{ bc_current | json }}}{%- endif -%}]}</script>
 {%- endif -%}

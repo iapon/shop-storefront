@@ -46,9 +46,11 @@
 <meta property="og:image" content="{{ og_img }}">
 <meta name="twitter:card" content="summary_large_image">
 {%- endif -%}
-{%- comment -%} слоты JSON-LD (D26): страницы и partial крошек кладут в
-  page_jsonld ГОТОВЫЕ <script type="application/ld+json">-блоки (каждый
-  объект — в своём теге: склейка объектов в один тег ломает парсинг) {%- endcomment -%}
+{%- comment -%} слоты JSON-LD (D26): страницы кладут в page_jsonld ГОТОВЫЕ
+  <script type="application/ld+json">-блоки (каждый объект — в своём теге:
+  склейка объектов в один тег ломает парсинг); BreadcrumbList эмитит
+  partials/breadcrumbs ИНЛАЙНОМ в теле (partial — чистая функция, capture
+  вверх не доезжает). {%- endcomment -%}
 {{ page_jsonld }}
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ site.version }}">
 {%- comment -%} Pre-paint boot темы — В head ДО CSS-ссылок (web.dev, W6 №24):

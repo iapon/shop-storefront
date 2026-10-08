@@ -1,12 +1,12 @@
 {
-  "_comment": "Мок данных каталога для dev-харнесса. Форма = GraphQL envelope: биндинг <key>.data.<field>. Страница=1, cat=''. all.data.products — ≤100 товаров для счётчиков чипов (D27); у категорий parent { id slug } — дерево чипов (D18), cat-4 — потомок cat-1. site_url='' — canonical/og:url уходят на фоллбек https://{{ host }} (D26).",
+  "_comment": "Мок данных каталога для dev-харнесса. Форма = GraphQL envelope: биндинг <key>.data.<field>. Страница=1, cat=''. all.data.products — ≤100 товаров для счётчиков чипов (D27); у категорий parent { id slug title } — дерево чипов (D18) + крошки-тайтлы (W6 №1), cat-4 — потомок cat-1. site_url='' — canonical/og:url уходят на фоллбек https://{{ host }} (D26).",
   "cats": {
     "data": {
       "categories": [
         { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
         { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null },
         { "id": "cat-3", "title": "Канцелярия", "slug": "stationery", "parent": null },
-        { "id": "cat-4", "title": "Тарелки", "slug": "plates", "parent": { "id": "cat-1", "slug": "ceramics" } }
+        { "id": "cat-4", "title": "Тарелки", "slug": "plates", "parent": { "id": "cat-1", "title": "Керамика", "slug": "ceramics" } }
       ]
     }
   },

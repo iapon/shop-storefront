@@ -168,7 +168,6 @@
 {%- assign t_row = ui_rows | find: "key", "theme_toggle_dark" -%}{%- assign t_theme_toggle_dark = t_row.value | default: "Тема: тёмная. Переключить" -%}
 {%- assign t_row = ui_rows | find: "key", "description_more" -%}{%- assign t_description_more = t_row.value | default: "Ещё" -%}
 {%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}
-{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
 
 {%- comment -%} пустая строка в Liquid TRUTHY — query-параметры нормализуем
    в nil через default: nil (поведение одинаково у osteele/liquid и liquidjs),
@@ -191,30 +190,99 @@
 {%- assign page_canon = "__SHOP_BASE__/" -%}
 {%- capture content -%}
 {%- assign q_enc = current_q | default: "" | url_encode -%}
-<section class="hero">
-  <div class="shop-container">
-    <span class="hero-kicker">{{ t_catalog_kicker }}</span>
-    <h1 class="hero-title">{% if cat_row %}{{ cat_row.title }}{% else %}{{ t_catalog_title }}{% endif %}</h1>
+{%- assign total = count.data.productsCount -%}
+{%- comment -%} W6: подписи тулбара — число применённых фильтров (бейдж кнопки
+  «Фильтры») и текущая сортировка (кнопка листа). Сортировка чипом не
+  становится (порядок, а не ограничение выборки). {%- endcomment -%}
+{%- assign applied_n = 0 -%}
+{%- if current_cat -%}{%- assign applied_n = applied_n | plus: 1 -%}{%- endif -%}
+{%- if current_q -%}{%- assign applied_n = applied_n | plus: 1 -%}{%- endif -%}
+{%- assign sort_current_label = t_sort_new -%}
+{%- if current_sort == "price_asc" -%}{%- assign sort_current_label = t_sort_price_asc -%}{%- endif -%}
+{%- if current_sort == "price_desc" -%}{%- assign sort_current_label = t_sort_price_desc -%}{%- endif -%}
+{%- assign sort_current_txt = t_sort_current | replace: ph_n, sort_current_label -%}
+{%- assign cnt_txt = t_category_count | replace: ph_n, total -%}
+{%- comment -%} вход для partial applied-filters (десктоп — в тулбаре, мобайл —
+  строкой под ним): чипы применённых cat/q с крестиком + «Сбросить всё» {%- endcomment -%}
+{%- assign ac_base = "__SHOP_BASE__/" -%}
+{%- assign ac_cat_slug = current_cat -%}
+{%- if cat_row -%}{%- assign ac_cat_title = cat_row.title -%}{%- endif -%}
+{%- assign ac_q = current_q -%}
+{%- assign ac_q_enc = q_enc -%}
+{%- assign ac_sort = sort_suffix -%}
+
+<div class="shop-container" data-catalog-ui data-base="__SHOP_BASE__/" data-cat="{{ current_cat | escape }}">
+  {%- comment -%} ── Шапка (W6 №12-15): крошки → [H1 + счётчик] → описание ── {%- endcomment -%}
+  <div class="cat-head">
+    {%- if cat_row -%}
+      {%- comment -%} W6 №1: крошки — titles из Liquid-объекта категории
+        (parent { id title slug } приходит запросом), текущая — span без ссылки;
+        JSON-LD эмитит тот же partial из тех же данных {%- endcomment -%}
+      {%- if cat_row.parent -%}
+        {%- assign bc_parent_title = cat_row.parent.title -%}
+        {%- assign bc_parent_slug = cat_row.parent.slug -%}
+      {%- endif -%}
+      {%- assign bc_current = cat_row.title -%}
+      {% include "partials/breadcrumbs" %}
+      {%- assign bc_current = nil -%}{%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
+    {%- endif -%}
+    <div class="cat-title-row">
+      <h1 class="cat-title">{% if cat_row %}{{ cat_row.title }}{% else %}{{ t_catalog_title }}{% endif %}</h1>
+      <span class="cat-count" data-cat-count>{{ cnt_txt }}</span>
+    </div>
     {%- if cat_row and cat_row.description -%}
-      <p class="hero-subtitle">{{ cat_row.description }}</p>
+      {%- comment -%} №15: короткое описание сверху (2 строки + «Ещё»),
+        полное SEO-описание — под гридом {%- endcomment -%}
+      <p class="cat-desc" data-cat-desc data-clamp="1">{{ cat_row.description }}</p>
+      <button class="desc-toggle" type="button" data-desc-toggle data-visible="0"
+              data-more="{{ t_description_more | escape }}" data-less="{{ t_description_less | escape }}">{{ t_description_more }}</button>
     {%- else -%}
-      <p class="hero-subtitle">{{ t_catalog_subtitle }}</p>
+      <p class="cat-desc">{{ t_catalog_subtitle }}</p>
     {%- endif -%}
   </div>
-</section>
 
-<div class="shop-container">
-  {%- if cat_row -%}
-    {%- assign bc_cat_title = cat_row.title -%}
-    {%- assign bc_cat_slug = cat_row.slug -%}
-    {%- if cat_row.parent -%}
-      {%- assign bc_parent_title = cat_row.parent.title -%}
-      {%- assign bc_parent_slug = cat_row.parent.slug -%}
-    {%- endif -%}
-    {% include "partials/breadcrumbs" %}
-    {%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}{%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
-  {%- endif -%}
+  {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка. Мобайл — кнопки
+    «Фильтры» (бейдж применённых) и «Сортировка: <текущая>» (нижние листы);
+    ≥48rem — десктопная форма: поиск + чипы применённых + сортировка+Найти.
+    query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q= и ?cat=
+    кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1). {%- endcomment -%}
+  <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
+    {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
+    <div class="toolbar-mobile">
+      <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4Z"/></svg>
+        <span>{{ t_filters_open }}</span>
+        {%- if applied_n > 0 -%}<span class="toolbar-badge" data-applied-badge>{{ applied_n }}</span>{%- endif -%}
+      </button>
+      <button class="toolbar-btn" type="button" data-sort-open aria-haspopup="dialog" aria-controls="sort-sheet">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h12M6 10h8M8 14h4"/></svg>
+        <span data-sort-current>{{ sort_current_txt }}</span>
+      </button>
+    </div>
+    <div class="search-box">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="m13.4 13.4 4 4"/></svg>
+      <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+    </div>
+    {%- assign ac_mode = "desktop" -%}
+    {% include "partials/applied-filters" %}
+    {%- assign ac_mode = "mobile" -%}
+    <div class="tools-right">
+      <label class="sr-only" for="cat-sort">{{ t_sort_label }}</label>
+      <div class="sort-box">
+        <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
+          <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
+          <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
+          <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+        </select>
+        <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
+      </div>
+      <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
+    </div>
+  </form>
+  {%- assign ac_mode = "mobile" -%}
+  {% include "partials/applied-filters" %}
 
+  {%- comment -%} ── Чипы категорий — навигация по дереву (одна скролл-строка) {%- endcomment -%}
   <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
     <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>{{ t_chip_all }}</a>
     {%- comment -%} дерево: корни (parent пуст), внутри — потомки вторым уровнем.
@@ -236,47 +304,6 @@
       {%- endunless -%}
     {%- endfor -%}
   </nav>
-
-  <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
-    {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
-    {%- comment -%} query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q=
-      и ?cat= кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1).
-      Тулбар компактный (rich-shop, v1.6.1): поиск слева — узкое поле с
-      иконкой-лупой; справа группа «сортировка+кнопка»: select ОБЁРНУТ в
-      .sort-box с кастомным шевроном (appearance: none), НЕ голый и НЕ на
-      всю ширину — зажат max-width на ≥30rem (см. shop.css, проба
-      «тулбар компактен»). Видимый лейбл сортировки ушёл в sr-only. {%- endcomment -%}
-    <div class="search-box">
-      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="m13.4 13.4 4 4"/></svg>
-      <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
-    </div>
-    <div class="tools-right">
-      <label class="sr-only" for="cat-sort">{{ t_sort_label }}</label>
-      <div class="sort-box">
-        <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
-          <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
-          <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
-          <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
-        </select>
-        <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
-      </div>
-      <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
-    </div>
-  </form>
-  <script>
-  /* сортировка применяется сразу — select сам сабмитит GET-форму (D20);
-     статичный query-текст, инъекции не проходят (белый список — во флоу) */
-  (function () {
-    var s = document.querySelector('[data-sort-select]');
-    if (s) s.addEventListener('change', function () { if (s.form) s.form.submit(); });
-  })();
-  </script>
-
-  {%- assign total = count.data.productsCount -%}
-  {%- if current_q -%}
-    {%- assign found_txt = t_results_found | replace: "{{n}}", total -%}
-    <p class="results-note">{{ found_txt }}</p>
-  {%- endif -%}
 
   {%- if prods.data.products.size > 0 -%}
     <div class="product-grid">
@@ -305,6 +332,230 @@
       {% endfor %}
     </nav>
   {%- endif -%}
+
+  {%- comment -%} №15: полное SEO-описание категории — под гридом {%- endcomment -%}
+  {%- if cat_row and cat_row.description -%}
+  <div class="cat-desc-full">{{ cat_row.description }}</div>
+  {%- endif -%}
+
+  {%- comment -%} ── Нижние листы (W6 №7-8, №11): фильтры + сортировка. ──
+    Счётчики опций — Liquid-подсчёт по all.data.products (кап 100, D27).
+    «Показать N» — живой счётчик по черновику формы: JS считает по
+    data-products-index (title+categories всех товаров ≤100 — тот же
+    источник, что у счётчиков чипов). Радио несёт value (значение ?cat=),
+    data-goto (куда навигировать) и data-count-slug (для счётчика). {%- endcomment -%}
+  <div class="sheet-overlay" data-sheet-overlay></div>
+
+  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="{{ t_filters_open }}" aria-hidden="true">
+    <div class="sheet-head">
+      <span class="sheet-title">{{ t_filters_open }}</span>
+      <button class="sheet-reset" type="button" data-drawer-reset>{{ t_filters_reset }}</button>
+      <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-group">
+        <label class="sheet-label" for="drawer-q">{{ t_filters_search }}</label>
+        <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" data-drawer-q>
+      </div>
+      <fieldset class="sheet-group">
+        <legend class="sheet-legend">{{ t_filters_categories }}</legend>
+        <label class="sheet-option">
+          <input type="radio" name="drawer-cat" value="" data-goto="__SHOP_BASE__/" data-count-slug="" {% unless current_cat %}checked{% endunless %}>
+          <span>{{ t_filters_all }}</span>
+        </label>
+        {%- for c in cats.data.categories -%}
+          {%- unless c.parent -%}
+          {%- assign opt_n = 0 -%}
+          {%- for p in all.data.products -%}{%- if p.categories contains c.slug -%}{%- assign opt_n = opt_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
+          <label class="sheet-option">
+            <input type="radio" name="drawer-cat" value="{{ c.slug }}" data-goto="__SHOP_BASE__/" data-count-slug="{{ c.slug }}" {% if current_cat == c.slug %}checked{% endif %}>
+            <span>{{ c.title }}</span>
+            <span class="sheet-count">{{ opt_n }}</span>
+          </label>
+          {%- for cc in cats.data.categories -%}
+            {%- if cc.parent and cc.parent.id == c.id -%}
+            {%- assign opt_n = 0 -%}
+            {%- for p in all.data.products -%}{%- if p.categories contains cc.slug -%}{%- assign opt_n = opt_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
+            <label class="sheet-option">
+              <input type="radio" name="drawer-cat" value="{{ cc.slug }}" data-goto="__SHOP_BASE__/" data-count-slug="{{ cc.slug }}" {% if current_cat == cc.slug %}checked{% endif %}>
+              <span>{{ cc.title }}</span>
+              <span class="sheet-count">{{ opt_n }}</span>
+            </label>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endunless -%}
+      {%- endfor -%}
+      </fieldset>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn btn-primary sheet-apply" type="button" data-drawer-apply data-apply-tpl="{{ t_filters_show | escape }}"><span data-apply-label>{{ t_filters_show | replace: ph_n, total }}</span></button>
+    </div>
+  </aside>
+
+  <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="{{ t_sort_label }}" aria-hidden="true">
+    <div class="sheet-head">
+      <span class="sheet-title">{{ t_sort_label }}</span>
+      <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+    </div>
+    <div class="sheet-body">
+      <fieldset class="sheet-group">
+        <legend class="sr-only">{{ t_sort_label }}</legend>
+        <label class="sheet-option"><input type="radio" name="sort-choice" value="" {% if sort_suffix == blank %}checked{% endif %}><span>{{ t_sort_new }}</span></label>
+        <label class="sheet-option"><input type="radio" name="sort-choice" value="price_asc" {% if sort_suffix == "price_asc" %}checked{% endif %}><span>{{ t_sort_price_asc }}</span></label>
+        <label class="sheet-option"><input type="radio" name="sort-choice" value="price_desc" {% if sort_suffix == "price_desc" %}checked{% endif %}><span>{{ t_sort_price_desc }}</span></label>
+      </fieldset>
+    </div>
+  </aside>
+
+  {%- comment -%} индекс товаров для живого счётчика «Показать N»: те же данные,
+    что у счётчиков чипов (all.data.products ≤100, D27). JSON в body — тот же
+    уровень доверия, что JSON-LD выше (контент владельца). {%- endcomment -%}
+  <script type="application/json" data-products-index>{{ all.data.products | json }}</script>
+
+  {%- comment -%} сортировка применяется сразу — select сам сабмитит GET-форму (D20);
+     статичный query-текст, инъекции не проходят (белый список — во флоу) {%- endcomment -%}
+  <script>
+  (function () {
+    var s = document.querySelector('[data-sort-select]');
+    if (s) s.addEventListener('change', function () { if (s.form) s.form.submit(); });
+  })();
+  </script>
+  <script>
+  /* W6-CATALOG-UI-START
+     №4 крошки-автоскролл · №6-9 дравер/чипы/бейдж · №8 «Показать N» по
+     черновику · №10 URL-состояние (q/cat/sort в query, page сброс,
+     Back — нативный history) · №11 сортировка-лист · №15 «Ещё». */
+  (function () {
+    var ui = document.querySelector('[data-catalog-ui]');
+    if (!ui) return;
+    var base = ui.getAttribute('data-base') || '/';
+    var pageCat = ui.getAttribute('data-cat') || '';
+    var params = new URLSearchParams(location.search);
+    var overlay = ui.querySelector('[data-sheet-overlay]');
+    var openSheet = null;
+
+    function setOn(el, on) {
+      if (!el) return;
+      el.setAttribute('data-open', on ? '1' : '0');
+      if (el.hasAttribute('aria-hidden')) el.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    function closeSheet() {
+      if (!openSheet) return;
+      setOn(openSheet, false);
+      setOn(overlay, false);
+      document.documentElement.setAttribute('data-sheet-open', '0');
+      openSheet = null;
+    }
+    function showSheet(el, focusSel) {
+      closeSheet();
+      openSheet = el;
+      setOn(el, true);
+      setOn(overlay, true);
+      document.documentElement.setAttribute('data-sheet-open', '1');
+      var f = focusSel && el.querySelector(focusSel);
+      if (f) f.focus();
+    }
+    var dOpen = ui.querySelector('[data-drawer-open]');
+    var dEl = ui.querySelector('[data-filter-drawer]');
+    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]'); });
+    var sOpen = ui.querySelector('[data-sort-open]');
+    var sEl = ui.querySelector('[data-sort-sheet]');
+    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked'); });
+    if (overlay) overlay.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
+    });
+    var closes = ui.querySelectorAll('[data-sheet-close]');
+    for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
+
+    /* ---- дравер: черновик → «Показать N» (batch-применение, №8) ---- */
+    function draft() {
+      var r = ui.querySelector('input[name="drawer-cat"]:checked');
+      var qi = ui.querySelector('[data-drawer-q]');
+      return {
+        goto: r ? (r.getAttribute('data-goto') || base) : base,
+        cat: r ? r.value : pageCat,
+        countSlug: r ? (r.getAttribute('data-count-slug') || '') : pageCat,
+        q: qi ? qi.value : '',
+        sort: params.get('sort') || ''
+      };
+    }
+    function buildUrl(st) {
+      var sp = new URLSearchParams();
+      if (st.cat) sp.set('cat', st.cat);
+      if (st.q) sp.set('q', st.q);
+      if (st.sort) sp.set('sort', st.sort);
+      var qs = sp.toString();
+      return st.goto + (qs ? '?' + qs : '');
+    }
+    function applyUrl(st) { window.location.assign(buildUrl(st)); } /* №10: Back возвращает */
+
+    var INDEX = [];
+    var idxEl = ui.querySelector('[data-products-index]');
+    if (idxEl) { try { INDEX = JSON.parse(idxEl.textContent) || []; } catch (e) { INDEX = []; } }
+    function countOf(st) {
+      var q = (st.q || '').trim().toLowerCase();
+      var n = 0;
+      for (var i = 0; i < INDEX.length; i++) {
+        var row = INDEX[i] || {};
+        if (st.countSlug && (row.categories || []).indexOf(st.countSlug) < 0) continue;
+        if (q && String(row.title || '').toLowerCase().indexOf(q) < 0) continue;
+        n++;
+      }
+      return n;
+    }
+    function syncN() {
+      var label = ui.querySelector('[data-apply-label]');
+      var btn = ui.querySelector('[data-drawer-apply]');
+      if (!label || !btn || !INDEX.length) return;
+      label.textContent = (btn.getAttribute('data-apply-tpl') || '').replace('{{n}}', countOf(draft()));
+    }
+    var radios = ui.querySelectorAll('input[name="drawer-cat"]');
+    for (var ri = 0; ri < radios.length; ri++) radios[ri].addEventListener('change', syncN);
+    var dq = ui.querySelector('[data-drawer-q]');
+    if (dq) dq.addEventListener('input', syncN);
+    var applyBtn = ui.querySelector('[data-drawer-apply]');
+    if (applyBtn) applyBtn.addEventListener('click', function () { applyUrl(draft()); });
+    var resetBtn = ui.querySelector('[data-drawer-reset]');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === '';
+      if (dq) dq.value = '';
+      syncN();
+    });
+
+    /* ---- сортировка-лист: выбор применяет сразу (полная навигация, №11) ---- */
+    var sorts = ui.querySelectorAll('input[name="sort-choice"]');
+    for (var si = 0; si < sorts.length; si++) {
+      (function (r) {
+        r.addEventListener('change', function () {
+          applyUrl({ goto: base, cat: pageCat, countSlug: pageCat, q: params.get('q') || '', sort: r.value });
+        });
+      })(sorts[si]);
+    }
+
+    /* ---- №15: «Ещё»/«Свернуть» описания (только если есть переполнение) ---- */
+    var desc = ui.querySelector('[data-cat-desc]');
+    var more = ui.querySelector('[data-desc-toggle]');
+    if (desc && more) {
+      var hasOverflow = desc.scrollHeight > desc.clientHeight + 2;
+      var syncMore = function () {
+        var clamped = desc.getAttribute('data-clamp') === '1';
+        more.setAttribute('data-visible', hasOverflow ? '1' : '0');
+        more.textContent = clamped ? more.getAttribute('data-more') : more.getAttribute('data-less');
+      };
+      more.addEventListener('click', function () {
+        desc.setAttribute('data-clamp', desc.getAttribute('data-clamp') === '1' ? '0' : '1');
+        syncMore();
+      });
+      syncMore();
+    }
+
+    /* №4 (крошки-автоскролл) живёт в partials/breadcrumbs — там же, где
+       разметка; продукт и категория получают его без каталогного скрипта. */
+  })();
+  /* W6-CATALOG-UI-END */
+  </script>
 </div>
+
 {%- endcapture -%}
 {% include "base" %}

@@ -1,13 +1,14 @@
 {%- comment -%}
-  category.liquid — страница категории (НОВЫЙ, волна A; маршрут
+  category.liquid — страница категории (волна A; маршрут
   __SHOP_BASE__/category/:slug, sitemap shop_categories_sitemap).
   Биндинги (флоу shop_category): cat.data.categories (0..1 по слагу, со
   select'ом parent { id title slug }), children.data.categories (потомки по
   id родителя), prods.data.products, count.data.productsCount, g_site.
   Не найдена → состояние в шаблоне (страница жива, 404 не роняет кэш).
-  Сортировка ?sort= согласована с каталогом (тот же белый список во флоу).
-  JSON-LD: CollectionPage + BreadcrumbList (partial крошек appends к
-  page_jsonld — порядок присвоения важен: сначала CollectionPage).
+  Сортировка ?sort= согласована с каталогом (тот же белый список во флоу);
+  ?q= тоже читается флоу (те же library-записи shop_catalog_products/count).
+  JSON-LD: CollectionPage — в page_jsonld (head); BreadcrumbList эмитит
+  partial breadcrumbs ИНЛАЙНОМ в месте вызова (partial — чистая функция).
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП СЛОВАРЯ И НАСТРОЕК (D25/D30) — ИНЛАЙН в каждом entry-шаблоне.
@@ -171,27 +172,44 @@
 {%- assign t_row = ui_rows | find: "key", "theme_toggle_dark" -%}{%- assign t_theme_toggle_dark = t_row.value | default: "Тема: тёмная. Переключить" -%}
 {%- assign t_row = ui_rows | find: "key", "description_more" -%}{%- assign t_description_more = t_row.value | default: "Ещё" -%}
 {%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}
-{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
 
 {%- assign category = cat.data.categories | first -%}
-{%- comment -%} пустая строка TRUTHY — query.sort нормализуем в nil (см. catalog.liquid) {%- endcomment -%}
+{%- comment -%} пустая строка TRUTHY — query-параметры нормализуем в nil
+   (см. catalog.liquid); q/sort несёт URL — Back возвращает состояние (W6 №10),
+   flow shop_category читает те же query.q/query.sort, что и каталог. {%- endcomment -%}
+{%- assign current_q = query.q | default: nil -%}
 {%- assign current_sort = query.sort | default: nil -%}
 {%- assign sort_suffix = nil -%}
 {%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
+{%- assign q_enc = current_q | default: "" | url_encode -%}
+{%- assign sort_current_label = t_sort_new -%}
+{%- if current_sort == "price_asc" -%}{%- assign sort_current_label = t_sort_price_asc -%}{%- endif -%}
+{%- if current_sort == "price_desc" -%}{%- assign sort_current_label = t_sort_price_desc -%}{%- endif -%}
+{%- assign sort_current_txt = t_sort_current | replace: ph_n, sort_current_label -%}
 {%- if category -%}
   {%- assign page_title = category.meta_title | default: category.title -%}
   {%- assign page_desc = category.meta_description | default: category.description | default: category.title -%}
   {%- assign page_canon = "__SHOP_BASE__/category/" | append: category.slug -%}
   {%- capture cat_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":{{ category.title | json }},"url":"{{ canon_base }}{{ page_canon }}"}</script>{%- endcapture -%}
   {%- assign page_jsonld = cat_ld -%}
+  {%- assign total = count.data.productsCount -%}
+  {%- assign cnt_txt = t_category_count | replace: ph_n, total -%}
+  {%- comment -%} вход partial applied-filters: на категории фильтр один — q
+    (категория живёт в пути); сортировка чипом не становится. {%- endcomment -%}
+  {%- assign ac_base = "__SHOP_BASE__/category/" | append: category.slug -%}
+  {%- assign ac_q = current_q -%}
+  {%- assign ac_q_enc = q_enc -%}
+  {%- assign ac_sort = sort_suffix -%}
 {%- else -%}
   {%- assign page_title = t_category_not_found -%}
   {%- assign page_noindex = true -%}
 {%- endif -%}
 {%- capture content -%}
-<div class="shop-container section-y">
+<div class="shop-container section-y" data-category-ui data-base="__SHOP_BASE__/category/{{ category.slug | escape }}">
   {%- if category -%}
-    <section class="category-hero">
+    {%- comment -%} ── Шапка (W6 №12-15, контракт каталога): крошки →
+      [H1 clamp + счётчик] → описание 2 строки + «Ещё» ── {%- endcomment -%}
+    <div class="cat-head">
       {%- assign bc_current = category.title -%}
       {%- if category.parent -%}
         {%- assign bc_cat_title = category.parent.title -%}
@@ -199,27 +217,41 @@
       {%- endif -%}
       {% include "partials/breadcrumbs" %}
       {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
-      <h1 class="hero-title category-title">{{ category.title }}</h1>
-      {%- if category.description -%}<p class="hero-subtitle">{{ category.description }}</p>{%- endif -%}
-    </section>
+      <div class="cat-title-row">
+        <h1 class="cat-title">{{ category.title }}</h1>
+        <span class="cat-count" data-cat-count>{{ cnt_txt }}</span>
+      </div>
+      {%- if category.description -%}
+      <p class="cat-desc" data-cat-desc data-clamp="1">{{ category.description }}</p>
+      <button class="desc-toggle" type="button" data-desc-toggle data-visible="0"
+              data-more="{{ t_description_more | escape }}" data-less="{{ t_description_less | escape }}">{{ t_description_more }}</button>
+      {%- endif -%}
+    </div>
 
-    {%- if children.data.categories.size > 0 -%}
-    <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
-      {%- for cc in children.data.categories -%}
-      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}">{{ cc.title }}</a>
-      {%- endfor -%}
-    </nav>
-    {%- endif -%}
-
-    {%- assign total = count.data.productsCount -%}
-    {%- assign cnt_txt = t_category_count | replace: "{{n}}", total -%}
-    <p class="results-note">{{ cnt_txt }}</p>
-
-    {%- if prods.data.products.size > 0 -%}
+    {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка, контракт каталога.
+      Мобайл — «Фильтры» (нижний лист с поиском; на категории нет полного
+      индекса товаров, поэтому кнопка «Найти» без счётчика N) и
+      «Сортировка: <текущая>» (лист-меню); ≥48rem — десктопная форма:
+      поиск + чип применённых + сортировка. {%- endcomment -%}
     <form class="cat-tools" method="get" action="__SHOP_BASE__/category/{{ category.slug }}" data-cat-tools>
-      {%- comment -%} тулбар категории — тот же контракт, что в каталоге
-        (v1.6.1): select обёрнут в .sort-box с кастомным шевроном, справа;
-        ширина зажата max-width на ≥30rem — не растягивается. {%- endcomment -%}
+      <div class="toolbar-mobile">
+        <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4Z"/></svg>
+          <span>{{ t_filters_open }}</span>
+          {%- if current_q -%}<span class="toolbar-badge" data-applied-badge>1</span>{%- endif -%}
+        </button>
+        <button class="toolbar-btn" type="button" data-sort-open aria-haspopup="dialog" aria-controls="sort-sheet">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h12M6 10h8M8 14h4"/></svg>
+          <span data-sort-current>{{ sort_current_txt }}</span>
+        </button>
+      </div>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="m13.4 13.4 4 4"/></svg>
+        <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+      </div>
+      {%- assign ac_mode = "desktop" -%}
+      {% include "partials/applied-filters" %}
+      {%- assign ac_mode = "mobile" -%}
       <div class="tools-right">
         <label class="sr-only" for="category-sort">{{ t_sort_label }}</label>
         <div class="sort-box">
@@ -230,14 +262,26 @@
           </select>
           <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
         </div>
+        <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
       </div>
     </form>
+    {%- assign ac_mode = "mobile" -%}
+    {% include "partials/applied-filters" %}
 
+    {%- if children.data.categories.size > 0 -%}
+    <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
+      {%- for cc in children.data.categories -%}
+      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}">{{ cc.title }}</a>
+      {%- endfor -%}
+    </nav>
+    {%- endif -%}
+
+    {%- if prods.data.products.size > 0 -%}
     <div class="product-grid">
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
 
-    {%- comment -%} та же формула страниц, что в каталоге (w3-№5): см. catalog.liquid {%- endcomment -%}
+    {%- comment -%} та же формула страниц, что в каталоге (w3-№5); q не теряем {%- endcomment -%}
     {%- assign page_size = 12 -%}
     {%- assign page_size_m1 = page_size | minus: 1 -%}
     {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
@@ -246,14 +290,143 @@
     {%- if pages > 1 -%}
       <nav class="pagination" aria-label="{{ t_pagination_aria }}">
         {% for n in (1..pages) %}
-          {%- capture pg_href -%}__SHOP_BASE__/category/{{ category.slug }}?{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
+          {%- capture pg_href -%}__SHOP_BASE__/category/{{ category.slug }}?{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
           <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
         {% endfor %}
       </nav>
     {%- endif -%}
+    {%- comment -%} №15: полное SEO-описание — под гридом {%- endcomment -%}
+    {%- if category.description -%}
+    <div class="cat-desc-full">{{ category.description }}</div>
+    {%- endif -%}
     {%- else -%}
     <p class="empty-note">{{ t_catalog_empty }}</p>
     {%- endif -%}
+
+    {%- comment -%} ── Нижние листы (W6 №7-8, №11): поиск + сортировка.
+      Счётчика «Показать N» нет — полного индекса товаров категории
+      (как catalog all.data.products) здесь не видно, честнее кнопка «Найти». ── {%- endcomment -%}
+    <div class="sheet-overlay" data-sheet-overlay></div>
+
+    <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="{{ t_filters_open }}" aria-hidden="true">
+      <div class="sheet-head">
+        <span class="sheet-title">{{ t_filters_open }}</span>
+        <button class="sheet-reset" type="button" data-drawer-reset>{{ t_filters_reset }}</button>
+        <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-group">
+          <label class="sheet-label" for="drawer-q">{{ t_filters_search }}</label>
+          <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" data-drawer-q>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="btn btn-primary sheet-apply" type="button" data-drawer-apply>{{ t_search_submit }}</button>
+      </div>
+    </aside>
+
+    <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="{{ t_sort_label }}" aria-hidden="true">
+      <div class="sheet-head">
+        <span class="sheet-title">{{ t_sort_label }}</span>
+        <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+      </div>
+      <div class="sheet-body">
+        <fieldset class="sheet-group">
+          <legend class="sr-only">{{ t_sort_label }}</legend>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="" {% if sort_suffix == blank %}checked{% endif %}><span>{{ t_sort_new }}</span></label>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_asc" {% if sort_suffix == "price_asc" %}checked{% endif %}><span>{{ t_sort_price_asc }}</span></label>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_desc" {% if sort_suffix == "price_desc" %}checked{% endif %}><span>{{ t_sort_price_desc }}</span></label>
+        </fieldset>
+      </div>
+    </aside>
+
+  <script>
+  /* W6-CATEGORY-UI-START — контракт каталога (W6-CATALOG-UI) в объёме
+     категории: дравер поиска, сортировка-лист (выбор применяет сразу),
+     «Ещё» описания, Esc/оверлей. URL-состояние: q/sort в query, page
+     сброс, Back — нативный history. */
+  (function () {
+    var ui = document.querySelector('[data-category-ui]');
+    if (!ui) return;
+    var base = ui.getAttribute('data-base') || location.pathname;
+    var params = new URLSearchParams(location.search);
+    var overlay = ui.querySelector('[data-sheet-overlay]');
+    var openSheet = null;
+
+    function setOn(el, on) {
+      if (!el) return;
+      el.setAttribute('data-open', on ? '1' : '0');
+      if (el.hasAttribute('aria-hidden')) el.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    function closeSheet() {
+      if (!openSheet) return;
+      setOn(openSheet, false);
+      setOn(overlay, false);
+      document.documentElement.setAttribute('data-sheet-open', '0');
+      openSheet = null;
+    }
+    function showSheet(el, focusSel) {
+      closeSheet();
+      openSheet = el;
+      setOn(el, true);
+      setOn(overlay, true);
+      document.documentElement.setAttribute('data-sheet-open', '1');
+      var f = focusSel && el.querySelector(focusSel);
+      if (f) f.focus();
+    }
+    var dOpen = ui.querySelector('[data-drawer-open]');
+    var dEl = ui.querySelector('[data-filter-drawer]');
+    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]'); });
+    var sOpen = ui.querySelector('[data-sort-open]');
+    var sEl = ui.querySelector('[data-sort-sheet]');
+    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked'); });
+    if (overlay) overlay.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
+    });
+    var closes = ui.querySelectorAll('[data-sheet-close]');
+    for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
+
+    function applyUrl(q, sort) {
+      var sp = new URLSearchParams();
+      if (q) sp.set('q', q);
+      if (sort) sp.set('sort', sort);
+      var qs = sp.toString();
+      window.location.assign(base + (qs ? '?' + qs : ''));
+    }
+    var dq = ui.querySelector('[data-drawer-q]');
+    var applyBtn = ui.querySelector('[data-drawer-apply]');
+    if (applyBtn) applyBtn.addEventListener('click', function () { applyUrl(dq ? dq.value : '', params.get('sort') || ''); });
+    var resetBtn = ui.querySelector('[data-drawer-reset]');
+    if (resetBtn) resetBtn.addEventListener('click', function () { if (dq) dq.value = ''; });
+    if (dq) dq.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); applyUrl(dq.value, params.get('sort') || ''); }
+    });
+    var sorts = ui.querySelectorAll('input[name="sort-choice"]');
+    for (var si = 0; si < sorts.length; si++) {
+      (function (r) {
+        r.addEventListener('change', function () { applyUrl(params.get('q') || '', r.value); });
+      })(sorts[si]);
+    }
+
+    var desc = ui.querySelector('[data-cat-desc]');
+    var more = ui.querySelector('[data-desc-toggle]');
+    if (desc && more) {
+      var hasOverflow = desc.scrollHeight > desc.clientHeight + 2;
+      var syncMore = function () {
+        var clamped = desc.getAttribute('data-clamp') === '1';
+        more.setAttribute('data-visible', hasOverflow ? '1' : '0');
+        more.textContent = clamped ? more.getAttribute('data-more') : more.getAttribute('data-less');
+      };
+      more.addEventListener('click', function () {
+        desc.setAttribute('data-clamp', desc.getAttribute('data-clamp') === '1' ? '0' : '1');
+        syncMore();
+      });
+      syncMore();
+    }
+  })();
+  /* W6-CATEGORY-UI-END */
+  </script>
   {%- else -%}
   <div class="status-screen" style="padding-left:0;padding-right:0;">
     <span class="status-badge error" aria-hidden="true">∅</span>

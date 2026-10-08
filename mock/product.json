@@ -1,6 +1,14 @@
 {
-  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4.",
+  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); cats — биндинг shop_catalog_categories (узел g_cat флоу): тайтлы категорий для крошек (W6 №1); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4.",
   "found": {
+    "cats": {
+      "data": {
+        "categories": [
+          { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
+          { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null }
+        ]
+      }
+    },
     "p": {
       "data": {
         "products": [

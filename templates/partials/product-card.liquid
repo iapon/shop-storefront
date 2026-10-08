@@ -4,18 +4,28 @@
   (переменные текут вниз — читает, не назначает). Бейдж наличия —
   partial stock-badge (тоже чистый: читает p.stock); волна B добавит сюда
   сердечко избранного.
+
+  W6 №20-22: фото — ЕДИНЫЙ аспект 3/4 (CSS), loading="lazy" + width/height
+  против CLS; hover — свап на ВТОРОЕ фото (оба <img> в разметке, второй
+  opacity:0, CSS :hover на (hover:hover); на таче не активен); название —
+  2 строки line-clamp с зарезервированной высотой; цена 18px semibold;
+  «Нет в наличии» — оверлей на фото (а не только бейдж в теле). Бейдж
+  скидки «−N%» отложен: поля old_price в схеме товара нет — выдумывать не
+  станем (заметка в отчёте W6).
 {%- endcomment -%}
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
     {%- if p.photos and p.photos.size > 0 -%}
-      <img src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy">
+      <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy" width="600" height="800">
+      {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true" loading="lazy" width="600" height="800">{%- endif -%}
     {%- else -%}
       <span>{{ t_no_photo }}</span>
     {%- endif -%}
+    {%- if p.stock <= 0 -%}<span class="card-overlay">{{ t_out_of_stock }}</span>{%- endif -%}
   </div>
   <div class="product-card-body">
     <h3 class="product-card-title">{{ p.title }}</h3>
     <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
-    {% include "partials/stock-badge" %}
+    <div class="product-card-stock">{% include "partials/stock-badge" %}</div>
   </div>
 </a>

@@ -14,7 +14,7 @@ const q = { cat: '', page: '', q: '', sort: '' };
 const cases = [
   ['catalog', null, ['Кружка «Лён»', '990.00', 'product-card', 'Каталог', 'pagination', 'chip-count', 'Тарелки', 'cat-tools', 'data-sort-select']],
   ['catalog', null, ['Кружка «Лён»', '990.00', 'product-card', 'Каталог', 'pagination', 'chip-count', 'cat-tools', 'data-sort-select'], { query: { ...q, cat: 'ceramics' } }],
-  ['catalog', null, ['Найдено: 26', 'value="кружка-тест"', 'q='], { query: { ...q, q: 'кружка-тест' } }],
+  ['catalog', null, ['Товаров: 26', 'value="кружка-тест"', 'applied-chip', 'q='], { query: { ...q, q: 'кружка-тест' } }],
   ['catalog', null, ['value="price_asc" selected', 'sort=price_asc&amp;page=2'], { query: { ...q, sort: 'price_asc', page: '2' } }],
   ['category', 'found', ['Керамика', 'Посуда и декор', 'Товаров: 26', 'Тарелки', 'product-card', 'data-sort-select', 'category/ceramics?page=3']],
   ['category', 'nested', ['Керамика', 'Тарелки', 'category/ceramics', 'Товаров: 1']],
@@ -185,10 +185,12 @@ function extractJsonLd(html) {
 }
 
 /* ── Поведенческая проба: тоггл темы (мини-DOM над static/js/theme.js) ────
-   Контракт: клик меняет data-theme и пишет ОБЕ формы выбора — localStorage
-   dynamica-theme И куку dynamica-theme с domain=.<родительский домен>
-   (boot-скрипт платформы кладёт куку на .dynapi.ru — тоггл обязан её
-   перезаписывать 1:1, иначе «тоггл не работает», страницы в разных темах). */
+   Контракт (W6 №23-24): ОДНА кнопка циклит auto→light→dark→auto. «Системная»
+   (auto) = ПУСТОЕ хранилище (localStorage И кука dynamica-theme удалены) —
+   boot-скрипт head в этом режиме сам следует за prefers-color-scheme.
+   Явный выбор пишется в ОБЕ формы: localStorage И куку с domain=.<родительский
+   домен> (перезапись платформенной куки 1:1; localhost — host-only).
+   aria-label обновляется по слотам data-theme-aria-{auto,light,dark} на body. */
 
 function makeToggleDom(hostname) {
   // Куковая банка с браузерной семантикой: domain-кука и host-only кука с
@@ -238,10 +240,19 @@ function makeToggleDom(hostname) {
 
   const html = makeElement({
     attrs: { 'data-theme': 'dynamica-light' },
+    style: {},
     classList: {
       _s: new Set(),
       add(c) { this._s.add(c); },
       remove(c) { this._s.delete(c); },
+    },
+  });
+
+  const body = makeElement({
+    attrs: {
+      'data-theme-aria-auto': 'Тема: системная. Переключить',
+      'data-theme-aria-light': 'Тема: светлая. Переключить',
+      'data-theme-aria-dark': 'Тема: тёмная. Переключить',
     },
   });
 
@@ -250,6 +261,7 @@ function makeToggleDom(hostname) {
     get cookie() { return cookieString(); },
     set cookie(v) { writeCookie(v); },
     documentElement: html,
+    body,
     getElementById(id) { return id === 'theme-toggle' ? toggle : null; },
     addEventListener(type, fn) { (domListeners[type] ??= []).push(fn); },
   };
@@ -257,6 +269,7 @@ function makeToggleDom(hostname) {
   const localStorage = {
     getItem: (k) => (storage.has(k) ? storage.get(k) : null),
     setItem: (k, v) => storage.set(k, String(v)),
+    removeItem: (k) => storage.delete(k),
   };
   const window = {
     location: { hostname },
@@ -275,20 +288,34 @@ function runThemeJs(dom) {
 function smokeThemeToggle() {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const themeCookies = (dom) => dom.jar.filter((c) => c.name === 'dynamica-theme');
 
-  // 1) sub.dynapi.ru: тоггл меняет data-theme и пишет ОБЕ формы; кука — на .dynapi.ru
+  // 1) sub.dynapi.ru: цикл auto→light→dark→auto; хранилище пишется/чистится,
+  //    кука — на .dynapi.ru, aria-label следует за режимом.
   const dom = makeToggleDom('mag.dynapi.ru');
   runThemeJs(dom);
-  check(dom.html.attrs['data-theme'] === 'dynamica-light', 'boot: ожидалась dynamica-light');
-  dom.toggle.click();
-  check(dom.html.attrs['data-theme'] === 'dynamica-dark', 'клик не сменил data-theme на dynamica-dark');
-  check(dom.localStorage.getItem('dynamica-theme') === 'dark', 'localStorage не получил dark');
-  const themeCookies = () => dom.jar.filter((c) => c.name === 'dynamica-theme');
-  check(themeCookies().length === 1, `кук dynamica-theme ${themeCookies().length}, ожидалась 1: ${JSON.stringify(dom.jar)}`);
-  check(themeCookies()[0]?.value === 'dark', 'кука не dark');
-  check(themeCookies()[0]?.domain === '.dynapi.ru', `кука без domain=.dynapi.ru: ${JSON.stringify(themeCookies()[0])}`);
-  dom.toggle.click();
-  check(dom.html.attrs['data-theme'] === 'dynamica-light' && themeCookies()[0]?.value === 'light', 'обратный клик не вернул light');
+  check(dom.html.attrs['data-theme'] === 'dynamica-light', 'boot (auto, ОС светлая): ожидалась dynamica-light');
+  check(dom.toggle.attrs['aria-label'] === 'Тема: системная. Переключить', `boot: aria-label не «системная»: ${dom.toggle.attrs['aria-label']}`);
+  check(dom.toggle.attrs.title === 'Тема: системная. Переключить', 'boot: title не проставлен');
+
+  dom.toggle.click(); // auto → light
+  check(dom.html.attrs['data-theme'] === 'dynamica-light', 'клик 1 (light): data-theme сбился');
+  check(dom.localStorage.getItem('dynamica-theme') === 'light', 'клик 1: localStorage не получил light');
+  check(themeCookies(dom).length === 1 && themeCookies(dom)[0].value === 'light'
+        && themeCookies(dom)[0].domain === '.dynapi.ru', `клик 1: кука light не на .dynapi.ru: ${JSON.stringify(dom.jar)}`);
+  check(dom.toggle.attrs['aria-label'] === 'Тема: светлая. Переключить', 'клик 1: aria-label не «светлая»');
+
+  dom.toggle.click(); // light → dark
+  check(dom.html.attrs['data-theme'] === 'dynamica-dark', 'клик 2 (dark): data-theme не dynamica-dark');
+  check(dom.localStorage.getItem('dynamica-theme') === 'dark', 'клик 2: localStorage не получил dark');
+  check(themeCookies(dom).length === 1 && themeCookies(dom)[0].value === 'dark', 'клик 2: кука не dark');
+  check(dom.toggle.attrs['aria-label'] === 'Тема: тёмная. Переключить', 'клик 2: aria-label не «тёмная»');
+
+  dom.toggle.click(); // dark → auto: хранилище ПОЛНОСТЬЮ пустое
+  check(dom.localStorage.getItem('dynamica-theme') === null, 'клик 3 (auto): localStorage не очищен');
+  check(themeCookies(dom).length === 0, `клик 3: куки не удалены: ${JSON.stringify(dom.jar)}`);
+  check(dom.html.attrs['data-theme'] === 'dynamica-light', 'клик 3 (auto): ОС светлая — ожидалась dynamica-light');
+  check(dom.toggle.attrs['aria-label'] === 'Тема: системная. Переключить', 'клик 3: aria-label не «системная»');
 
   // 2) localhost: domain-атрибута быть не должно (host-only)
   const local = makeToggleDom('localhost');
@@ -301,7 +328,7 @@ function smokeThemeToggle() {
     failed++;
     console.log('FAIL theme-toggle: ' + fails.join(' | '));
   } else {
-    console.log('OK   theme-toggle (data-theme + localStorage + cookie domain; localhost host-only)');
+    console.log('OK   theme-toggle (цикл auto→light→dark→auto: хранилище/кука .dynapi.ru/aria по слотам; localhost host-only)');
   }
 }
 smokeThemeToggle();
@@ -555,16 +582,14 @@ await smokeQtySteppers();
   }
 }
 
-/* ── Проба «тулбар компактен» (v1.6.1, разнос владельца) ──────────────
-   Контракт: на desktop-вьюпорте поиск и сортировка НЕ растянуты на всю
-   ширину страницы (rich-shop тулбар). Смок рендерит HTML без применения
-   стилей, поэтому контракт — по исходнику shop.css (комментарии вычищены):
-   в блоке @media (min-width: 30rem) у .search-box и .sort-box есть
-   max-width в rem (поле ≤ 20rem = 320px, селект ≤ 13.75rem = 220px); в
-   базе (320) панель складывается — .search-box полная строка (там это
-   ок). Плюс обёртки: select не голый (appearance: none + .sort-box с
-   кастомным шевроном в разметке), у поиска — иконка-лупа; легаси-классы
-   растянутой вёрстки (.sort-label) ликвидированы. */
+/* ── Проба «тулбар компактен» (v1.6.1 → W6 №6/№16) ────────────────────
+   Контракт W6: тулбар — sticky-строка. В БАЗЕ (320) десктопная форма
+   скрыта (поиск/сортировка display:none), живут мобильные кнопки-листы
+   (.toolbar-mobile: «Фильтры» + «Сортировка: <текущая>», тап-таргет
+   2.75rem); на ≥48rem — обратная раскладка одной строкой ≤48px (поиск
+   ≤20rem, селект ≤12.5rem, группа прижата вправо, мобильные кнопки
+   скрыты). Смок рендерит HTML без стилей — контракт по исходнику CSS
+   (комментарии вычищены) + по разметке шаблонов (лупа, шеврон, кнопки). */
 
 /* mediaBlock: вырезать сбалансированный по скобкам блок @media-правила
    (наивный [^}] не берёт вложенные правила). */
@@ -583,27 +608,38 @@ const mediaBlock = (cssSrc, header) => {
     .replace(/\/\*[\s\S]*?\*\//g, '');
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
-  const block30 = mediaBlock(css, '@media \\(min-width: 30rem\\)');
+  const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
   const remMax = (rule) => { const m = /max-width:\s*([\d.]+)rem/.exec(rule); return m ? Number(m[1]) : null; };
-  const searchRule = /\.search-box\s*\{[^}]*\}/.exec(block30)?.[0] ?? '';
-  const sortRule = /\.sort-box\s*\{[^}]*\}/.exec(block30)?.[0] ?? '';
+  // База (мобайл-фёрст): десктопная форма скрыта, кнопки-листы на месте
+  const baseSearch = /\.search-box,\s*\.tools-right\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/display:\s*none/.test(baseSearch), 'база 320: десктопная форма (поиск/сортировка) не скрыта — должны жить кнопки-листы');
+  check(/\.toolbar-mobile\s*\{[^}]*display:\s*flex/.test(css), 'база 320: мобильные кнопки тулбара не показаны');
+  check(/\.toolbar-btn\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'кнопки тулбара в базе ниже 2.75rem (44px, D31)');
+  // Sticky-тулбар (W6 №16): прилипает к верху с фоном и тонким бордером
+  const toolsRule = /\.cat-tools\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/position:\s*sticky/.test(toolsRule) && /top:\s*0/.test(toolsRule), 'тулбар не sticky (position: sticky; top: 0)');
+  check(/background:\s*var\(--shop-bg\)/.test(toolsRule) && /border-bottom/.test(toolsRule), 'тулбар: нет фона и бордера снизу для sticky-состояния');
+  // ≥48rem: одна строка, компактные ширины, мобильные кнопки скрыты
+  const searchRule = /\.search-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
+  const sortRule = /\.sort-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
   const sw = remMax(searchRule), tw = remMax(sortRule);
-  check(sw !== null && sw >= 15 && sw <= 20, `desktop: у .search-box нет компактного max-width 15–20rem: ${searchRule}`);
-  check(tw !== null && tw >= 10 && tw <= 13.75, `desktop: у .sort-box нет фиксированной ширины 10–13.75rem: ${sortRule}`);
-  check(/\.tools-right\s*\{[^}]*margin-left:\s*auto/.test(block30), 'desktop: группа «сортировка+кнопка» прижата вправо');
-  const baseSearch = /\.search-box\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/flex:\s*1 1 100%/.test(baseSearch), 'база 320: поле поиска — полная строка (панель складывается)');
+  check(sw !== null && sw >= 15 && sw <= 20, `desktop ≥48rem: у .search-box нет компактного max-width 15–20rem: ${searchRule}`);
+  check(tw !== null && tw >= 10 && tw <= 13.75, `desktop ≥48rem: у .sort-box нет фиксированной ширины 10–13.75rem: ${sortRule}`);
+  check(/\.tools-right\s*\{[^}]*margin-left:\s*auto/.test(block48), 'desktop ≥48rem: группа «сортировка+кнопка» не прижата вправо');
+  check(/\.toolbar-mobile\s*\{[^}]*display:\s*none/.test(block48), 'desktop ≥48rem: мобильные кнопки тулбара не скрыты');
   check(/\.field-input\.sort-select\s*\{[^}]*appearance:\s*none/.test(css), 'select не голый: appearance: none (+ кастомный шеврон)');
   const catTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'catalog.liquid'), 'utf8');
   const catPageTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'category.liquid'), 'utf8');
   check(catTpl.includes('search-icon') && catTpl.includes('sort-chevron'), 'каталог: тулбар несёт иконку-лупу и шеврон сортировки');
-  check(catPageTpl.includes('sort-chevron'), 'категория: сортировка тоже обёрнута (шеврон)');
+  check(catPageTpl.includes('sort-chevron') && catPageTpl.includes('search-icon'), 'категория: тулбар того же контракта (лупа + шеврон)');
+  check(catTpl.includes('data-drawer-open') && catTpl.includes('data-sort-open'), 'каталог: мобильные кнопки «Фильтры»/«Сортировка» в разметке');
+  check(catPageTpl.includes('data-drawer-open') && catPageTpl.includes('data-sort-open'), 'категория: мобильные кнопки «Фильтры»/«Сортировка» в разметке');
   check(!/\.sort-label\s*\{/.test(css), 'легаси .sort-label растянутой вёрстки ликвидирован');
   if (fails.length) {
     failed++;
     console.log('FAIL toolbar-compact: ' + fails.join(' | '));
   } else {
-    console.log('OK   toolbar-compact (desktop: поиск ≤20rem, селект ≤12.5rem, группа справа; select обёрнут, лупа на месте)');
+    console.log('OK   toolbar-compact (база: кнопки-листы 44px; ≥48rem: sticky-строка, поиск ≤20rem, селект ≤12.5rem, группа справа)');
   }
 }
 
@@ -649,6 +685,101 @@ const mediaBlock = (cssSrc, header) => {
   }
 }
 
+/* ── Проба UX-волны W6 (исследование w6-ux-research) ────────────────────
+   Крошки-тайтлы (№1-5) · дравер фильтров и «Показать N» (№7-8) · URL-
+   состояние/Back (№10) · сортировка-лист (№11) · счётчик у H1 (№14) ·
+   карточка: аспект/hover/clamp/оверлей (№20-22) · тумблер темы: разметка
+   и pre-paint (№23-24) · тёмная полировка (№25) · грид 4 колонки (№19). */
+{
+  const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const read = (p) => readFileSync(join(rootDir, p), 'utf8');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+
+  // A. Крошки-тайтлы на каталоге: ?cat=plates (потомок) → «Керамика» ссылкой,
+  //    «Тарелки» — span aria-current без <a>; JSON-LD 1:1 с видимой строкой.
+  const catChild = await renderMockPage(engine, 'catalog', null, { query: { ...q, cat: 'plates' } });
+  check(/href="\/shop\/category\/ceramics"[^>]*>Керамика<\/a>/.test(catChild), 'крошки каталога: родитель — ссылкой с title (не slug)');
+  check(/<span class="crumb crumb-current" aria-current="page">Тарелки<\/span>/.test(catChild), 'крошки каталога: текущая — span aria-current без ссылки');
+  const childLd = extractJsonLd(catChild).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('catalog?cat=plates: JSON-LD не парсится: ' + e.message); return null; } }).filter(Boolean);
+  const childBc = childLd.find((o) => o['@type'] === 'BreadcrumbList');
+  check(childBc && childBc.itemListElement.length === 3
+    && childBc.itemListElement[1].name === 'Керамика'
+    && childBc.itemListElement[1].item === 'https://localhost:5173/shop/category/ceramics'
+    && childBc.itemListElement[2].name === 'Тарелки'
+    && !('item' in childBc.itemListElement[2]), 'крошки каталога: JSON-LD совпадает с видимой строкой, у последнего элемента нет item');
+
+  // B. Крошка товара — человекочитаемый title из cats (не capitalize(slug)).
+  const prod = await renderMockPage(engine, 'product', null, { query: { ...q } });
+  check(/href="\/shop\/category\/ceramics"[^>]*>Керамика<\/a>/.test(prod), 'крошки товара: категория — «Керамика», не capitalize(slug)');
+  const prodLdW6 = extractJsonLd(prod).map((s) => { try { return JSON.parse(s); } catch (e) { return null; } }).filter(Boolean);
+  const prodBcW6 = prodLdW6.find((o) => o['@type'] === 'BreadcrumbList');
+  check(prodBcW6 && prodBcW6.itemListElement[1].name === 'Керамика', 'крошки товара: JSON-LD несёт title категории');
+
+  // C. Дравер фильтров (№7-8): нижний лист — dialog с aria, оверлей,
+  //    «Показать N» (шаблон в data-apply-tpl, живое число в data-apply-label),
+  //    радио категорий со счётчиками, индекс товаров для живого счётчика.
+  const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  check(/<aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true"[^>]*aria-hidden="true"/.test(catHtml), 'дравер: нижний лист без role=dialog/aria-modal/aria-hidden');
+  check(catHtml.includes('data-sheet-overlay'), 'дравер: нет оверлея (закрытие по клику мимо)');
+  check(/data-apply-tpl="Показать \{\{n\}\}"/.test(catHtml), 'дравер: на кнопке «Показать N» нет шаблона подписи');
+  check(/>Показать 26</.test(catHtml), 'дравер: стартовая подпись «Показать N» не равна общему числу товаров');
+  check(/data-count-slug="plates"/.test(catHtml) && /<span class="sheet-count">1<\/span>/.test(catHtml), 'дравер: у радио категорий нет счётчиков опций');
+  check(catHtml.includes('data-products-index'), 'дравер: нет индекса товаров для живого счётчика');
+  const idx = /<script type="application\/json" data-products-index>([\s\S]*?)<\/script>/.exec(catHtml);
+  let idxOk = false;
+  try { idxOk = Array.isArray(JSON.parse(idx[1])) && JSON.parse(idx[1]).length === 5; } catch (e) { idxOk = false; }
+  check(idxOk, 'дравер: индекс товаров не парсится / неполон');
+
+  // D. URL-состояние и Back (№10): применение — навигация по URL (history
+  //    нативный), страница сбрасывается; Esc/оверлей закрывают лист.
+  const catSrc = read('templates/catalog.liquid');
+  check(catSrc.includes('window.location.assign'), 'дравер: применение не навигацией по URL (Back не вернёт состояние)');
+  check(catSrc.includes("'Escape'") && catSrc.includes('data-sheet-close'), 'дравер: закрытие по Esc/крестику не подключено');
+  check(catSrc.includes("sp.delete") === false && /buildUrl[\s\S]{0,400}sp\.set\('cat'[\s\S]{0,200}sp\.set\('q'[\s\S]{0,200}sp\.set\('sort'/.test(catSrc), 'дравер: URL собирается только из q/cat/sort (page сбрасывается)');
+
+  // E. Тумблер темы (№23-24): pre-paint в head ДО CSS-ссылок; кнопка с
+  //    aria-live; SVG-морф (маска-затмение); слоты aria на body.
+  const baseSrc = read('templates/base.liquid');
+  const prePaintIdx = baseSrc.indexOf('Pre-paint boot темы');
+  const cssLinkIdx = baseSrc.indexOf('css/tokens.css');
+  check(prePaintIdx > -1 && cssLinkIdx > -1 && prePaintIdx < cssLinkIdx, 'тема: pre-paint скрипт не до CSS-ссылок (вспышка не-той темы)');
+  check(baseSrc.includes('aria-live="polite"') && baseSrc.includes('theme-mask') && baseSrc.includes('theme-mask-hole'), 'тумблер: нет aria-live/SVG-маски-морфа');
+  check(baseSrc.includes('data-theme-aria-auto') && baseSrc.includes('data-theme-aria-light') && baseSrc.includes('data-theme-aria-dark'), 'тумблер: слоты динамического aria-label не на body');
+  const tokensSrc = read('static/css/tokens.css');
+  check(tokensSrc.includes('color-scheme: light') && tokensSrc.includes('color-scheme: dark'), 'тема: color-scheme не выставлен (нативные контролы не подстраиваются)');
+  check(tokensSrc.includes('[data-theme="dynamica-dark"] .product-card-photo img'), 'тёмная тема (№25): контентные фото не приглушаются');
+  check(/prefers-reduced-motion:\s*no-preference/.test(tokensSrc), 'тема: переход не сгейчен prefers-reduced-motion');
+
+  // F. Карточка (№20-22) и грид (№19).
+  const cssSrc = read('static/css/shop.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cardSrc = read('templates/partials/product-card.liquid');
+  check(/\.product-card-photo\s*\{[^}]*aspect-ratio:\s*3\s*\/\s*4/.test(cssSrc), 'карточка: фото без единого aspect-ratio 3/4');
+  check(cardSrc.includes('loading="lazy"') && cardSrc.includes('width="600"') && cardSrc.includes('height="800"'), 'карточка: нет lazy/width/height (CLS)');
+  check(/\.product-card-title\s*\{[^}]*-webkit-line-clamp:\s*2/.test(cssSrc) && /min-height:\s*calc\(1\.35em \* 2\)/.test(cssSrc), 'карточка: название без clamp 2 строк с резервом высоты');
+  check(/@media \(hover: hover\) and \(pointer: fine\)\s*\{\s*\.product-card:hover \.card-img-alt/.test(cssSrc), 'карточка: hover-свап второго фото не ограничен (hover: hover)');
+  check(cardSrc.includes('card-img-alt') && cardSrc.includes('card-overlay'), 'карточка: нет второго фото / оверлея «Нет в наличии»');
+  const block62 = mediaBlock(cssSrc, '@media \\(min-width: 62rem\\)');
+  check(/\.product-grid,\s*\.rel-grid\s*\{[^}]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/.test(block62), 'грид ≥62rem: не 4 колонки');
+
+  // G. Категория — тот же контракт W6 (H1-клэмп, счётчик у H1, листы, чипы).
+  const catPage = await renderMockPage(engine, 'category', 'found', { query: { ...q } });
+  check(catPage.includes('cat-title') && catPage.includes('data-cat-count'), 'категория: H1 без клэмпа/счётчик не у H1');
+  check(catPage.includes('data-cat-desc') && catPage.includes('data-desc-toggle'), 'категория: описание без «Ещё»');
+  check(catPage.includes('data-filter-drawer') && catPage.includes('data-sort-sheet'), 'категория: нет нижних листов фильтра/сортировки');
+  check(!catPage.includes('applied-row'), 'категория: чипы применённых не должны рендериться без фильтров');
+  const catPageQ = await renderMockPage(engine, 'category', 'found', { query: { ...q, q: 'кружка' } });
+  check(catPageQ.includes('applied-row') && /aria-label="Убрать фильтр: кружка"/.test(catPageQ), 'категория: применённый q не стал чипом с escape-эхом');
+  check(/data-applied-badge[^>]*>1</.test(catPageQ), 'категория: бейдж применённых на кнопке «Фильтры» не равен 1');
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w6-ux: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w6-ux (крошки-тайтлы+JSON-LD, дравер/«Показать N»/URL-Back, тумблер+pre-paint+color-scheme, карточка 3:4/hover/clamp, грид 4, категория W6)');
+  }
+}
+
 /* ── Инвариант скоупа паршалов (регрессия класса include-assign) ──────────
    Движок рендера (osteele/liquid) НЕ поднимает assign/capture из паршала
    включателю — паршал обязан быть чистой функцией входов (данные текут
@@ -674,10 +805,22 @@ const mediaBlock = (cssSrc, header) => {
   const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
     'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
     'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
+  // Регион бутстрапа в entry-шаблоне: ровно canon.length байт от старт-маркера
+  // — обязан быть байт-в-байт равен канону. Простой includes не ловит
+  // «хвост-мусор» ПОСЛЕ канона (реальный кейс: sync резал по префиксу строки —
+  // сирота-assign перезатирала t_email_phone_label значением последнего t_row).
+  const CANON_TAIL = '{%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}';
+  const START_MARK = '{%- comment -%}\n  БУТСТРАП СЛОВАРЯ И НАСТРОЕК';
   for (const e of entries) {
     const src = readFileSync(join(rootDir, 'templates', e), 'utf8');
     if (!src.includes(bootstrap)) fails.push(`${e}: бутстрап словаря отсутствует/разошёлся с dev/ui-text-bootstrap.liquid`);
     if (/include\s+"partials\/ui-text"/.test(src)) fails.push(`${e}: устаревший include partials/ui-text (assign не доедет)`);
+    const s = src.indexOf(START_MARK);
+    if (s < 0) { fails.push(`${e}: не найден старт бутстрапа`); continue; }
+    const region = src.slice(s, s + bootstrap.length);
+    if (region !== bootstrap) fails.push(`${e}: регион бутстрапа не байт-равен канону (хвост-мусор после канона?)`);
+    const after = src.slice(s + bootstrap.length, s + bootstrap.length + 200);
+    if (/^\s*\{%- assign t_email_phone_label/.test(after)) fails.push(`${e}: сирота-assign t_email_phone_label после канона`);
   }
   if (fails.length) {
     failed++;
@@ -691,4 +834,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w6-ux + partial-purity');

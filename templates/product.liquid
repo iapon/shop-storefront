@@ -168,7 +168,6 @@
 {%- assign t_row = ui_rows | find: "key", "theme_toggle_dark" -%}{%- assign t_theme_toggle_dark = t_row.value | default: "Тема: тёмная. Переключить" -%}
 {%- assign t_row = ui_rows | find: "key", "description_more" -%}{%- assign t_description_more = t_row.value | default: "Ещё" -%}
 {%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}
-{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
 
 {%- assign product = p.data.products | first -%}
 {%- if product -%}
@@ -189,14 +188,30 @@
   {%- if product -%}
   <div class="product-page">
     {%- assign p_cat_slug = product.categories | first -%}
-    {%- comment -%} JSON-LD Product ДО включения крошек: partial breadcrumbs
-      ДОБАВЛЯЕТ BreadcrumbList к page_jsonld (порядок append'ов). Строки
-      вычищаются от кавычек/бэкслешей — ld-блок обязан парситься всегда;
-      offers.price — базовая цена (вариантные цены — волна B, платит k_calc). {%- endcomment -%}
+    {%- comment -%} JSON-LD Product — в page_jsonld (head); BreadcrumbList
+      эмитит partial breadcrumbs ИНЛАЙНОМ в месте вызова (partial — чистая
+      функция, capture вверх не доезжает). Строки вычищаются от
+      кавычек/бэкслешей — ld-блок обязан парситься всегда; offers.price —
+      базовая цена (вариантные цены — волна B, платит k_calc). {%- endcomment -%}
     {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
-    {%- assign bc_current = product.title -%}
+    {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
+      Тайтл приезжает биндингом cats (узел g_cat флоу переиспользует
+      shop_catalog_categories: id/title/slug + parent{title,slug}); без
+      биндинга — мягкая деградация на capitalize(slug), как в v1.6.1. {%- endcomment -%}
+    {%- assign p_cat_row = nil -%}
     {%- if p_cat_slug -%}
+      {%- assign p_cat_row = cats.data.categories | find: "slug", p_cat_slug -%}
+    {%- endif -%}
+    {%- assign bc_current = product.title -%}
+    {%- if p_cat_row -%}
+      {%- assign bc_cat_title = p_cat_row.title -%}
+      {%- assign bc_cat_slug = p_cat_row.slug -%}
+      {%- if p_cat_row.parent -%}
+        {%- assign bc_parent_title = p_cat_row.parent.title -%}
+        {%- assign bc_parent_slug = p_cat_row.parent.slug -%}
+      {%- endif -%}
+    {%- elsif p_cat_slug -%}
       {%- assign bc_cat_title = p_cat_slug | capitalize -%}
       {%- assign bc_cat_slug = p_cat_slug -%}
     {%- else -%}
@@ -205,6 +220,7 @@
     {%- endif -%}
     {% include "partials/breadcrumbs" %}
     {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
+    {%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
     <div class="product-page-cols">
     <div class="product-gallery" data-gallery>
       <div class="product-photo">

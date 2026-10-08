@@ -252,7 +252,7 @@ img { display: block; max-width: 100%; }
 .toolbar-mobile { display: flex; flex: 1 1 100%; align-items: center; justify-content: space-between; gap: 0.625rem; }
 .toolbar-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  min-height: 2.25rem; padding: 0.375rem 0.875rem;
+  min-height: 2.75rem; padding: 0.375rem 0.875rem; /* 44px, D31 (компакт на ≥62rem) */
   border: 1px solid var(--shop-border); border-radius: var(--shop-radius-md);
   background: var(--shop-surface); color: var(--shop-text);
   font-size: var(--shop-text-sm); font-family: inherit; cursor: pointer;
@@ -310,7 +310,7 @@ img { display: block; max-width: 100%; }
 .applied-chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
   flex: 0 0 auto; scroll-snap-align: start;
-  min-height: 2.25rem; padding: 0.25rem 0.75rem; border-radius: var(--shop-radius-pill);
+  min-height: 2.75rem; padding: 0.25rem 0.75rem; border-radius: var(--shop-radius-pill); /* 44px, D31 */
   border: 1px solid color-mix(in oklch, var(--shop-brand) 30%, transparent);
   background: var(--shop-brand-tint); color: var(--shop-brand);
   font-size: var(--shop-text-sm); text-decoration: none;
@@ -319,7 +319,7 @@ img { display: block; max-width: 100%; }
 .applied-chip:hover { border-color: var(--shop-brand); color: var(--shop-brand); text-decoration: none; }
 .applied-chip .applied-x { font-size: var(--shop-text-md); line-height: 1; }
 .applied-reset {
-  flex: 0 0 auto; min-height: 2.25rem; padding: 0.25rem 0.5rem; border: 0; background: none;
+  flex: 0 0 auto; min-height: 2.75rem; padding: 0.25rem 0.5rem; border: 0; background: none; /* 44px, D31 */
   color: var(--shop-text-3); font-size: var(--shop-text-sm); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
@@ -425,13 +425,6 @@ html[data-sheet-open="1"] { overflow: hidden; }
 .crumb-current {
   display: inline-flex; align-items: center; min-height: 2.75rem;
   color: var(--shop-text); font-weight: 500;
-}
-/* ≥48rem фейд не нужен (десктоп обычно без переполнения), строки ниже */
-@media (min-width: 48rem) {
-  .crumb-list {
-    -webkit-mask-image: none; mask-image: none;
-    flex-wrap: wrap; white-space: normal; overflow: visible;
-  }
 }
 
 /* ── Карточный грид (ЕДИНСТВЕННЫЙ: каталог + «Похожие») ──────
@@ -737,6 +730,7 @@ html[data-sheet-open="1"] { overflow: hidden; }
   .cart-counter { min-height: 0; }
   .icon-btn { width: 2.5rem; height: 2.5rem; } /* тумблер 40px (W6 №23: 40–44 десктоп) */
   .chip { min-height: 0; padding: 0.375rem 0.875rem; }
+  .toolbar-btn, .applied-chip, .applied-reset { min-height: 2.25rem; } /* тулбар компактнеет вслед за чипами */
   .page-link { min-width: 2.25rem; height: 2.25rem; }
   /* тулбар компактнеет вслед за чипами/пагинацией (вертикальный ритм десктопа) */
   .field-input.search-input, .field-input.sort-select { min-height: 2.25rem; }
@@ -762,7 +756,10 @@ html[data-sheet-open="1"] { overflow: hidden; }
    чипам/крошкам фейд-подсказка прокрутки не нужна. */
 @media (min-width: 48rem) {
   .chip-row { -webkit-mask-image: none; mask-image: none; }
-  .crumb-list { -webkit-mask-image: none; mask-image: none; }
+  .crumb-list {
+    -webkit-mask-image: none; mask-image: none;
+    flex-wrap: wrap; white-space: normal; overflow: visible;
+  }
   .toolbar-mobile { display: none; }
   .cat-tools { margin-inline: calc(var(--shop-gutter) * -1); padding: 0.25rem var(--shop-gutter); }
   .search-box { display: block; flex: 1 1 16rem; min-width: 10rem; max-width: 20rem; }

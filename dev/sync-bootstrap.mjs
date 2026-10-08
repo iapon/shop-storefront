@@ -8,7 +8,11 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const canon = readFileSync(join(root, 'dev', 'ui-text-bootstrap.liquid'), 'utf8');
 const START = '{%- comment -%}\n  БУТСТРАП СЛОВАРЯ И НАСТРОЕК';
-const END_LINE = '{%- assign t_row = ui_rows | find: "key", "email_phone_label" -%}';
+// Хвост блока — ПОЛНАЯ строка email_phone_label (find + assign на одной
+// строке). Резать по префиксу нельзя: второй assign той же строки оставался
+// сиротой ПОСЛЕ канона и перезатирал t_email_phone_label значением последнего
+// t_row («Свернуть») — реальный баг письма вендора (ревизия W6).
+const END_LINE = '{%- assign t_row = ui_rows | find: "key", "email_phone_label" -%}{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}';
 const endIdxCanon = canon.lastIndexOf(END_LINE);
 if (endIdxCanon < 0) { console.error('канон: не найден хвост'); process.exit(1); }
 const canonEnd = endIdxCanon + END_LINE.length;

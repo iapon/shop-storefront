@@ -4,13 +4,13 @@
   Вход: товар в переменной p (читается p.stock) — вызывающий НЕ назначает
   ничего: у product-card и product.liquid `p`/`product` уже в скоупе.
   Порог «Мало» — 5 (унифицирован D24); меняется здесь, в одном месте.
-  Тексты — словарь (t_* из бутстрапа entry-шаблона, течёт вниз),
-  подстановки {{n}} — штатным replace прямо в интерполяции.
+  Тексты — константы partial (данные текут только вниз);
+  число подставляется append'ом — литерал-плейсхолдер не нужен.
 {%- endcomment -%}
 {%- if p.stock <= 0 -%}
-  <span class="badge badge-error">{{ t_out_of_stock }}</span>
+  <span class="badge badge-error">Нет в наличии</span>
 {%- elsif p.stock <= 5 -%}
-  <span class="badge badge-warning">{{ t_low_stock | replace: ph_n, p.stock }}</span>
+  <span class="badge badge-warning">{{ "Осталось " | append: p.stock }}</span>
 {%- else -%}
-  <span class="badge badge-success">{{ t_in_stock | replace: ph_n, p.stock }}</span>
+  <span class="badge badge-success">{{ "В наличии: " | append: p.stock }}</span>
 {%- endif -%}

@@ -11,21 +11,23 @@
   partial breadcrumbs ИНЛАЙНОМ в месте вызова (partial — чистая функция).
 {%- endcomment -%}
 {%- comment -%}
-  БУТСТРАП СЛОВАРЯ И НАСТРОЕК (D25/D30) — ИНЛАЙН в каждом entry-шаблоне.
+  БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
   Принцип витрины: данные текут только ВНИЗ; partial = чистая функция
   входов (движок include не поднимает присваивания включателю —
-  osteele/liquid). Каноническая копия блока — dev/ui-text-bootstrap.liquid;
-  смок проверяет байт-равенство во всех entry-шаблонах. НЕ включать через
-  {% include %} — присваивания не доедут до включателя.
+  osteele/liquid). Каноническая копия блока —
+  dev/site-config-bootstrap.liquid; смок проверяет байт-равенство во всех
+  entry-шаблонах. НЕ включать через {% include %} — присваивания не
+  доедут до включателя.
 
   Две ветки адресации:
-    render-страницы: g_site.data.ui / g_site.data.cfg (hoist result_key g_site)
-    письма/API:      results.g_site.ui / results.g_site.cfg (сырой tplCtx flow)
-  Владельцу: тексты правятся в админке (Контент → «Строки витрины» /
-  «Настройки магазина»); здесь — только чтение и фоллбеки.
+    render-страницы: g_site.data.cfg (hoist result_key g_site)
+    письма/API:      results.g_site.cfg (сырой tplCtx flow)
+  Владельцу: поля правятся в админке (Контент → «Настройки магазина» —
+  одна запись с именованными полями; словарь ui_text ликвидирован в W8).
+  Пустое поле = вшитый фоллбек шаблона: cfg-поля читаются на месте с
+  default-фоллбеком (cfg.cta_add_to_cart → «В корзину»), интерфейсные
+  подписи без cfg-поля — константы шаблона; умеющие правят в шаблонах.
 {%- endcomment -%}
-{%- assign ui_rows = g_site.data.ui -%}
-{%- if ui_rows == blank -%}{%- assign ui_rows = results.g_site.ui -%}{%- endif -%}
 {%- assign cfg = g_site.data.cfg | first -%}
 {%- if cfg == blank -%}{%- assign cfg = results.g_site.cfg | first -%}{%- endif -%}
 {%- assign shop_name = cfg.name | default: "Магазин" -%}
@@ -45,133 +47,6 @@
   {%- assign canon_base = "https://" | append: canon_base -%}
 {%- endif -%}
 
-{%- assign t_row = ui_rows | find: "key", "header_account" -%}{%- assign t_header_account = t_row.value | default: "Кабинет" -%}
-{%- assign t_row = ui_rows | find: "key", "header_logout" -%}{%- assign t_header_logout = t_row.value | default: "Выйти" -%}
-{%- assign t_row = ui_rows | find: "key", "header_login" -%}{%- assign t_header_login = t_row.value | default: "Войти" -%}
-{%- assign t_row = ui_rows | find: "key", "header_register" -%}{%- assign t_header_register = t_row.value | default: "Регистрация" -%}
-{%- assign t_row = ui_rows | find: "key", "footer_powered" -%}{%- assign t_footer_powered = t_row.value | default: "Работает на DynapiCMS" -%}
-{%- assign t_row = ui_rows | find: "key", "catalog_kicker" -%}{%- assign t_catalog_kicker = t_row.value | default: "Каталог" -%}
-{%- assign t_row = ui_rows | find: "key", "catalog_title" -%}{%- assign t_catalog_title = t_row.value | default: "Выберите товар" -%}
-{%- assign t_row = ui_rows | find: "key", "catalog_subtitle" -%}{%- assign t_catalog_subtitle = t_row.value | default: "Доставка по всей России. Оплата картой онлайн через ЮKassa." -%}
-{%- assign t_row = ui_rows | find: "key", "chip_all" -%}{%- assign t_chip_all = t_row.value | default: "Все" -%}
-{%- assign t_row = ui_rows | find: "key", "catalog_empty" -%}{%- assign t_catalog_empty = t_row.value | default: "Здесь пока пусто — загляните позже или выберите другую категорию." -%}
-{%- assign t_row = ui_rows | find: "key", "pagination_aria" -%}{%- assign t_pagination_aria = t_row.value | default: "Страницы" -%}
-{%- assign t_row = ui_rows | find: "key", "search_placeholder" -%}{%- assign t_search_placeholder = t_row.value | default: "Поиск по каталогу" -%}
-{%- assign t_row = ui_rows | find: "key", "search_submit" -%}{%- assign t_search_submit = t_row.value | default: "Найти" -%}
-{%- assign t_row = ui_rows | find: "key", "sort_label" -%}{%- assign t_sort_label = t_row.value | default: "Сортировка" -%}
-{%- assign t_row = ui_rows | find: "key", "sort_new" -%}{%- assign t_sort_new = t_row.value | default: "Сначала новые" -%}
-{%- assign t_row = ui_rows | find: "key", "sort_price_asc" -%}{%- assign t_sort_price_asc = t_row.value | default: "Сначала дешевле" -%}
-{%- assign t_row = ui_rows | find: "key", "sort_price_desc" -%}{%- assign t_sort_price_desc = t_row.value | default: "Сначала дороже" -%}
-{%- assign t_row = ui_rows | find: "key", "results_found" -%}{%- assign t_results_found = t_row.value | default: "Найдено: {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "category_not_found" -%}{%- assign t_category_not_found = t_row.value | default: "Категория не найдена" -%}
-{%- assign t_row = ui_rows | find: "key", "category_not_found_text" -%}{%- assign t_category_not_found_text = t_row.value | default: "Возможно, категория была переименована или удалена." -%}
-{%- assign t_row = ui_rows | find: "key", "category_count" -%}{%- assign t_category_count = t_row.value | default: "Товаров: {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "breadcrumbs_home" -%}{%- assign t_breadcrumbs_home = t_row.value | default: "Главная" -%}
-{%- assign t_row = ui_rows | find: "key", "breadcrumbs_catalog" -%}{%- assign t_breadcrumbs_catalog = t_row.value | default: "Каталог" -%}
-{%- assign t_row = ui_rows | find: "key", "breadcrumbs_aria" -%}{%- assign t_breadcrumbs_aria = t_row.value | default: "Хлебные крошки" -%}
-{%- assign t_row = ui_rows | find: "key", "no_photo" -%}{%- assign t_no_photo = t_row.value | default: "нет фото" -%}
-{%- assign t_row = ui_rows | find: "key", "add_to_cart" -%}{%- assign t_add_to_cart = t_row.value | default: "В корзину" -%}
-{%- assign t_row = ui_rows | find: "key", "qty_aria" -%}{%- assign t_qty_aria = t_row.value | default: "Количество" -%}
-{%- assign t_row = ui_rows | find: "key", "qty_dec_aria" -%}{%- assign t_qty_dec_aria = t_row.value | default: "Уменьшить количество" -%}
-{%- assign t_row = ui_rows | find: "key", "qty_inc_aria" -%}{%- assign t_qty_inc_aria = t_row.value | default: "Увеличить количество" -%}
-{%- assign t_row = ui_rows | find: "key", "in_stock" -%}{%- assign t_in_stock = t_row.value | default: "В наличии: {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "low_stock" -%}{%- assign t_low_stock = t_row.value | default: "Осталось {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "out_of_stock" -%}{%- assign t_out_of_stock = t_row.value | default: "Нет в наличии" -%}
-{%- assign t_row = ui_rows | find: "key", "product_not_found" -%}{%- assign t_product_not_found = t_row.value | default: "Товар не найден" -%}
-{%- assign t_row = ui_rows | find: "key", "product_not_found_text" -%}{%- assign t_product_not_found_text = t_row.value | default: "Возможно, он распродан или снят с продажи." -%}
-{%- assign t_row = ui_rows | find: "key", "to_catalog" -%}{%- assign t_to_catalog = t_row.value | default: "В каталог" -%}
-{%- assign t_row = ui_rows | find: "key", "related_title" -%}{%- assign t_related_title = t_row.value | default: "Похожие товары" -%}
-{%- assign t_row = ui_rows | find: "key", "features_title" -%}{%- assign t_features_title = t_row.value | default: "Характеристики" -%}
-{%- assign t_row = ui_rows | find: "key", "product_meta_suffix" -%}{%- assign t_product_meta_suffix = t_row.value | default: "купить в интернет-магазине" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_title" -%}{%- assign t_checkout_title = t_row.value | default: "Оформление заказа" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_your_order" -%}{%- assign t_checkout_your_order = t_row.value | default: "Ваш заказ" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_contacts" -%}{%- assign t_checkout_contacts = t_row.value | default: "Контакты" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_summary" -%}{%- assign t_checkout_summary = t_row.value | default: "Итого" -%}
-{%- assign t_row = ui_rows | find: "key", "total_to_pay" -%}{%- assign t_total_to_pay = t_row.value | default: "К оплате" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_pay" -%}{%- assign t_checkout_pay = t_row.value | default: "Перейти к оплате" -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_pay_hint" -%}{%- assign t_checkout_pay_hint = t_row.value | default: "Оплата через ЮKassa: после нажатия вы перейдёте на платёжную страницу." -%}
-{%- assign t_row = ui_rows | find: "key", "checkout_agree" -%}{%- assign t_checkout_agree = t_row.value | default: "Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи." -%}
-{%- assign t_row = ui_rows | find: "key", "cart_clear" -%}{%- assign t_cart_clear = t_row.value | default: "Очистить корзину" -%}
-{%- assign t_row = ui_rows | find: "key", "cart_remove_aria" -%}{%- assign t_cart_remove_aria = t_row.value | default: "Убрать из корзины" -%}
-{%- assign t_row = ui_rows | find: "key", "cart_empty" -%}{%- assign t_cart_empty = t_row.value | default: "Корзина пуста" -%}
-{%- assign t_row = ui_rows | find: "key", "cart_empty_text" -%}{%- assign t_cart_empty_text = t_row.value | default: "Добавьте товары из каталога — они сохранятся, даже если вы ещё не зарегистрированы." -%}
-{%- assign t_row = ui_rows | find: "key", "field_name" -%}{%- assign t_field_name = t_row.value | default: "Имя" -%}
-{%- assign t_row = ui_rows | find: "key", "field_email" -%}{%- assign t_field_email = t_row.value | default: "Email" -%}
-{%- assign t_row = ui_rows | find: "key", "field_phone" -%}{%- assign t_field_phone = t_row.value | default: "Телефон" -%}
-{%- assign t_row = ui_rows | find: "key", "field_password" -%}{%- assign t_field_password = t_row.value | default: "Пароль" -%}
-{%- assign t_row = ui_rows | find: "key", "field_comment" -%}{%- assign t_field_comment = t_row.value | default: "Комментарий к заказу" -%}
-{%- assign t_row = ui_rows | find: "key", "field_email_hint" -%}{%- assign t_field_email_hint = t_row.value | default: "На этот email придёт подтверждение заказа." -%}
-{%- assign t_row = ui_rows | find: "key", "ph_name" -%}{%- assign t_ph_name = t_row.value | default: "Иван Петров" -%}
-{%- assign t_row = ui_rows | find: "key", "ph_email" -%}{%- assign t_ph_email = t_row.value | default: "ivan@example.ru" -%}
-{%- assign t_row = ui_rows | find: "key", "ph_phone" -%}{%- assign t_ph_phone = t_row.value | default: "+7 900 000-00-00" -%}
-{%- assign t_row = ui_rows | find: "key", "stock_only" -%}{%- assign t_stock_only = t_row.value | default: "в наличии только {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "order_no" -%}{%- assign t_order_no = t_row.value | default: "Заказ №" -%}
-{%- assign t_row = ui_rows | find: "key", "order_paid" -%}{%- assign t_order_paid = t_row.value | default: "Заказ оплачен ✓" -%}
-{%- assign t_row = ui_rows | find: "key", "order_paid_text" -%}{%- assign t_order_paid_text = t_row.value | default: "Спасибо! Мы получили оплату и приступаем к сборке. Подтверждение отправлено на {{email}}." -%}
-{%- assign t_row = ui_rows | find: "key", "order_cancelled" -%}{%- assign t_order_cancelled = t_row.value | default: "Заказ отменён" -%}
-{%- assign t_row = ui_rows | find: "key", "order_cancelled_text" -%}{%- assign t_order_cancelled_text = t_row.value | default: "Если вы отменили заказ случайно — просто оформите его заново в каталоге." -%}
-{%- assign t_row = ui_rows | find: "key", "order_new" -%}{%- assign t_order_new = t_row.value | default: "Заказ принят" -%}
-{%- assign t_row = ui_rows | find: "key", "order_new_text" -%}{%- assign t_order_new_text = t_row.value | default: "Осталось оплатить {{amount}} ₽ — сейчас откроется платёжная страница. Статус обновится автоматически: просто обновите эту страницу через пару минут." -%}
-{%- assign t_row = ui_rows | find: "key", "order_new_cancel_hint" -%}{%- assign t_order_new_cancel_hint = t_row.value | default: "Передумаете — напишите нам до оплаты, и мы отменим заказ." -%}
-{%- assign t_row = ui_rows | find: "key", "order_save_link" -%}{%- assign t_order_save_link = t_row.value | default: "Сохраните ссылку на эту страницу — она показывает актуальный статус заказа." -%}
-{%- assign t_row = ui_rows | find: "key", "order_not_found" -%}{%- assign t_order_not_found = t_row.value | default: "Заказ не найден" -%}
-{%- assign t_row = ui_rows | find: "key", "order_not_found_text" -%}{%- assign t_order_not_found_text = t_row.value | default: "Проверьте ссылку: возможно, номер заказа указан неверно." -%}
-{%- assign t_row = ui_rows | find: "key", "back_to_catalog" -%}{%- assign t_back_to_catalog = t_row.value | default: "Вернуться в каталог" -%}
-{%- assign t_row = ui_rows | find: "key", "account_title" -%}{%- assign t_account_title = t_row.value | default: "Мои заказы" -%}
-{%- assign t_row = ui_rows | find: "key", "account_empty" -%}{%- assign t_account_empty = t_row.value | default: "Заказов пока нет" -%}
-{%- assign t_row = ui_rows | find: "key", "account_empty_text" -%}{%- assign t_account_empty_text = t_row.value | default: "Оформите первый заказ — он появится здесь сразу после оплаты." -%}
-{%- assign t_row = ui_rows | find: "key", "status_paid" -%}{%- assign t_status_paid = t_row.value | default: "оплачен" -%}
-{%- assign t_row = ui_rows | find: "key", "status_cancelled" -%}{%- assign t_status_cancelled = t_row.value | default: "отменён" -%}
-{%- assign t_row = ui_rows | find: "key", "status_awaiting" -%}{%- assign t_status_awaiting = t_row.value | default: "ожидает оплаты" -%}
-{%- assign t_row = ui_rows | find: "key", "login_title" -%}{%- assign t_login_title = t_row.value | default: "Вход" -%}
-{%- assign t_row = ui_rows | find: "key", "login_already" -%}{%- assign t_login_already = t_row.value | default: "Вы уже вошли" -%}
-{%- assign t_row = ui_rows | find: "key", "login_already_text" -%}{%- assign t_login_already_text = t_row.value | default: "Можно перейти в кабинет — там ваши заказы." -%}
-{%- assign t_row = ui_rows | find: "key", "login_subtitle" -%}{%- assign t_login_subtitle = t_row.value | default: "С заказами, сохранённой корзиной и историей покупок." -%}
-{%- assign t_row = ui_rows | find: "key", "login_failed" -%}{%- assign t_login_failed = t_row.value | default: "Неверный email или пароль — попробуйте ещё раз." -%}
-{%- assign t_row = ui_rows | find: "key", "login_no_account" -%}{%- assign t_login_no_account = t_row.value | default: "Нет аккаунта?" -%}
-{%- assign t_row = ui_rows | find: "key", "to_register" -%}{%- assign t_to_register = t_row.value | default: "Зарегистрируйтесь" -%}
-{%- assign t_row = ui_rows | find: "key", "login_register_hint" -%}{%- assign t_login_register_hint = t_row.value | default: "— корзина гостя переедет в ваш кабинет." -%}
-{%- assign t_row = ui_rows | find: "key", "register_title" -%}{%- assign t_register_title = t_row.value | default: "Регистрация" -%}
-{%- assign t_row = ui_rows | find: "key", "register_already" -%}{%- assign t_register_already = t_row.value | default: "Вы уже зарегистрированы" -%}
-{%- assign t_row = ui_rows | find: "key", "register_already_text" -%}{%- assign t_register_already_text = t_row.value | default: "Аккаунт создан и вы вошли — загляните в кабинет." -%}
-{%- assign t_row = ui_rows | find: "key", "register_subtitle" -%}{%- assign t_register_subtitle = t_row.value | default: "История заказов, корзина на всех устройствах, статус оплаты — в личном кабинете." -%}
-{%- assign t_row = ui_rows | find: "key", "register_taken" -%}{%- assign t_register_taken = t_row.value | default: "Такой email уже зарегистрирован —" -%}
-{%- assign t_row = ui_rows | find: "key", "to_login" -%}{%- assign t_to_login = t_row.value | default: "войдите" -%}
-{%- assign t_row = ui_rows | find: "key", "register_check_email" -%}{%- assign t_register_check_email = t_row.value | default: "Почти готово! Мы отправили письмо для подтверждения — проверьте почту." -%}
-{%- assign t_row = ui_rows | find: "key", "register_submit" -%}{%- assign t_register_submit = t_row.value | default: "Создать аккаунт" -%}
-{%- assign t_row = ui_rows | find: "key", "register_pwd_hint" -%}{%- assign t_register_pwd_hint = t_row.value | default: "От 6 символов." -%}
-{%- assign t_row = ui_rows | find: "key", "register_have_account" -%}{%- assign t_register_have_account = t_row.value | default: "Уже есть аккаунт?" -%}
-{%- assign t_row = ui_rows | find: "key", "notfound_title" -%}{%- assign t_notfound_title = t_row.value | default: "Страница не найдена" -%}
-{%- assign t_row = ui_rows | find: "key", "notfound_text" -%}{%- assign t_notfound_text = t_row.value | default: "Такой страницы нет — возможно, товар распродан или ссылка устарела." -%}
-{%- assign t_row = ui_rows | find: "key", "notfound_help" -%}{%- assign t_notfound_help = t_row.value | default: "Ошибка 404 — вы можете сообщить о битой ссылке в поддержку." -%}
-{%- assign t_row = ui_rows | find: "key", "js_fill_form" -%}{%- assign t_js_fill_form = t_row.value | default: "Заполните имя и email." -%}
-{%- assign t_row = ui_rows | find: "key", "js_cart_invalid" -%}{%- assign t_js_cart_invalid = t_row.value | default: "Корзина недоступна или пуста — обновите страницу." -%}
-{%- assign t_row = ui_rows | find: "key", "js_checkout_failed" -%}{%- assign t_js_checkout_failed = t_row.value | default: "Не удалось оформить заказ. Попробуйте ещё раз." -%}
-{%- assign t_row = ui_rows | find: "key", "email_greeting" -%}{%- assign t_email_greeting = t_row.value | default: "Здравствуйте" -%}
-{%- assign t_row = ui_rows | find: "key", "email_order_received" -%}{%- assign t_email_order_received = t_row.value | default: "Спасибо за заказ! Мы уже начали его обрабатывать." -%}
-{%- assign t_row = ui_rows | find: "key", "email_awaiting_payment" -%}{%- assign t_email_awaiting_payment = t_row.value | default: "Заказ создан и ожидает оплаты." -%}
-{%- assign t_row = ui_rows | find: "key", "email_items_title" -%}{%- assign t_email_items_title = t_row.value | default: "Состав заказа" -%}
-{%- assign t_row = ui_rows | find: "key", "email_order_link" -%}{%- assign t_email_order_link = t_row.value | default: "Страница заказа" -%}
-{%- assign t_row = ui_rows | find: "key", "email_vendor_heading" -%}{%- assign t_email_vendor_heading = t_row.value | default: "Новый заказ" -%}
-{%- assign t_row = ui_rows | find: "key", "email_customer_label" -%}{%- assign t_email_customer_label = t_row.value | default: "Покупатель" -%}
-{%- assign t_row = ui_rows | find: "key", "email_comment_label" -%}{%- assign t_email_comment_label = t_row.value | default: "Комментарий" -%}
-{%- assign t_row = ui_rows | find: "key", "email_phone_label" -%}{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}
-{%- comment -%} ── UX-волна W6: фильтры-дравер, сортировка, чипы, тумблер темы ── {%- endcomment -%}
-{%- assign t_row = ui_rows | find: "key", "filters_open" -%}{%- assign t_filters_open = t_row.value | default: "Фильтры" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_reset" -%}{%- assign t_filters_reset = t_row.value | default: "Сбросить" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_close_aria" -%}{%- assign t_filters_close_aria = t_row.value | default: "Закрыть фильтры" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_show" -%}{%- assign t_filters_show = t_row.value | default: "Показать {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_search" -%}{%- assign t_filters_search = t_row.value | default: "Поиск" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_categories" -%}{%- assign t_filters_categories = t_row.value | default: "Категории" -%}
-{%- assign t_row = ui_rows | find: "key", "filters_all" -%}{%- assign t_filters_all = t_row.value | default: "Все категории" -%}
-{%- assign t_row = ui_rows | find: "key", "sort_current" -%}{%- assign t_sort_current = t_row.value | default: "Сортировка: {{n}}" -%}
-{%- assign t_row = ui_rows | find: "key", "applied_clear" -%}{%- assign t_applied_clear = t_row.value | default: "Сбросить всё" -%}
-{%- assign t_row = ui_rows | find: "key", "applied_remove" -%}{%- assign t_applied_remove = t_row.value | default: "Убрать фильтр" -%}
-{%- assign t_row = ui_rows | find: "key", "theme_toggle_auto" -%}{%- assign t_theme_toggle_auto = t_row.value | default: "Тема: системная. Переключить" -%}
-{%- assign t_row = ui_rows | find: "key", "theme_toggle_light" -%}{%- assign t_theme_toggle_light = t_row.value | default: "Тема: светлая. Переключить" -%}
-{%- assign t_row = ui_rows | find: "key", "theme_toggle_dark" -%}{%- assign t_theme_toggle_dark = t_row.value | default: "Тема: тёмная. Переключить" -%}
-{%- assign t_row = ui_rows | find: "key", "description_more" -%}{%- assign t_description_more = t_row.value | default: "Ещё" -%}
-{%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}
 
 {%- assign category = cat.data.categories | first -%}
 {%- comment -%} пустая строка TRUTHY — query-параметры нормализуем в nil
@@ -182,10 +57,10 @@
 {%- assign sort_suffix = nil -%}
 {%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
 {%- assign q_enc = current_q | default: "" | url_encode -%}
-{%- assign sort_current_label = t_sort_new -%}
-{%- if current_sort == "price_asc" -%}{%- assign sort_current_label = t_sort_price_asc -%}{%- endif -%}
-{%- if current_sort == "price_desc" -%}{%- assign sort_current_label = t_sort_price_desc -%}{%- endif -%}
-{%- assign sort_current_txt = t_sort_current | replace: ph_n, sort_current_label -%}
+{%- assign sort_current_label = "Сначала новые" -%}
+{%- if current_sort == "price_asc" -%}{%- assign sort_current_label = "Сначала дешевле" -%}{%- endif -%}
+{%- if current_sort == "price_desc" -%}{%- assign sort_current_label = "Сначала дороже" -%}{%- endif -%}
+{%- assign sort_current_txt = "Сортировка: " | append: sort_current_label -%}
 {%- if category -%}
   {%- assign page_title = category.meta_title | default: category.title -%}
   {%- assign page_desc = category.meta_description | default: category.description | default: category.title -%}
@@ -193,7 +68,7 @@
   {%- capture cat_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":{{ category.title | json }},"url":"{{ canon_base }}{{ page_canon }}"}</script>{%- endcapture -%}
   {%- assign page_jsonld = cat_ld -%}
   {%- assign total = count.data.productsCount -%}
-  {%- assign cnt_txt = t_category_count | replace: ph_n, total -%}
+  {%- assign cnt_txt = "Товаров: " | append: total -%}
   {%- comment -%} вход partial applied-filters: на категории фильтр один — q
     (категория живёт в пути); сортировка чипом не становится. {%- endcomment -%}
   {%- assign ac_base = "__SHOP_BASE__/category/" | append: category.slug -%}
@@ -201,7 +76,7 @@
   {%- assign ac_q_enc = q_enc -%}
   {%- assign ac_sort = sort_suffix -%}
 {%- else -%}
-  {%- assign page_title = t_category_not_found -%}
+  {%- assign page_title = "Категория не найдена" -%}
   {%- assign page_noindex = true -%}
 {%- endif -%}
 {%- capture content -%}
@@ -224,7 +99,7 @@
     {%- if category.description -%}
     <p class="cat-desc" data-cat-desc data-clamp="1">{{ category.description }}</p>
     <button class="desc-toggle" type="button" data-desc-toggle data-visible="0"
-            data-more="{{ t_description_more | escape }}" data-less="{{ t_description_less | escape }}">{{ t_description_more }}</button>
+            data-more="Ещё" data-less="Свернуть">Ещё</button>
     {%- endif -%}
   </div>
 </section>
@@ -239,7 +114,7 @@
       <div class="toolbar-mobile">
         <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4Z"/></svg>
-          <span>{{ t_filters_open }}</span>
+          <span>Фильтры</span>
           {%- if current_q -%}<span class="toolbar-badge" data-applied-badge>1</span>{%- endif -%}
         </button>
         <button class="toolbar-btn" type="button" data-sort-open aria-haspopup="dialog" aria-controls="sort-sheet">
@@ -249,29 +124,29 @@
       </div>
       <div class="search-box">
         <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="m13.4 13.4 4 4"/></svg>
-        <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" aria-label="{{ t_search_placeholder }}">
+        <input class="field-input search-input" type="search" name="q" value="{{ current_q | escape }}" placeholder="Поиск по каталогу" aria-label="Поиск по каталогу">
       </div>
       {%- assign ac_mode = "desktop" -%}
       {% include "partials/applied-filters" %}
       {%- assign ac_mode = "mobile" -%}
       <div class="tools-right">
-        <label class="sr-only" for="category-sort">{{ t_sort_label }}</label>
+        <label class="sr-only" for="category-sort">Сортировка</label>
         <div class="sort-box">
           <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select>
-            <option value="" {% if sort_suffix == blank %}selected{% endif %}>{{ t_sort_new }}</option>
-            <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>{{ t_sort_price_asc }}</option>
-            <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>{{ t_sort_price_desc }}</option>
+            <option value="" {% if sort_suffix == blank %}selected{% endif %}>Сначала новые</option>
+            <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
+            <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>Сначала дороже</option>
           </select>
           <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
         </div>
-        <button class="btn btn-secondary search-submit" type="submit">{{ t_search_submit }}</button>
+        <button class="btn btn-secondary search-submit" type="submit">Найти</button>
       </div>
     </form>
     {%- assign ac_mode = "mobile" -%}
     {% include "partials/applied-filters" %}
 
     {%- if children.data.categories.size > 0 -%}
-    <nav class="chip-row" aria-label="{{ t_catalog_kicker }}">
+    <nav class="chip-row" aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
       {%- for cc in children.data.categories -%}
       <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}">{{ cc.title }}</a>
       {%- endfor -%}
@@ -290,7 +165,7 @@
     {%- assign page_no = query.page | plus: 0 -%}
     {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
     {%- if pages > 1 -%}
-      <nav class="pagination" aria-label="{{ t_pagination_aria }}">
+      <nav class="pagination" aria-label="Страницы">
         {% for n in (1..pages) %}
           {%- capture pg_href -%}__SHOP_BASE__/category/{{ category.slug }}?{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
           <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
@@ -302,7 +177,7 @@
     <div class="cat-desc-full">{{ category.description }}</div>
     {%- endif -%}
     {%- else -%}
-    <p class="empty-note">{{ t_catalog_empty }}</p>
+    <p class="empty-note">Здесь пока пусто — загляните позже или выберите другую категорию.</p>
     {%- endif -%}
 
     {%- comment -%} ── Нижние листы (W6 №7-8, №11): поиск + сортировка.
@@ -310,34 +185,34 @@
       (как catalog all.data.products) здесь не видно, честнее кнопка «Найти». ── {%- endcomment -%}
     <div class="sheet-overlay" data-sheet-overlay></div>
 
-    <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="{{ t_filters_open }}" aria-hidden="true">
+  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="Фильтры" aria-hidden="true">
       <div class="sheet-head">
-        <span class="sheet-title">{{ t_filters_open }}</span>
-        <button class="sheet-reset" type="button" data-drawer-reset>{{ t_filters_reset }}</button>
-        <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+        <span class="sheet-title">Фильтры</span>
+        <button class="sheet-reset" type="button" data-drawer-reset>Сбросить</button>
+        <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
       </div>
       <div class="sheet-body">
         <div class="sheet-group">
-          <label class="sheet-label" for="drawer-q">{{ t_filters_search }}</label>
-          <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="{{ t_search_placeholder }}" data-drawer-q>
+          <label class="sheet-label" for="drawer-q">Поиск</label>
+          <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="Поиск по каталогу" data-drawer-q>
         </div>
       </div>
       <div class="sheet-foot">
-        <button class="btn btn-primary sheet-apply" type="button" data-drawer-apply>{{ t_search_submit }}</button>
+        <button class="btn btn-primary sheet-apply" type="button" data-drawer-apply>Найти</button>
       </div>
     </aside>
 
-    <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="{{ t_sort_label }}" aria-hidden="true">
+    <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="Сортировка" aria-hidden="true">
       <div class="sheet-head">
-        <span class="sheet-title">{{ t_sort_label }}</span>
-        <button class="sheet-close" type="button" data-sheet-close aria-label="{{ t_filters_close_aria }}">×</button>
+        <span class="sheet-title">Сортировка</span>
+        <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
       </div>
       <div class="sheet-body">
         <fieldset class="sheet-group">
-          <legend class="sr-only">{{ t_sort_label }}</legend>
-          <label class="sheet-option"><input type="radio" name="sort-choice" value="" {% if sort_suffix == blank %}checked{% endif %}><span>{{ t_sort_new }}</span></label>
-          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_asc" {% if sort_suffix == "price_asc" %}checked{% endif %}><span>{{ t_sort_price_asc }}</span></label>
-          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_desc" {% if sort_suffix == "price_desc" %}checked{% endif %}><span>{{ t_sort_price_desc }}</span></label>
+          <legend class="sr-only">Сортировка</legend>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="" {% if sort_suffix == blank %}checked{% endif %}><span>Сначала новые</span></label>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_asc" {% if sort_suffix == "price_asc" %}checked{% endif %}><span>Сначала дешевле</span></label>
+          <label class="sheet-option"><input type="radio" name="sort-choice" value="price_desc" {% if sort_suffix == "price_desc" %}checked{% endif %}><span>Сначала дороже</span></label>
         </fieldset>
       </div>
     </aside>
@@ -433,9 +308,9 @@
   {%- else -%}
   <div class="status-screen">
     <span class="status-badge error" aria-hidden="true">∅</span>
-    <h1 class="status-title">{{ t_category_not_found }}</h1>
-    <p class="status-text">{{ t_category_not_found_text }}</p>
-    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
+    <h1 class="status-title">Категория не найдена</h1>
+    <p class="status-text">Возможно, категория была переименована или удалена.</p>
+    <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
   </div>
   {%- endif -%}
 {%- endcapture -%}

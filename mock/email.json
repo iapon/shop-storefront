@@ -4,14 +4,29 @@
     "calc": {
       "ok": true,
       "lines": [
-        { "slug": "mug-linen", "title": "Кружка «Лён»", "price_kopecks": 99000, "qty": 2 },
-        { "slug": "planner-pine", "title": "Планинг «Сосна»", "price_kopecks": 34900, "qty": 1 }
+        {
+          "slug": "mug-linen",
+          "title": "Кружка «Лён»",
+          "price_kopecks": 99000,
+          "qty": 2
+        },
+        {
+          "slug": "planner-pine",
+          "title": "Планинг «Сосна»",
+          "price_kopecks": 34900,
+          "qty": 1
+        }
       ],
       "total_kopecks": 232900,
       "summary": "Кружка «Лён» × 2, Планинг «Сосна» × 1",
       "amount": "232.90"
     },
-    "order": { "createOrder": { "id": "b7e2c4a1-1111-4b6a-9a55-1e2f3a4b5c6d", "created_at": "2026-10-07T12:00:00Z" } },
+    "order": {
+      "createOrder": {
+        "id": "b7e2c4a1-1111-4b6a-9a55-1e2f3a4b5c6d",
+        "created_at": "2026-10-07T12:00:00Z"
+      }
+    },
     "g_site": {
       "cfg": [
         {
@@ -24,14 +39,25 @@
           "social_link": "https://t.me/example",
           "legal": "ИП Иванов И. И., ИНН 7800000000",
           "site_url": "https://shop.example.ru",
-          "og_image": null
+          "og_image": null,
+          "telegram": "https://t.me/example",
+          "hero_kicker": "Витрина",
+          "hero_title": "Выберите товар",
+          "hero_subtitle": "Доставка по всей России.",
+          "cta_add_to_cart": "",
+          "cta_checkout": "",
+          "cart_empty_title": "",
+          "filters_show": ""
         }
-      ],
-      "ui": []
+      ]
     }
   },
   "json": {
-    "customer": { "name": "Иван Петров", "email": "ivan@example.ru", "phone": "+7 921 000-00-00" },
+    "customer": {
+      "name": "Иван Петров",
+      "email": "ivan@example.ru",
+      "phone": "+7 921 000-00-00"
+    },
     "comment": "Позвоните за час до доставки",
     "website": ""
   }

@@ -13,7 +13,7 @@
     ac_cat_title / ac_cat_slug — применённая категория (опционально);
     ac_q / ac_q_enc — применённый поисковый запрос (опционально);
     ac_sort    — применённая сортировка («»|price_asc|price_desc);
-    t_applied_remove, t_applied_clear, t_catalog_kicker — из бутстрапа (вниз).
+    константы подписей — в самом partial; ac_*/bc_* — входы (вниз).
 
   Чипы: [cat ×] [q ×] [Сбросить всё]. Сортировка — НЕ фильтр (порядок,
   а не ограничение выборки) — чипом не станет. href чипов держит
@@ -21,13 +21,13 @@
   ?cat=..&sort=..; page сбрасывается (новая выдача — с первой страницы).
 {%- endcomment -%}
 {%- if ac_cat_title or ac_q -%}
-<nav class="applied-row applied-row-{{ ac_mode }}" aria-label="{{ t_catalog_kicker }}">
+<nav class="applied-row applied-row-{{ ac_mode }}" aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
   {%- if ac_cat_title -%}
-  <a class="applied-chip" href="{{ ac_base }}{% if ac_q %}?q={{ ac_q_enc }}{% if ac_sort %}&amp;sort={{ ac_sort }}{% endif %}{% elsif ac_sort %}?sort={{ ac_sort }}{% endif %}" aria-label="{{ t_applied_remove }}: {{ ac_cat_title | escape }}">{{ ac_cat_title | escape }}<span class="applied-x" aria-hidden="true">×</span></a>
+  <a class="applied-chip" href="{{ ac_base }}{% if ac_q %}?q={{ ac_q_enc }}{% if ac_sort %}&amp;sort={{ ac_sort }}{% endif %}{% elsif ac_sort %}?sort={{ ac_sort }}{% endif %}" aria-label="Убрать фильтр: {{ ac_cat_title | escape }}">{{ ac_cat_title | escape }}<span class="applied-x" aria-hidden="true">×</span></a>
   {%- endif -%}
   {%- if ac_q -%}
-  <a class="applied-chip" href="{{ ac_base }}{% if ac_cat_title %}?cat={{ ac_cat_slug | escape }}{% if ac_sort %}&amp;sort={{ ac_sort }}{% endif %}{% elsif ac_sort %}?sort={{ ac_sort }}{% endif %}" aria-label="{{ t_applied_remove }}: {{ ac_q | escape }}">{{ ac_q | escape }}<span class="applied-x" aria-hidden="true">×</span></a>
+  <a class="applied-chip" href="{{ ac_base }}{% if ac_cat_title %}?cat={{ ac_cat_slug | escape }}{% if ac_sort %}&amp;sort={{ ac_sort }}{% endif %}{% elsif ac_sort %}?sort={{ ac_sort }}{% endif %}" aria-label="Убрать фильтр: {{ ac_q | escape }}">{{ ac_q | escape }}<span class="applied-x" aria-hidden="true">×</span></a>
   {%- endif -%}
-  <a class="applied-reset" href="{{ ac_base }}">{{ t_applied_clear }}</a>
+  <a class="applied-reset" href="{{ ac_base }}">Сбросить всё</a>
 </nav>
 {%- endif -%}

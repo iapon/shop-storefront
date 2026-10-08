@@ -1,22 +1,14 @@
-// Разовая синхронизация канонического бутстрапа (dev/ui-text-bootstrap.liquid)
-// во все entry-шаблоны: блок от маркера комментария до последней строки-assign
-// заменяется байт-в-байт на канон.
+// Синхронизация канонического бутстрапа настроек (dev/site-config-bootstrap.liquid)
+// во все entry-шаблоны: регион от старт-маркера комментария длиной ровно
+// canon.length байт заменяется байт-в-байт на канон (регион, а не includes —
+// «хвост-мусор» после канона ловится смоком, sync его не тиражирует).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const canon = readFileSync(join(root, 'dev', 'ui-text-bootstrap.liquid'), 'utf8');
-const START = '{%- comment -%}\n  БУТСТРАП СЛОВАРЯ И НАСТРОЕК';
-// Хвост блока — ПОЛНАЯ строка email_phone_label (find + assign на одной
-// строке). Резать по префиксу нельзя: второй assign той же строки оставался
-// сиротой ПОСЛЕ канона и перезатирал t_email_phone_label значением последнего
-// t_row («Свернуть») — реальный баг письма вендора (ревизия W6).
-const END_LINE = '{%- assign t_row = ui_rows | find: "key", "email_phone_label" -%}{%- assign t_email_phone_label = t_row.value | default: "Телефон" -%}';
-const endIdxCanon = canon.lastIndexOf(END_LINE);
-if (endIdxCanon < 0) { console.error('канон: не найден хвост'); process.exit(1); }
-const canonEnd = endIdxCanon + END_LINE.length;
-const canonBlock = canon; // весь канон, включая новые секции
+const canon = readFileSync(join(root, 'dev', 'site-config-bootstrap.liquid'), 'utf8');
+const START = '{%- comment -%}\n  БУТСТРАП НАСТРОЕК (W8)';
 
 const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
   'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
@@ -26,8 +18,6 @@ for (const e of entries) {
   const src = readFileSync(p, 'utf8');
   const s = src.indexOf(START);
   if (s < 0) { console.error(`${e}: не найден старт маркера`); process.exit(1); }
-  const tail = src.lastIndexOf(END_LINE);
-  if (tail < s) { console.error(`${e}: не найден хвост блока`); process.exit(1); }
-  const out = src.slice(0, s) + canonBlock + src.slice(tail + END_LINE.length);
+  const out = src.slice(0, s) + canon + src.slice(s + canon.length);
   if (out !== src) { writeFileSync(p, out); console.log(`synced ${e}`); } else { console.log(`ok ${e}`); }
 }

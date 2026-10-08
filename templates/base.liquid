@@ -15,7 +15,7 @@
   запроса) + page_canon страницы; og:image — page_og_image страницы (первое
   фото товара) или cfg.og_image; JSON-LD страницы приходит в page_jsonld
   (страница + partials/breadcrumbs). Слоты данных для JS — data-msg-* на
-  body: тексты из словаря, cart.js читает атрибуты со своим вшитым
+  body: константы шаблона, cart.js читает атрибуты со своим вшитым
   фоллбеком (мост D25).
 {%- endcomment -%}
 <!doctype html>
@@ -79,12 +79,12 @@
 <script src="/static/js/cart.js?v={{ site.version }}" defer></script>
 </head>
 <body
-  data-msg-fill="{{ t_js_fill_form | escape }}"
-  data-msg-cart-invalid="{{ t_js_cart_invalid | escape }}"
-  data-msg-checkout-failed="{{ t_js_checkout_failed | escape }}"
-  data-theme-aria-auto="{{ t_theme_toggle_auto | escape }}"
-  data-theme-aria-light="{{ t_theme_toggle_light | escape }}"
-  data-theme-aria-dark="{{ t_theme_toggle_dark | escape }}">
+  data-msg-fill="Заполните имя и email."
+  data-msg-cart-invalid="Корзина недоступна или пуста — обновите страницу."
+  data-msg-checkout-failed="Не удалось оформить заказ. Попробуйте ещё раз."
+  data-theme-aria-auto="Тема: системная. Переключить"
+  data-theme-aria-light="Тема: светлая. Переключить"
+  data-theme-aria-dark="Тема: тёмная. Переключить">
 {%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
   /checkout (позиции парсит флоу в results.ci — Liquid не читает JSON-строки);
   на остальных страницах счётчик равен 0 и мгновенно гидратируется
@@ -99,7 +99,7 @@
 {%- endif -%}
 <header class="shop-header" data-member="{% if member and member.id %}{{ member.id }}{% endif %}">
   <div class="shop-container shop-header-inner">
-    <a class="shop-logo" href="__SHOP_BASE__/">{{ shop_name }}</a>
+    <a class="shop-logo" href="__SHOP_BASE__/">{{ shop_name | escape }}</a>
     {%- comment -%} member-контур живёт на КОРНЕ сайта (платформенная конвенция:
       /login /register /account /logout — НЕ под базой магазина). Вошедшему —
       кабинет и выход (POST-форма: logout — POST-сценарий); гостю — вход/регистрация.
@@ -107,13 +107,13 @@
       на мобиле — в burger-details (.nav-burger-panel, без JS); в строке
       остаются только иконки 2.75rem — слипаться нечему. Блок ссылок
       дублируется в обоих местах (partial не нужен: оба места в base). {%- endcomment -%}
-    <nav class="site-nav" aria-label="{{ t_header_account }}">
+    <nav class="site-nav" aria-label="Кабинет">
       {%- if member and member.id -%}
-        <a href="/account">{{ t_header_account }}</a>
-        <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">{{ t_header_logout }}</button></form>
+        <a href="/account">Кабинет</a>
+        <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>
       {%- else -%}
-        <a href="/login">{{ t_header_login }}</a>
-        <a href="/register">{{ t_header_register }}</a>
+        <a href="/login">Войти</a>
+        <a href="/register">Регистрация</a>
       {%- endif -%}
     </nav>
     <div class="header-actions">
@@ -146,11 +146,11 @@
         </summary>
         <nav class="nav-burger-panel">
           {%- if member and member.id -%}
-            <a href="/account">{{ t_header_account }}</a>
-            <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">{{ t_header_logout }}</button></form>
+            <a href="/account">Кабинет</a>
+            <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>
           {%- else -%}
-            <a href="/login">{{ t_header_login }}</a>
-            <a href="/register">{{ t_header_register }}</a>
+            <a href="/login">Войти</a>
+            <a href="/register">Регистрация</a>
           {%- endif -%}
         </nav>
       </details>
@@ -164,22 +164,22 @@
   <div class="shop-container shop-footer-inner">
     <div class="footer-grid">
       <div class="footer-col">
-        <p class="footer-brand">© {{ "now" | date: "%Y" }} {{ shop_name }}{% if cfg.slogan %} · {{ cfg.slogan }}{% endif %}</p>
-        {%- if cfg.address -%}<p class="footer-line">{{ cfg.address }}</p>{%- endif -%}
-        {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours }}</p>{%- endif -%}
+        <p class="footer-brand">© {{ "now" | date: "%Y" }} {{ shop_name | escape }}{% if cfg.slogan %} · {{ cfg.slogan | escape }}{% endif %}</p>
+        {%- if cfg.address -%}<p class="footer-line">{{ cfg.address | escape }}</p>{%- endif -%}
+        {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours | escape }}</p>{%- endif -%}
       </div>
       {%- if cfg.phone or cfg.email or cfg.social_link -%}
       <div class="footer-col">
-        {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone }}</a></p>{%- endif -%}
-        {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email }}">{{ cfg.email }}</a></p>{%- endif -%}
-        {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" }}</a></p>{%- endif -%}
+        {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone | escape }}</a></p>{%- endif -%}
+        {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email | escape }}">{{ cfg.email | escape }}</a></p>{%- endif -%}
+        {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link | escape }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" | escape }}</a></p>{%- endif -%}
       </div>
       {%- endif -%}
       {%- if cfg.legal -%}
-      <div class="footer-col footer-legal">{{ cfg.legal }}</div>
+      <div class="footer-col footer-legal">{{ cfg.legal | escape }}</div>
       {%- endif -%}
     </div>
-    <p class="footer-powered">{{ t_footer_powered }}</p>
+    <p class="footer-powered">Работает на DynapiCMS</p>
   </div>
 </footer>
 </body>

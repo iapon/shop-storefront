@@ -833,11 +833,11 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .checkout-grid { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: var(--section-y); }
   .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* строки корзины — обратно в одну строку (имя жмётся, не стек);
-     степпер строки компактнеет */
+     степпер строки НЕ компактнеет: одна высота контрола везде
+     (W8 — как на товарной странице, 2.75rem/44px) */
   .cart-line { flex-wrap: nowrap; gap: 0.75rem; }
   .cart-line-name { flex: 1 1 auto; order: 0; }
   .cart-line-stepper, .cart-line-sum { order: 0; margin-left: 0; }
-  .cart-line-stepper .qty-btn { width: 2rem; height: 2rem; }
   .cart-line-remove { order: 0; margin-left: 0; width: 1.75rem; height: 1.75rem; }
   .buy-row > .btn { flex: 0 0 auto; }
   .status-screen { padding: calc(var(--section-y) * 1.5) var(--gutter); }

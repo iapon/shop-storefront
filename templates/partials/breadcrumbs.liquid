@@ -23,7 +23,7 @@
                                        «Главная → Каталог» для товара без категорий);
     bc_current                        — заголовок текущей страницы (опционально,
                                        рендерится span'ом, не ссылкой).
-  Плюс из бутстрапа страницы (вниз): t_breadcrumbs_aria, t_breadcrumbs_home,
+  Подписи — константы partial (вниз текут только входы):
   canon_base.
 
   Гард глубины 5 (D18): структура даёт максимум Главная → родитель → категория
@@ -37,10 +37,10 @@
   фильтр | json — ld-строка обязана парситься всегда.
 {%- endcomment -%}
 {%- if bc_parent_title or bc_cat_title or bc_current -%}
-<nav class="breadcrumbs" aria-label="{{ t_breadcrumbs_aria }}">
+<nav class="breadcrumbs" aria-label="Хлебные крошки">
   <ol class="crumb-list" data-crumb-list>
     <li class="crumb-item">
-      <a class="crumb" href="__SHOP_BASE__/">{{ t_breadcrumbs_home }}</a>
+      <a class="crumb" href="__SHOP_BASE__/">Главная</a>
     </li>
     {%- if bc_parent_title -%}
     <li class="crumb-item">
@@ -66,5 +66,5 @@
   if (list) list.scrollLeft = list.scrollWidth;
 })();
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":{{ t_breadcrumbs_home | json }},"item":"{{ canon_base }}__SHOP_BASE__/"}{%- if bc_parent_title -%},{"@type":"ListItem","position":2,"name":{{ bc_parent_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/category/{{ bc_parent_slug }}"}{%- endif -%}{%- if bc_cat_title -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}3{%- else -%}2{%- endif -%},"name":{{ bc_cat_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}"}{%- endif -%}{%- if bc_current -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}{%- if bc_cat_title -%}4{%- else -%}3{%- endif -%}{%- else -%}{%- if bc_cat_title -%}3{%- else -%}2{%- endif -%}{%- endif -%},"name":{{ bc_current | json }}}{%- endif -%}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":{{ "Главная" | json }},"item":"{{ canon_base }}__SHOP_BASE__/"}{%- if bc_parent_title -%},{"@type":"ListItem","position":2,"name":{{ bc_parent_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/category/{{ bc_parent_slug }}"}{%- endif -%}{%- if bc_cat_title -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}3{%- else -%}2{%- endif -%},"name":{{ bc_cat_title | json }},"item":"{{ canon_base }}__SHOP_BASE__/{% if bc_cat_slug %}category/{{ bc_cat_slug }}{% endif %}"}{%- endif -%}{%- if bc_current -%},{"@type":"ListItem","position":{%- if bc_parent_title -%}{%- if bc_cat_title -%}4{%- else -%}3{%- endif -%}{%- else -%}{%- if bc_cat_title -%}3{%- else -%}2{%- endif -%}{%- endif -%},"name":{{ bc_current | json }}}{%- endif -%}]}</script>
 {%- endif -%}

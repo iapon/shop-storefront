@@ -19,9 +19,9 @@
       <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy" width="600" height="800">
       {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true" loading="lazy" width="600" height="800">{%- endif -%}
     {%- else -%}
-      <span>{{ t_no_photo }}</span>
+      <span>нет фото</span>
     {%- endif -%}
-    {%- if p.stock <= 0 -%}<span class="card-overlay">{{ t_out_of_stock }}</span>{%- endif -%}
+    {%- if p.stock <= 0 -%}<span class="card-overlay">Нет в наличии</span>{%- endif -%}
   </div>
   <div class="product-card-body">
     <h3 class="product-card-title">{{ p.title }}</h3>

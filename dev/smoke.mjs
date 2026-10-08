@@ -85,32 +85,37 @@ for (const [mock, variant, markers, overrides] of cases) {
   }
 }
 
-/* ── Проба словаря-фоллбека и словаря-переопределения (D25) ───────────────
-   Пустой g_site (cfg/ui пусты) → вшитые фоллбеки partials/ui-text, страница
-   жива; заполненный → имя магазина из shop_config, строка из ui_text
-   («Купить» вместо «В корзину») вытесняет фоллбек. */
+/* ── Проба настроек-фоллбека и настроек-переопределения (W8) ─────────────
+   Пустой g_site (cfg пуст) → вшитые фоллбеки шаблонов, страница жива;
+   заполненный → имя магазина и cfg-поля («Купить» вместо «В корзину»)
+   вытесняют фоллбеки. Словаря ui_text больше нет (ликвидирован в W8). */
 {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
   const empty = await renderMockPage(engine, 'product', null, {
     query: { ...q },
-    g_site: { data: { cfg: [], ui: [] } },
+    g_site: { data: { cfg: [] } },
   });
   check(empty.includes('В корзину'), 'пустой g_site: кнопка несёт вшитый фоллбек «В корзину»');
   check(empty.includes('Товар не найден') === false, 'пустой g_site: страница товара жива');
   check(empty.includes('>Магазин<'), 'пустой g_site: шапка несёт фоллбек имени «Магазин»');
   const filled = await renderMockPage(engine, 'product', null, {
     query: { ...q },
-    g_site: { data: { cfg: [{ name: 'Тест-магазин' }], ui: [{ key: 'add_to_cart', value: 'Купить' }] } },
+    g_site: { data: { cfg: [{ name: 'Тест-магазин', cta_add_to_cart: 'Купить' }] } },
   });
-  check(filled.includes('Купить'), 'словарь: строка ui_text вытесняет фоллбек');
-  check(!filled.includes('В корзину'), 'словарь: фоллбек «В корзину» скрыт переопределением');
-  check(filled.includes('Тест-магазин'), 'словарь: имя магазина из shop_config в шапке/title');
+  check(filled.includes('Купить'), 'настройки: поле cta_add_to_cart вытесняет фоллбек');
+  check(!filled.includes('В корзину'), 'настройки: фоллбек «В корзину» скрыт переопределением');
+  check(filled.includes('Тест-магазин'), 'настройки: имя магазина из shop_config в шапке/title');
+  const hero = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Тест-магазин', hero_title: 'Керамика прямо с завода' }] } },
+  });
+  check(hero.includes('Керамика прямо с завода'), 'настройки: hero_title доезжает до H1 каталога');
   if (fails.length) {
     failed++;
-    console.log('FAIL ui-text: ' + fails.join(' | '));
+    console.log('FAIL site-config: ' + fails.join(' | '));
   } else {
-    console.log('OK   ui-text (пустой словарь → фоллбеки и живая страница; заполненный → переопределение)');
+    console.log('OK   site-config (пустой cfg → фоллбеки и живая страница; заполненный → переопределение, hero_title в H1)');
   }
 }
 
@@ -849,9 +854,9 @@ const mediaBlock = (cssSrc, header) => {
    включателю — паршал обязан быть чистой функцией входов (данные текут
    только вниз). (1) Статика: в templates/partials/*.liquid запрещены
    {% assign %} и {% capture %} — любое появление ловим здесь.
-   (2) Синхронизация: бутстрап словаря обязан быть заинлайнен БАЙТ-В-БАЙТ
-   в каждом entry-шаблоне (каноническая копия — dev/ui-text-bootstrap.liquid);
-   include "partials/ui-text" больше не существует. */
+   (2) Синхронизация: бутстрап настроек обязан быть заинлайнен БАЙТ-В-БАЙТ
+   в каждом entry-шаблоне (каноническая копия —
+   dev/site-config-bootstrap.liquid); словаря ui_text больше нет. */
 {
   const { readdirSync } = await import('node:fs');
   const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -861,36 +866,33 @@ const mediaBlock = (cssSrc, header) => {
     if (!f.endsWith('.liquid')) continue;
     const src = readFileSync(join(partDir, f), 'utf8');
     const body = src.replace(/\{%-?\s*comment[\s\S]*?endcomment\s*-?%\}/g, ''); // комментарии не считаются
-    if (/\{%-?\s*assign/.test(body)) fails.push(`partials/${f}: найден {% assign %} — паршал должен быть чистой функцией`);
-    if (/\{%-?\s*capture/.test(body)) fails.push(`partials/${f}: найден {% capture %} — capture вверх не доезжает`);
-    if (/include\s+"partials\/ui-text"/.test(body)) fails.push(`partials/${f}: include ликвидированного ui-text`);
+    if (/\{%-?\s*assign/.test(body)) fails.push(`partials/${f}: найден {% assign %} — паршал должен быть чистой функцией`);
+    if (/\{%-?\s*capture/.test(body)) fails.push(`partials/${f}: найден {% capture %} — capture вверх не доезжает`);
+    if (/ui_rows|ui_text|uiTexts/.test(body)) fails.push(`partials/${f}: упоминание ликвидированного словаря`);
   }
-  const bootstrap = readFileSync(join(rootDir, 'dev', 'ui-text-bootstrap.liquid'), 'utf8');
+  const bootstrap = readFileSync(join(rootDir, 'dev', 'site-config-bootstrap.liquid'), 'utf8');
   const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
     'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
     'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
   // Регион бутстрапа в entry-шаблоне: ровно canon.length байт от старт-маркера
-  // — обязан быть байт-в-байт равен канону. Простой includes не ловит
-  // «хвост-мусор» ПОСЛЕ канона (реальный кейс: sync резал по префиксу строки —
-  // сирота-assign перезатирала t_email_phone_label значением последнего t_row).
-  const CANON_TAIL = '{%- assign t_row = ui_rows | find: "key", "description_less" -%}{%- assign t_description_less = t_row.value | default: "Свернуть" -%}';
-  const START_MARK = '{%- comment -%}\n  БУТСТРАП СЛОВАРЯ И НАСТРОЕК';
+  // — обязан быть байт-в-байт равен канону (простой includes не ловит
+  // «хвост-мусор» ПОСЛЕ канона).
+  const START_MARK = '{%- comment -%}\n  БУТСТРАП НАСТРОЕК (W8)';
+  const UI_DICT_RE = /\bui_rows\b|\bt_[a-z][a-z0-9_]*\b|\buiTexts\b|find:\s*"key"/;
   for (const e of entries) {
     const src = readFileSync(join(rootDir, 'templates', e), 'utf8');
-    if (!src.includes(bootstrap)) fails.push(`${e}: бутстрап словаря отсутствует/разошёлся с dev/ui-text-bootstrap.liquid`);
-    if (/include\s+"partials\/ui-text"/.test(src)) fails.push(`${e}: устаревший include partials/ui-text (assign не доедет)`);
+    if (!src.includes(bootstrap)) fails.push(`${e}: бутстрап настроек отсутствует/разошёлся с dev/site-config-bootstrap.liquid`);
     const s = src.indexOf(START_MARK);
     if (s < 0) { fails.push(`${e}: не найден старт бутстрапа`); continue; }
     const region = src.slice(s, s + bootstrap.length);
     if (region !== bootstrap) fails.push(`${e}: регион бутстрапа не байт-равен канону (хвост-мусор после канона?)`);
-    const after = src.slice(s + bootstrap.length, s + bootstrap.length + 200);
-    if (/^\s*\{%- assign t_email_phone_label/.test(after)) fails.push(`${e}: сирота-assign t_email_phone_label после канона`);
+    if (UI_DICT_RE.test(src)) fails.push(`${e}: остались следы словаря (ui_rows/t_*/uiTexts/find "key")`);
   }
   if (fails.length) {
     failed++;
     console.log('FAIL partial-purity: ' + fails.join(' | '));
   } else {
-    console.log('OK   partial-purity (паршалы без assign/capture; бутстрап байт-в-байт во всех entry)');
+    console.log('OK   partial-purity (паршалы без assign/capture; бутстрап настроек байт-в-байт во всех entry; следов словаря нет)');
   }
 }
 
@@ -898,4 +900,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w7-canon + w6-ux + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w7-canon + w6-ux + partial-purity');

@@ -20,10 +20,11 @@ export const mockDir = join(root, 'mock');
    Корень «/» остаётся будущему лендингу — страницы магазина живут под /shop. */
 export const SHOP_BASE = '/shop';
 
-/* Дефолтный g_site дев-среды (D25): shop_config + ui_text. Демо-имя магазина
-   доказывает чтение cfg; словарь пуст — все строки страниц идут из вшитых
-   фоллбеков partials/ui-text (так же, как у магазина до заполнения словаря).
-   Проба словаря (админка переопределяет строку) — в smoke с оверрайдом. */
+/* Дефолтный g_site дев-среды (W8): одна запись shop_config с именованными
+   полями (словарь ui_text ликвидирован). Демо-имя магазина доказывает чтение
+   cfg; пустые поля — легальны: шаблон отвечает вшитым фоллбеком
+   (cfg.cta_add_to_cart → «В корзину»). Проба переопределения поля — в smoke
+   с оверрайдом. */
 export const G_SITE_DEFAULT = {
   data: {
     cfg: [{
@@ -33,12 +34,19 @@ export const G_SITE_DEFAULT = {
       email: 'hi@example.ru',
       address: 'Санкт-Петербург, наб. реки Карповки, 5',
       work_hours: '10:00–19:00',
-      social_link: 'https://t.me/example',
+      telegram: 'https://t.me/example',
+      social_link: '',
       legal: 'ИП Иванов И. И., ИНН 7800000000',
       site_url: '',
-      og_image: null
-    }],
-    ui: []
+      og_image: null,
+      hero_kicker: 'Каталог',
+      hero_title: '',
+      hero_subtitle: '',
+      cta_add_to_cart: '',
+      cta_checkout: '',
+      cart_empty_title: '',
+      filters_show: ''
+    }]
   }
 };
 
@@ -119,8 +127,8 @@ export function registerPlatformFilters(engine) {
       : 0
   );
   // find — семантика платформы (liquid_filters.go findFilter): первый
-  // элемент с равенством строк; nil-вход и промах → nil (словарь ui_text
-  // читается только им — бутстрап entry-шаблонов).
+  // элемент с равенством строк; nil-вход и промах → nil (выборки категорий
+  // и «похожих» товаров читаются им в catalog/product.liquid).
   engine.registerFilter('find', (arr, key, expected) => {
     if (!Array.isArray(arr)) return null;
     const hit = arr.find((x) => x && String(x?.[key]) === String(expected));

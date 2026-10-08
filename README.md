@@ -19,7 +19,7 @@ dev/         # Vite-харнесс: liquidjs + шимы платформенны
 cd dev
 npm install
 npm run dev        # http://localhost:5173/?mock=catalog
-npm run smoke      # рендер всех страниц + пробы темы/корзины/степперов/SEO/словаря
+npm run smoke      # рендер всех страниц + пробы темы/корзины/степперов/SEO/настроек
 npm run build      # сборка харнесса
 ```
 
@@ -39,26 +39,27 @@ category, `member|empty` для checkout, `empty` для account, `paid|not_foun
 
 ## Тексты и настройки — из админки (не из шаблонов)
 
-Витрина не хранит ни названия магазина, ни контактов, ни интерфейсных строк:
+Витрина не хранит ни названия магазина, ни контактов, ни настраиваемых строк
+(словарь `ui-text` ликвидирован в W8 — осталась ОДНА запись настроек):
 
-- **Настройки магазина** (сущность `shop-config`, одна запись): название,
-  слоган, телефон, email, адрес, часы работы, соцссылка, реквизиты,
-  `site_url` (канонический домен для canonical/OG), og-картинка. Шаблоны
-  читают их из биндинга `g_site` (`g_site.data.cfg[0]`), фоллбеки — «Магазин»
-  и пустые контакты.
-- **Строки витрины** (сущность `ui-text`, ключ→значение): все интерфейсные
-  тексты («В корзину», «Корзина пуста», бейджи…). Читаются штатным `find` по
-  `g_site.data.ui`; единственное место фоллбеков — `templates/partials/ui-text.liquid`
-  (в остальных шаблонах только переменные `t_*`). Ключ совпадает с именем
-  переменной без приставки `t_` (`add_to_cart` → `t_add_to_cart`); подстановки
-  в строках — литералы `{{n}}`/`{{amount}}`/`{{email}}`, их подставляет шаблон
-  (`replace`).
+- **Настройки магазина** (сущность `shop-config`, одна запись, 19 именованных
+  полей, группы видны в префиксах): Магазин — `name`, `slogan`, `description`,
+  `legal`, `site_url` (канонический домен для canonical/OG), `og_image`;
+  Контакты — `email`, `phone`, `address`, `work_hours`, `telegram`,
+  `social_link`; Главная — `hero_kicker`/`hero_title`/`hero_subtitle`
+  (каталог); Кнопки — `cta_add_to_cart`, `cta_checkout`, `cart_empty_title`,
+  `filters_show`. Шаблоны читают их из биндинга `g_site`
+  (`g_site.data.cfg[0]`) с фоллбеком на месте:
+  `{{ cfg.cta_add_to_cart | default: "В корзину" }}` — **пустое поле =
+  вшитый фоллбек шаблона**, владелец заполняет только то, что хочет
+  переопределить. Прочие интерфейсные подписи («Войти», «Найдено: …»,
+  бейджи…) — константы шаблонов: умеющие правят прямо в `templates/`.
 - **Письма** (`email-layout` + `email-order-customer` + `email-order-vendor`)
   живут в API-сценарии оформления: hoist render-ноды там не выполняется,
   поэтому адресация в письмах — только `results.g_site.*` и `json.*`
-  (partials/ui-text сам знает обе ветки адресации).
+  (бутстрап настроек знает обе ветки адресации).
 - JS-строки (ошибки оформления в cart.js) приходят мостом `data-msg-*` на
-  `<body>` (шаблон рендерит из словаря), в JS — вшитый фоллбек.
+  `<body>` (константы шаблона), в JS — вшитый фоллбек.
 
 ## Правки стилей и разметки
 
@@ -87,9 +88,11 @@ category, `member|empty` для checkout, `empty` для account, `paid|not_foun
   разделители запрещены — воздух (rem) и `--bg-soft`-подложки
   (проба w7-canon в smoke ловит регрессию grep'ом).
 - Паттерн страницы:
-  `{% include "partials/ui-text" %}` → `page_*` assigns → `{% capture content %}…{% endcapture %}`
-  → `{% include "base" %}` (include делит скоуп — словарь и `canon_base`
-  назначает partials/ui-text). Крошки — `partials/breadcrumbs` (рендерит nav +
+  бутстрап настроек (`cfg`/`shop_name`/`canon_base` — инлайн, канон в
+  `dev/site-config-bootstrap.liquid`) → `page_*` assigns →
+  `{% capture content %}…{% endcapture %}` → `{% include "base" %}`
+  (include делит скоуп — cfg и `canon_base` назначает бутстрап entry-шаблона).
+  Крошки — `partials/breadcrumbs` (рендерит nav +
   JSON-LD BreadcrumbList); бейдж наличия — `partials/stock-badge` (порог «мало» = 5).
 - Проверка: `npm run smoke`, затем превью на платформе.
 

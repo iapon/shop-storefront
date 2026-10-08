@@ -22,8 +22,8 @@
 
   var state = { items: [] }; // [{slug: string, qty: number}]
 
-  /* Мост текстов (D25): шаблон рендерит data-msg-* на <body> из словаря
-     ui-text; здесь — чтение атрибута с вшитым фоллбеком. */
+  /* Мост текстов: шаблон рендерит data-msg-* на <body> (константы шаблона);
+     здесь — чтение атрибута с вшитым фоллбеком. */
   function msg(name, fallback) {
     var v = document.body ? document.body.getAttribute('data-msg-' + name) : null;
     return v || fallback;

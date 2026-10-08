@@ -572,7 +572,15 @@ await smokeQtySteppers();
   check(/\.icon-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'тумблер темы в базе уже 2.75rem (44px, D31)');
   check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.75rem/.test(css), 'крестик корзины в базе уже 2.75rem (44px, D31)');
   check(/\.chip\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'чип категорий в базе ниже 2.75rem (44px, D31)');
-  check(/\.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');
+  check(/\.qty-stepper \.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');
+  // W7 (разнос владельца): нативные спиннеры number-инпута скрыты — они
+  // дублировали кастомные «−/+»; степпер = одна визуальная группа
+  check(/input\[type="number"\]\s*\{[^}]*appearance:\s*texfield|input\[type="number"\]\s*\{[^}]*appearance:\s*textfield/.test(css)
+        && /::-webkit-inner-spin-button[\s\S]{0,80}-webkit-appearance:\s*none/.test(css),
+        'нативные спиннеры number-инпута не скрыты (appearance: textfield + -webkit-appearance: none)');
+  check(/\.qty-stepper \.qty-input\s*\{[^}]*border-radius:\s*0/.test(css)
+        && /\.qty-stepper \.qty-btn:first-child\s*\{[^}]*border-radius:\s*var\(--radius-btn\)\s*0\s*0\s*var\(--radius-btn\)/.test(css),
+        'степпер не сцеплен в одну группу (радиусы только по краям группы)');
   check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--text-md\)/.test(css),
         'инпуты в базе мельче 16px — iOS Safari зумит при фокусе');
   if (fails.length) {

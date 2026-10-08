@@ -585,24 +585,36 @@ html[data-sheet-open="1"] { overflow: hidden; }
 .product-desc { color: var(--muted); white-space: pre-line; }
 .buy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.25rem 0; }
 .buy-row > .btn { flex: 1 1 100%; }
-/* Степпер количества ± (D23): карточный вариант — кнопки вокруг инпута */
-.qty-stepper { display: inline-flex; align-items: center; gap: 0.375rem; }
-.qty-btn {
+/* ── Степпер количества (W7, разнос владельца): ОДНА визуальная группа ──
+   Нативные спиннеры number-инпута скрыты по всей витрине (дублировали
+   кнопки «−/+»); контрол сцеплен: кнопка − | инпут | кнопка + с общими
+   границами и радиусами только по краям группы (канон ghost-кнопки:
+   border var(--border), radius 10px). Тап-таргеты 2.75rem. */
+input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-stepper { display: inline-flex; align-items: stretch; }
+.qty-stepper .qty-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 2.75rem; height: 2.75rem; padding: 0;
-  border: 1px solid var(--border); border-radius: var(--radius-btn);
-  background: var(--card); color: var(--muted);
+  border: 1px solid var(--border); background: var(--card); color: var(--muted);
   font-size: var(--text-lg); line-height: 1; cursor: pointer;
-  transition: color var(--theme-fade), border-color var(--theme-fade);
+  transition: color var(--theme-fade), border-color var(--theme-fade), background-color var(--theme-fade);
 }
-.qty-btn:hover { color: var(--text); border-color: var(--accent); }
-.qty-btn:active { background: var(--bg-soft); }
-.qty-input {
-  width: 4.5rem; height: 2.75rem; text-align: center;
-  border: 1px solid var(--border); border-radius: var(--radius-input);
+.qty-stepper .qty-btn:first-child { border-radius: var(--radius-btn) 0 0 var(--radius-btn); }
+.qty-stepper .qty-btn:last-child { border-radius: 0 var(--radius-btn) var(--radius-btn) 0; }
+.qty-stepper .qty-btn:hover { color: var(--text); border-color: var(--accent); }
+.qty-stepper .qty-btn:active { background: var(--bg-soft); }
+/* инпут между кнопками: ширина 3ch, центр, высота группы; границы кнопок
+   накрывают двойную линию стыка (margin −1px), фокус виден (outline) */
+.qty-stepper .qty-input {
+  width: 3rem; min-width: 3ch; height: 2.75rem; text-align: center;
+  border: 1px solid var(--border); border-radius: 0;
   background: var(--card); color: var(--text);
-  font-size: var(--text-md);
+  font-size: var(--text-md); font-family: inherit;
+  margin: 0 -1px;
 }
+.qty-stepper .qty-input:focus { outline: 2px solid var(--accent); outline-offset: -2px; border-color: var(--accent); }
 /* Характеристики товара (features string[]) — тихий список с тире */
 .features-heading { margin: 1.25rem 0 0.625rem; font-size: var(--text-lg); }
 .feature-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.375rem; }

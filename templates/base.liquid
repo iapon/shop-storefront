@@ -51,11 +51,11 @@
   объект — в своём теге: склейка объектов в один тег ломает парсинг) {%- endcomment -%}
 {{ page_jsonld }}
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ site.version }}">
-<link rel="stylesheet" href="/static/css/tokens.css?v={{ site.version }}">
-<link rel="stylesheet" href="/static/css/shop.css?v={{ site.version }}">
+{%- comment -%} Pre-paint boot темы — В head ДО CSS-ссылок (web.dev, W6 №24):
+   выбор до первой отрисовки, вспышки не-той темы нет. Контракт платформы:
+   cookie dynamica-theme → localStorage → prefers-color-scheme → light;
+   пустое хранилище = режим «системная» (цикл тумблера auto→light→dark). {%- endcomment -%}
 <script>
-/* boot темы — до первой отрисовки (anti-FOUC; см. static/js/theme.js):
-   cookie dynamica-theme → localStorage → prefers-color-scheme → light */
 (function () {
   function norm(v) {
     if (v === 'dark' || v === 'dynamica-dark') return 'dynamica-dark';
@@ -71,13 +71,18 @@
   document.documentElement.style.colorScheme = t === 'dynamica-dark' ? 'dark' : 'light';
 })();
 </script>
+<link rel="stylesheet" href="/static/css/tokens.css?v={{ site.version }}">
+<link rel="stylesheet" href="/static/css/shop.css?v={{ site.version }}">
 <script src="/static/js/theme.js?v={{ site.version }}" defer></script>
 <script src="/static/js/cart.js?v={{ site.version }}" defer></script>
 </head>
 <body
   data-msg-fill="{{ t_js_fill_form | escape }}"
   data-msg-cart-invalid="{{ t_js_cart_invalid | escape }}"
-  data-msg-checkout-failed="{{ t_js_checkout_failed | escape }}">
+  data-msg-checkout-failed="{{ t_js_checkout_failed | escape }}"
+  data-theme-aria-auto="{{ t_theme_toggle_auto | escape }}"
+  data-theme-aria-light="{{ t_theme_toggle_light | escape }}"
+  data-theme-aria-dark="{{ t_theme_toggle_dark | escape }}">
 {%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
   /checkout (позиции парсит флоу в results.ci — Liquid не читает JSON-строки);
   на остальных страницах счётчик равен 0 и мгновенно гидратируется
@@ -110,9 +115,24 @@
       <span aria-hidden="true">🛒</span>
       <span data-cart-count>{{ cart_count }}</span>
     </a>
-    <button class="icon-btn" id="theme-toggle" type="button" aria-haspopup="true">
-      <span data-icon="sun" aria-hidden="true">☀️</span>
-      <span data-icon="moon" aria-hidden="true">🌙</span>
+    {%- comment -%} Тумблер темы (W6 №23, web.dev-паттерн): одна SVG солнце/луна
+      с маской-затмением (морф в CSS по [data-theme]), цикл auto→light→dark
+      ведёт static/js/theme.js; aria-label динамический (слоты data-theme-aria-*
+      на body), aria-live объявляет смену состояния. {%- endcomment -%}
+    <button class="icon-btn theme-toggle" id="theme-toggle" type="button" title="Тема" aria-live="polite">
+      <svg class="theme-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+        <mask id="theme-mask">
+          <rect width="24" height="24" fill="#fff"/>
+          <circle class="theme-mask-hole" cx="34" cy="0" r="7" fill="#000"/>
+        </mask>
+        <circle class="theme-sun" cx="12" cy="12" r="6" fill="currentColor" mask="url(#theme-mask)"/>
+        <g class="theme-rays" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <line x1="12" y1="0.8" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23.2"/>
+          <line x1="0.8" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23.2" y2="12"/>
+          <line x1="4.2" y1="4.2" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.8" y2="19.8"/>
+          <line x1="4.2" y1="19.8" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.8" y2="4.2"/>
+        </g>
+      </svg>
     </button>
   </div>
 </header>

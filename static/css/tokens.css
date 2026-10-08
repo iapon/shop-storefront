@@ -12,6 +12,8 @@
 
 /* ── Светлая тема (default) ─────────────────────────────────── */
 :root {
+  color-scheme: light; /* нативные скроллбары/контролы под тему (W6 №24) */
+
   /* фон страницы / поверхность карточки / утопленная поверхность */
   --shop-bg:          oklch(100% 0 0);          /* = light base-100 */
   --shop-surface:     oklch(100% 0 0);
@@ -78,6 +80,18 @@
   --shop-section-y: 3rem;      /* py-12 */
   --shop-gap: 1.5rem;          /* gap сеток */
 
+  /* spacing-шкала 8px (W6 №12): вертикальный ритм каталога держится
+     токенами — крошки 8, H1-строка 8–16, тулбар 16–24, грид 12/20 */
+  --shop-space-1: 0.5rem;   /* 8px */
+  --shop-space-2: 0.75rem;  /* 12px */
+  --shop-space-3: 1rem;     /* 16px */
+  --shop-space-4: 1.25rem;  /* 20px */
+  --shop-space-5: 1.5rem;   /* 24px */
+  --shop-space-6: 2rem;     /* 32px */
+
+  /* высота sticky-инструментов каталога (тулбар ≤ 48px, W6 №16) */
+  --shop-tools-h: 2.75rem;
+
   /* фокус и анимация */
   --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(58% 0.22 273) 35%, transparent);
   --shop-ease: cubic-bezier(0.19, 1, 0.22, 1); /* ease-out-expo */
@@ -86,6 +100,8 @@
 
 /* ── Тёмная тема — 1:1 с ядром dynamica-dark ────────────────── */
 [data-theme="dynamica-dark"] {
+  color-scheme: dark; /* нативные скроллбары/контролы под тему (W6 №24) */
+
   --shop-bg:        oklch(20% 0.04 266);    /* = dark base-100 */
   --shop-surface:   oklch(20% 0.04 266);    /* 1:1 с ядром; «карточка светлеет» → 22% 0.045 266 */
   --shop-surface-2: oklch(22% 0.045 266);   /* = dark base-200; вариант выше → 28% 0.04 266 */
@@ -110,6 +126,15 @@
                       0 10px 15px -3px color-mix(in oklch, oklch(94% 0.01 247) 5%, transparent),
                       0 0 0 1px color-mix(in oklch, oklch(94% 0.01 247) 3%, transparent);
   --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(72% 0.18 273) 35%, transparent);
+}
+
+/* Контентные фото в тёмной теме приглушаются (W6 №25): яркое фото на тёмном
+   фоне слепит — фильтр ТОЛЬКО на контентных снимках (карточка, галерея,
+   миниатюры), иконки и маски его не наследуют. */
+[data-theme="dynamica-dark"] .product-card-photo img,
+[data-theme="dynamica-dark"] .product-photo img,
+[data-theme="dynamica-dark"] .gallery-thumb img {
+  filter: brightness(0.88) contrast(1.05);
 }
 
 /* Глобальный кросс-фейд темы — один transition, без JS-тайминга.

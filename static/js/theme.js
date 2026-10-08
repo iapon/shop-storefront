@@ -1,20 +1,35 @@
-/* shop-storefront — тема (sun/moon).
-   Контракт темы платформы: SSR всегда отдаёт data-theme="dynamica-light";
-   выбор делает ТОЛЬКО клиент:
-   cookie dynamica-theme → localStorage dynamica-theme → prefers-color-scheme → light.
-   Понимаем обе формы значения: короткую (light|dark, как пишет админка)
-   и длинную (dynamica-light|dynamica-dark, как пишет сайт).
-   Тоггл пишет ОБЕ формы: localStorage И куку С domain=.<родительский домен>
-   (две последние метки hostname; localhost/одниметочные/IP — host-only).
-   Почему domain обязателен: платформенный boot-скрипт (лендинг/сайт) кладёт
-   куку dynamica-theme на .dynapi.ru — она СТАРШЕ; тоггл, пишущий host-only
-   куку, создаёт вторую куку с тем же именем, и читающая сторона берёт первую
-   попавшуюся — тоггл «не работает», страницы живут в разных темах. Кука с
-   domain перезаписывает платформенную 1:1, выбор одинаков на всём домене. */
+/* shop-storefront — тумблер темы, три состояния (W6 №23-24, web.dev-паттерн).
+   Цикл кнопки: системная (auto) → светлая → тёмная → системная.
+   «Системная» = ПУСТОЕ хранилище (cookie dynamica-theme и localStorage
+   dynamica-theme удалены) — платформенный boot-скрипт в этом режиме сам
+   следует за prefers-color-scheme; тоггл витрины держит тот же контракт
+   (записанный выбор — ТОЛЬКО явные light|dark).
+
+   Контракт куки платформы: тоггл пишет ОБЕ формы выбора — localStorage И
+   куку dynamica-theme С domain=.<родительский домен> (две последние метки
+   hostname; localhost/одниметочные/IP — host-only). Почему domain обязателен:
+   платформенный boot (лендинг/сайт) кладёт куку на .dynapi.ru — она СТАРШЕ;
+   тоггл, пишущий host-only куку, создаёт вторую куку с тем же именем, и
+   читающая сторона берёт первую попавшуюся — тоггл «не работает». Кука с
+   domain перезаписывает платформенную 1:1; выбор одинаков на всём домене.
+   Понимаем обе формы значения: короткую (light|dark, как пишут админка и
+   этот тоггл) и длинную (dynamica-light|dynamica-dark, как пишет boot-скрипт).
+
+   Живой синк с ОС: matchMedia('change') — в режиме системной тема следует
+   за ОС без перезагрузки. Иконка — один SVG (base.liquid): в dark-состоянии
+   CSS двигает вырезку-маску (затмение) и гасит лучи; aria-label динамический
+   (слоты data-theme-aria-{auto,light,dark} на body — строки словаря витрины),
+   aria-live="polite" объявляет смену. */
 (function () {
   'use strict';
 
   var KEY = 'dynamica-theme';
+  var FALLBACK_ARIA = {
+    auto: 'Тема: системная. Переключить',
+    light: 'Тема: светлая. Переключить',
+    dark: 'Тема: тёмная. Переключить'
+  };
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
   function norm(v) {
     if (v === 'dark' || v === 'dynamica-dark') return 'dark';
@@ -33,7 +48,8 @@
     return '; domain=.' + parts.slice(-2).join('.');
   }
 
-  function current() {
+  /* Хранимый выбор: 'light' | 'dark' | null (null = системная). */
+  function stored() {
     try {
       var m = document.cookie.match(/(?:^|;\s*)dynamica-theme=(light|dark|dynamica-light|dynamica-dark)/);
       var c = norm(m ? decodeURIComponent(m[1]) : null);
@@ -41,56 +57,81 @@
       c = norm(localStorage.getItem(KEY));
       if (c) return c;
     } catch (e) { /* приватный режим — живём по prefers */ }
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
-    return 'light';
+    return null;
   }
 
-  function apply(theme) {
+  function osPrefersDark() { return !!(mq && mq.matches); }
+
+  /* mode — РЕЖИМ выбора ('auto'|'light'|'dark'); тема резолвится по ОС в auto. */
+  function applyMode(mode) {
+    var theme = mode === 'auto' ? (osPrefersDark() ? 'dark' : 'light') : mode;
     document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dynamica-dark' : 'dynamica-light');
     document.documentElement.style.colorScheme = theme;
-    updateToggle(theme);
+    updateToggle(mode);
   }
 
-  function updateToggle(theme) {
+  function kebab(s) { return s.replace(/[A-Z]/g, function (c) { return '-' + c.toLowerCase(); }); }
+
+  function ariaText(mode) {
+    var v = document.body && document.body.getAttribute ? document.body.getAttribute('data-' + kebab('themeAria' + mode.charAt(0).toUpperCase() + mode.slice(1))) : null;
+    return v || FALLBACK_ARIA[mode];
+  }
+
+  function updateToggle(mode) {
     var btn = document.getElementById('theme-toggle');
     if (!btn) return;
-    btn.setAttribute('aria-label', theme === 'dark' ? 'Светлая тема' : 'Тёмная тема');
-    var sun = btn.querySelector('[data-icon="sun"]');
-    var moon = btn.querySelector('[data-icon="moon"]');
-    if (sun && moon) {
-      sun.style.display = theme === 'dark' ? '' : 'none';
-      moon.style.display = theme === 'dark' ? 'none' : '';
-    }
+    btn.setAttribute('aria-label', ariaText(mode));
+    btn.setAttribute('title', ariaText(mode).replace(/\.$/, ''));
   }
 
-  function persist(theme) {
-    try { localStorage.setItem(KEY, theme === 'dark' ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+  function persist(mode) {
+    try {
+      if (mode === 'auto') {
+        localStorage.removeItem(KEY); // системная = пустое хранилище
+      } else {
+        localStorage.setItem(KEY, mode);
+      }
+    } catch (e) { /* ignore */ }
     var attr = domainAttr();
-    document.cookie = KEY + '=' + theme + '; path=/; max-age=31536000; SameSite=Lax' + attr;
-    if (attr) {
-      /* хвост прошлой версии: host-only кука без domain осталась у вернувшегося
-         посетителя — гасим её, чтобы не спорила с доменной при чтении */
+    if (mode === 'auto') {
+      /* системная: гасим и доменную, и возможный хвост host-only куки */
+      document.cookie = KEY + '=; path=/; max-age=0; SameSite=Lax' + attr;
       document.cookie = KEY + '=; path=/; max-age=0; SameSite=Lax';
+    } else {
+      document.cookie = KEY + '=' + mode + '; path=/; max-age=31536000; SameSite=Lax' + attr;
+      if (attr) {
+        /* хвост прошлой версии: host-only кука без domain — гасим, чтобы
+           не спорила с доменной при чтении */
+        document.cookie = KEY + '=; path=/; max-age=0; SameSite=Lax';
+      }
     }
   }
 
-  /* boot — до первой отрисовки (скрипт дублируется inline в base.liquid;
-     этот файл нужен только для тоггла). */
-  apply(current());
+  function cycle(mode) { return mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto'; }
+
+  /* boot — состояние уже выставлено inline-скриптом в <head> (до CSS,
+     anti-FOUC); здесь докручиваем кнопку и подписку на ОС. */
+  applyMode(stored() || 'auto');
 
   document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('theme-toggle');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      var next = current() === 'dark' ? 'light' : 'dark';
-      /* кросс-фейд 150ms — transition вешаем только на момент переключения */
-      document.documentElement.classList.add('theme-transition');
-      apply(next);
-      persist(next);
-      window.setTimeout(function () {
-        document.documentElement.classList.remove('theme-transition');
-      }, 200);
-    });
-    updateToggle(current());
+    if (btn) {
+      btn.addEventListener('click', function () {
+        var next = cycle(stored() || 'auto');
+        /* кросс-фейд 150ms — transition вешаем только на момент переключения */
+        document.documentElement.classList.add('theme-transition');
+        persist(next);
+        applyMode(next);
+        window.setTimeout(function () {
+          document.documentElement.classList.remove('theme-transition');
+        }, 200);
+      });
+    }
+    /* Живой синк с ОС: в режиме системной тема следует за prefers-color-scheme. */
+    var onOs = function () { if (stored() === null) applyMode('auto'); };
+    if (mq) {
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onOs);
+      else if (typeof mq.addListener === 'function') mq.addListener(onOs); // старый Safari
+    }
   });
 })();

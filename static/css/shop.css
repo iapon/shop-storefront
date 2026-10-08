@@ -112,7 +112,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .nav-burger summary {
   list-style: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem;
+  width: 2.5rem; height: 2.5rem; /* W9 F2.3: база 40px — одна строка шапки на 320 */
   border: 1px solid var(--border); border-radius: var(--radius-btn); color: var(--muted);
 }
 .nav-burger summary::-webkit-details-marker { display: none; }
@@ -135,7 +135,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 /* Корзина-счётчик: пилюля в тинте акцента; пустая — тихая */
 .cart-counter {
   position: relative; display: inline-flex; align-items: center; gap: 0.375rem;
-  min-height: 2.75rem; padding: 0.375rem 0.5rem; border-radius: var(--radius-pill); /* W9 (F2.3): компактный inline-паддинг — одна строка шапки на 320 */
+  min-height: 2.5rem; padding: 0.375rem 0.5rem; border-radius: var(--radius-pill); /* W9 (F2.3): 40px ряд + компактный inline-паддинг — одна строка шапки на 320 */
   font-size: var(--text-sm); font-weight: 600;
   background: var(--accent-tint); color: var(--accent);
 }
@@ -143,10 +143,14 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .cart-counter[data-empty="1"] { background: transparent; color: var(--muted); }
 .cart-counter svg { width: 1.1rem; height: 1.1rem; }
 
-/* Иконка-кнопка (тумблер темы): 2.75rem = 44px тап-таргет (D31) */
+/* Иконка-кнопка (тумблер темы): база 2.5rem — W9 (F2.3): на 320 шапка с
+   пилюлей корзины помещается в ОДНУ строку только с 40px-иконками
+   (лого ~112 + корзина ~47 + 2×40 + зазоры = ~263 < 280); десктоп всё
+   равно пересаживает тумблер на 2.25rem канона (≥48rem). Тап-таргет 40px
+   — осознанный компромисс D31 для самой узкой базы. */
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem;
+  width: 2.5rem; height: 2.5rem;
   border: 1px solid var(--border); border-radius: var(--radius-btn);
   background: transparent; color: var(--muted); cursor: pointer;
 }

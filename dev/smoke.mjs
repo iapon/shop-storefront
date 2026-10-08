@@ -575,7 +575,7 @@ await smokeQtySteppers();
   check(/\.shop-header-inner\s*\{[^}]*flex-wrap:\s*wrap/.test(css), 'шапка в базе не переносится (flex-wrap: wrap)');
   check(/\.product-grid,\s*\.rel-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(css),
         'грид каталога в базе не одна текучая колонка minmax(0, 1fr)');
-  check(/\.icon-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'тумблер темы в базе уже 2.75rem (44px, D31)');
+  check(/\.icon-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'иконки шапки в базе 2.5rem (40px — W9 F2.3: одна строка шапки на 320)');
   check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.75rem/.test(css), 'крестик корзины в базе уже 2.75rem (44px, D31)');
   check(/\.chip\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'чип категорий в базе ниже 2.75rem (44px, D31)');
   check(/\.qty-stepper \.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');

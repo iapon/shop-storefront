@@ -205,30 +205,32 @@
   {%- assign page_noindex = true -%}
 {%- endif -%}
 {%- capture content -%}
-<div class="shop-container section-y" data-category-ui data-base="__SHOP_BASE__/category/{{ category.slug | escape }}">
-  {%- if category -%}
-    {%- comment -%} ── Шапка (W6 №12-15, контракт каталога): крошки →
-      [H1 clamp + счётчик] → описание 2 строки + «Ещё» ── {%- endcomment -%}
-    <div class="cat-head">
-      {%- assign bc_current = category.title -%}
-      {%- if category.parent -%}
-        {%- assign bc_cat_title = category.parent.title -%}
-        {%- assign bc_cat_slug = category.parent.slug -%}
-      {%- endif -%}
-      {% include "partials/breadcrumbs" %}
-      {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
-      <div class="cat-title-row">
-        <h1 class="cat-title">{{ category.title }}</h1>
-        <span class="cat-count" data-cat-count>{{ cnt_txt }}</span>
-      </div>
-      {%- if category.description -%}
-      <p class="cat-desc" data-cat-desc data-clamp="1">{{ category.description }}</p>
-      <button class="desc-toggle" type="button" data-desc-toggle data-visible="0"
-              data-more="{{ t_description_more | escape }}" data-less="{{ t_description_less | escape }}">{{ t_description_more }}</button>
-      {%- endif -%}
-    </div>
+{%- if category -%}
+{%- comment -%} ── Hero категории (канон лендинга, W7; контракт каталога):
+  крошки тихой строкой → H1 clamp → счётчик ОТДЕЛЬНОЙ строкой →
+  описание 2 строки + «Ещё». Живёт ВНЕ data-category-ui: скрипт №15
+  ищет data-cat-desc по document. ── {%- endcomment -%}
+<section class="cat-hero">
+  <div class="shop-container">
+    {%- assign bc_current = category.title -%}
+    {%- if category.parent -%}
+      {%- assign bc_cat_title = category.parent.title -%}
+      {%- assign bc_cat_slug = category.parent.slug -%}
+    {%- endif -%}
+    {% include "partials/breadcrumbs" %}
+    {%- assign bc_current = nil -%}{%- assign bc_cat_title = nil -%}{%- assign bc_cat_slug = nil -%}
+    <h1 class="cat-title">{{ category.title }}</h1>
+    <span class="cat-count" data-cat-count>{{ cnt_txt }}</span>
+    {%- if category.description -%}
+    <p class="cat-desc" data-cat-desc data-clamp="1">{{ category.description }}</p>
+    <button class="desc-toggle" type="button" data-desc-toggle data-visible="0"
+            data-more="{{ t_description_more | escape }}" data-less="{{ t_description_less | escape }}">{{ t_description_more }}</button>
+    {%- endif -%}
+  </div>
+</section>
+<div class="shop-container" data-category-ui data-base="__SHOP_BASE__/category/{{ category.slug | escape }}">
 
-    {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка, контракт каталога.
+  {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка ПОД шапкой, контракт каталога.
       Мобайл — «Фильтры» (нижний лист с поиском; на категории нет полного
       индекса товаров, поэтому кнопка «Найти» без счётчика N) и
       «Сортировка: <текущая>» (лист-меню); ≥48rem — десктопная форма:
@@ -409,8 +411,9 @@
       })(sorts[si]);
     }
 
-    var desc = ui.querySelector('[data-cat-desc]');
-    var more = ui.querySelector('[data-desc-toggle]');
+    /* hero (W7) живёт вне data-category-ui — ищем по document */
+    var desc = document.querySelector('[data-cat-desc]');
+    var more = document.querySelector('[data-desc-toggle]');
     if (desc && more) {
       var hasOverflow = desc.scrollHeight > desc.clientHeight + 2;
       var syncMore = function () {
@@ -428,13 +431,12 @@
   /* W6-CATEGORY-UI-END */
   </script>
   {%- else -%}
-  <div class="status-screen" style="padding-left:0;padding-right:0;">
+  <div class="status-screen">
     <span class="status-badge error" aria-hidden="true">∅</span>
     <h1 class="status-title">{{ t_category_not_found }}</h1>
     <p class="status-text">{{ t_category_not_found_text }}</p>
     <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">{{ t_to_catalog }}</a></div>
   </div>
   {%- endif -%}
-</div>
 {%- endcapture -%}
 {% include "base" %}

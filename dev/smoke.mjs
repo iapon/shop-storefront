@@ -541,18 +541,19 @@ await smokeQtySteppers();
 }
 
 /* ── Проба мобильного-фёрста: 320 без горизонтального скролла ─────────
-   Контракт (w3-mobile, паттерн лендинг-плагина): базовые стили = малые
-   экраны, улучшения ТОЛЬКО через @media (min-width: …). Смок рендерит
-   HTML без применения стилей, поэтому контракт проверяем по источнику
-   CSS: (1) ноль max-width-медиазапросов; (2) ноль px-ширин (текучие
+   Контракт (w3-mobile, W7-канон): базовые стили = малые экраны,
+   улучшения ТОЛЬКО через @media (min-width: …). Смок рендерит HTML
+   без применения стилей, поэтому контракт проверяем по источнику CSS:
+   (1) ноль max-width-медиазапросов; (2) ноль px-ширин (текучие
    rem-контролы, никакой фиксированной геометрии); (3) шапка в базе
-   переносится (flex-wrap: wrap) — иначе корзина с тумблером темы
-   выталкиваются за 320 (это и была живая поломка 412/320);
-   (4) грид каталога в базе — одна колонка minmax(0, 1fr) со ступенями
-   30rem/62rem (1→2→4); (5) тап-таргеты в базе ≥ 2.75rem = 44px, D31 (тумблер темы,
-   крестик корзины, чип, страница пагинации, кнопки степпера);
-   (6) инпуты в базе 16px (--shop-text-md) — Safari iOS не зумит страницу
-   при фокусе. */
+   переносится (flex-wrap: wrap) — страховка против выталкивания за
+   320; (4) грид каталога в базе — одна колонка minmax(0, 1fr) со
+   ступенями 30rem/62rem (1→2→4); главный десктопный брейкпоинт —
+   48rem (=768px, канон лендинг-визарда: масштаб несёт корень
+   html{font-size:100vw/90}, tokens.css); (5) тап-таргеты в базе
+   ≥ 2.75rem = 44px, D31 (тумблер темы, крестик корзины, чип,
+   кнопки степпера); (6) инпуты в базе 16px (--text-md) — Safari iOS
+   не зумит страницу при фокусе. */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
     // Контракт — по КОДУ: комментарии не должны влиять на пробу
@@ -561,8 +562,8 @@ await smokeQtySteppers();
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
   check(!/@media[^{]*max-width/.test(css), 'найден max-width-медиазапрос — не мобильный-фёрст');
-  check(/@media \(min-width: 30rem\)/.test(css) && /@media \(min-width: 40rem\)/.test(css)
-        && /@media \(min-width: 62rem\)/.test(css), 'нет min-width-ступеней 30/40/62rem');
+  check(/@media \(min-width: 30rem\)/.test(css) && /@media \(min-width: 48rem\)/.test(css)
+        && /@media \(min-width: 62rem\)/.test(css), 'нет min-width-ступеней 30/48/62rem');
   const pxW = [...css.matchAll(/(min-)?width:\s*(\d+)px/g)].map((m) => Number(m[2]));
   check(pxW.every((n) => n <= 320), 'px-ширина шире 320 — фиксированная геометрия запрещена: ' + pxW.filter((n) => n > 320).join(', '));
   check(/\.shop-header-inner\s*\{[^}]*flex-wrap:\s*wrap/.test(css), 'шапка в базе не переносится (flex-wrap: wrap)');
@@ -572,7 +573,7 @@ await smokeQtySteppers();
   check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.75rem/.test(css), 'крестик корзины в базе уже 2.75rem (44px, D31)');
   check(/\.chip\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'чип категорий в базе ниже 2.75rem (44px, D31)');
   check(/\.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');
-  check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--shop-text-md\)/.test(css),
+  check(/\.field-input,\s*\.field-textarea\s*\{[^}]*font-size:\s*var\(--text-md\)/.test(css),
         'инпуты в базе мельче 16px — iOS Safari зумит при фокусе');
   if (fails.length) {
     failed++;
@@ -615,10 +616,13 @@ const mediaBlock = (cssSrc, header) => {
   check(/display:\s*none/.test(baseSearch), 'база 320: десктопная форма (поиск/сортировка) не скрыта — должны жить кнопки-листы');
   check(/\.toolbar-mobile\s*\{[^}]*display:\s*flex/.test(css), 'база 320: мобильные кнопки тулбара не показаны');
   check(/\.toolbar-btn\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'кнопки тулбара в базе ниже 2.75rem (44px, D31)');
-  // Sticky-тулбар (W6 №16): прилипает к верху с фоном и тонким бордером
+  // Sticky-тулбар (W6 №16 → W7): прилипает ПОД шапку, фон непрозрачный;
+  // НИКАКИХ hairline (политика линий W7) — отделение от контента несёт
+  // мягкая тень канона; border-bottom на тулбаре — регрессия.
   const toolsRule = /\.cat-tools\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/position:\s*sticky/.test(toolsRule) && /top:\s*0/.test(toolsRule), 'тулбар не sticky (position: sticky; top: 0)');
-  check(/background:\s*var\(--shop-bg\)/.test(toolsRule) && /border-bottom/.test(toolsRule), 'тулбар: нет фона и бордера снизу для sticky-состояния');
+  check(/position:\s*sticky/.test(toolsRule) && /top:\s*var\(--header-h\)/.test(toolsRule), 'тулбар не sticky под шапкой (position: sticky; top: var(--header-h))');
+  check(/background:\s*var\(--bg\)/.test(toolsRule) && /box-shadow/.test(toolsRule), 'тулбар: нет фона и тени для sticky-состояния');
+  check(!/border-bottom/.test(toolsRule), 'тулбар: border-bottom запрещён политикой линий W7 (ровно 2 hairline — шапка и футер)');
   // ≥48rem: одна строка, компактные ширины, мобильные кнопки скрыты
   const searchRule = /\.search-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
   const sortRule = /\.sort-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
@@ -682,6 +686,53 @@ const mediaBlock = (cssSrc, header) => {
     console.log('FAIL chips-single-row: ' + fails.join(' | '));
   } else {
     console.log('OK   chips-single-row (одна скролл-строка: nowrap+snap+скрытый скроллбар+фейд<48rem; дыра margin-left ликвидирована)');
+  }
+}
+
+/* ── Проба W7: канон лендинг-визарда ──────────────────────────────────
+   (1) Политика горизонтальных линий (ЖЁСТКО, разнос владельца): в
+       shop.css ровно ДВЕ hairline — border-bottom шапки и border-top
+       футера; в tokens.css горизонтальных бордеров ноль. Все прочие
+       разделители — воздух и --bg-soft-подложки.
+   (2) Палитра-пикер (механика лендинг-визарда 1:1): tokens.css несёт
+       все ШЕСТЬ ${variant.*}-подстановок; при установке визард кладёт
+       hex выбранной палитры (по code: substituteArtifacts →
+       substituteString → resolvePlaceholder, head 'variant').
+   (3) Акцент — только токеном: в shop.css ни одного hex-литерала
+       (все цвета через var(--…)) — смена палитры перекрашивает витрину.
+   (4) Масштаб канона: корень 100vw/90 от 768px, фикс 16px с 1440px. */
+{
+  const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const readCss = (p) => readFileSync(join(rootDir, p), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const shopCss = readCss('static/css/shop.css');
+  const tokensCss = readCss('static/css/tokens.css');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+
+  const hairlines = [...shopCss.matchAll(/border-(?:top|bottom)\s*:/g)].length;
+  check(hairlines === 2, `политика линий W7: в shop.css ${hairlines} горизонтальных hairline вместо 2`);
+  const headerRule = /\.shop-header\s*\{[^}]*\}/.exec(shopCss)?.[0] ?? '';
+  const footerRule = /\.shop-footer\s*\{[^}]*\}/.exec(shopCss)?.[0] ?? '';
+  check(/border-bottom:\s*1px solid var\(--border\)/.test(headerRule), 'hairline 1 обязана быть border-bottom шапки');
+  check(/border-top:\s*1px solid var\(--border\)/.test(footerRule), 'hairline 2 обязана быть border-top футера');
+  check(!/border-(?:top|bottom)\s*:/.test(tokensCss), 'в tokens.css появились горизонтальные hairline');
+  for (const v of ['accent', 'accent_strong', 'on_accent', 'accent_on_dark', 'accent_on_dark_strong', 'on_accent_dark']) {
+    check(tokensCss.includes('${variant.' + v + '}'), `палитра: в tokens.css нет подстановки \${variant.${v}}`);
+  }
+  // hex-скан не считает #000 внутри mask-image-фейдов (маска прокрутки —
+  // не визуальный цвет; запрет касается ЦВЕТОВ: акцент обязан быть токеном)
+  const hexes = [...shopCss.replace(/(?:-webkit-)?mask-image:[^;}]*/g, '').matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0]);
+  check(hexes.length === 0, 'в shop.css есть hex-литералы — акцент обязан ехать через var(--accent): ' + hexes.slice(0, 5).join(', '));
+  check(/font-size:\s*calc\(100vw\s*\/\s*90\)/.test(tokensCss) && /min-width:\s*1440px/.test(tokensCss),
+        'масштаб канона: нет корня 100vw/90 (от 768px) или фикса 16px (с 1440px)');
+  // тёмная тема магазина — СВОИ имена значений (контракт тумблера не трогать)
+  check(/\[data-theme="dynamica-dark"\]/.test(tokensCss) && !/html\[data-theme="dark"\]/.test(tokensCss),
+        'тёмная тема должна висеть на [data-theme="dynamica-dark"] (не html[data-theme="dark"] лендинга)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL w7-canon: ' + fails.join(' | '));
+  } else {
+    console.log('OK   w7-canon (ровно 2 hairline шапка/футер, 6 ${variant.*}-подстановок, ноль hex в shop.css, масштаб 100vw/90, тёмная dynamica-dark)');
   }
 }
 
@@ -839,4 +890,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w6-ux + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + ui-text + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w7-canon + w6-ux + partial-purity');

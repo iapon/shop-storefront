@@ -1,24 +1,33 @@
 /* ============================================================
-   shop-storefront — компоненты витрины (на --shop-* токенах)
-   Анти-card-soup: карточный грид — ТОЛЬКО каталог/категория и «Похожие»
-   (≤4); корзина/checkout/статусы — типографика; тинты вместо заливок;
-   тени две; font-mono — только номер заказа.
+   shop-storefront — компоненты витрины. Дизайн-язык = канон
+   лендинг-визарда (W7): токены tokens.css (--accent от палитры,
+   нейтрали --bg/--bg-soft/--card/--text/--muted/--border/--shadow),
+   ВСЁ в rem (масштаб несёт корень: от 768px html{font-size:100vw/90},
+   с 1440px — фикс 16px), карточки 12px с hairline-бордером и мягкой
+   тенью, кнопки/инпуты 10px, фокус = outline 2px var(--accent).
 
-   МОБИЛЬНЫЙ-ФЁРСТ (паттерн лендинг-плагина): базовые стили = малые
-   экраны (320px: одна колонка, текучие ширины, тап-таргеты ≥ 2.75rem,
-   шрифты инпутов ≥ 16px — iOS не зумит), улучшения — ТОЛЬКО через
-   @media (min-width: …): 30rem (грид 1→2, тулбар одним рядом) → 40rem
-   (десктопная шапка, ритм, компактные контролы, футер 2 колонки)
-   → 48rem (product/checkout 2 колонки) → 62rem (грид 2→4).
-   Чипы категорий — ОДНА скролл-строка на любой ширине (ragged-wrap
-   запрещён); тулбар каталога на ≥30rem — один компактный ряд
-   (поиск ≤ 20rem слева, «сортировка+кнопка» справа).
-   Ни одного max-width-медиазапроса и px-ширин.
+   ПОЛИТИКА ГОРИЗОНТАЛЬНЫХ ЛИНИЙ (W7, жёстко): в этом файле ровно
+   ДВЕ hairline — border-bottom шапки (.shop-header) и border-top
+   футера (.shop-footer). Все прочие горизонтальные разделители
+   запрещены: вместо них воздух (rem) и --bg-soft-подложки
+   (смоук-проба w7-canon ловит регрессию grep'ом).
+
+   МОБИЛЬНЫЙ-ФЁРСТ: база = телефон (320: одна колонка, тап-таргеты
+   2.75rem, инпуты 1rem — iOS не зумит). Один ГЛАВНЫЙ брейкпоинт
+   48rem (=768px канона: десктопная шапка/тулбар/сплиты); у грида
+   каталога свои микрошаги колонок 30rem (1→2) и 62rem (2→4) —
+   контентная логика W6 №19, не «планшетная перестройка». Ни одного
+   max-width-медиазапроса и px-ширин.
+
+   Анти-card-soup (W1..W6, сохранено): карточный грид — только
+   каталог/категория и «Похожие»; корзина/checkout/статусы —
+   типографика; тинты вместо заливок; font-mono — только номер заказа.
    ============================================================ */
 
 /* ── База ───────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0;
   /* Футер прижат к низу на ЛЮБОЙ высоте контента: страница — колонка на весь
@@ -29,250 +38,262 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  font-family: var(--shop-font-sans);
-  font-size: var(--shop-text-md);
-  line-height: var(--shop-leading-body);
-  color: var(--shop-text);
-  background: var(--shop-bg);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
   font-synthesis-weight: none;
 }
 main { flex: 1 0 auto; } /* контент растёт, шапка и футер остаются по краям */
 h1, h2, h3 {
   margin: 0 0 0.5rem;
-  font-weight: 600;
-  letter-spacing: var(--shop-tracking-heading);
-  line-height: var(--shop-leading-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   overflow-wrap: break-word; /* длинное слово не распирает узкую колонку 320 */
 }
 p { margin: 0 0 1rem; overflow-wrap: break-word; }
-a { color: var(--shop-brand); text-decoration: none; }
-a:hover { text-decoration: underline; }
-img { display: block; max-width: 100%; }
-::selection { background: color-mix(in oklch, var(--shop-brand) 20%, transparent); }
-:focus-visible { outline: none; box-shadow: var(--shop-focus-ring); border-radius: var(--shop-radius-sm); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-strong); }
+img, svg { max-width: 100%; height: auto; display: block; }
+::selection { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+/* A11y канона лендинга: видимая фокус-обводка акцентом */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
-/* Контейнер: на 320 гаттер уже (1rem), с 40rem — десктопный 1.5rem (--shop-gutter) */
-.shop-container { max-width: var(--shop-container); margin: 0 auto; padding: 0 1rem; }
-.shop-prose { max-width: var(--shop-container-prose); }
+/* Контейнер: канон .wrap — гаттер 1.25rem на любой ширине */
+.shop-container { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
+.shop-prose { max-width: var(--container-prose); }
 /* Вертикальный ритм секций: на телефоне на треть компактней */
-.section-y { padding-top: calc(var(--shop-section-y) * 0.67); padding-bottom: calc(var(--shop-section-y) * 0.67); }
+.section-y { padding-top: calc(var(--section-y) * 0.67); padding-bottom: calc(var(--section-y) * 0.67); }
 
-.text-2 { color: var(--shop-text-2); }
-.text-3 { color: var(--shop-text-3); }
-.mono { font-family: var(--shop-font-mono); }
+.text-3 { color: var(--muted); }
+.mono { font-family: var(--font-mono); }
 
-/* ── Шапка / подвал ──────────────────────────────────────────
-   База (< 40rem): осознанные ДВЕ строки — лого + корзина + тема
-   (order 1–4), ссылки входа/кабинета уходят на вторую строку и
-   прижимаются вправо (margin-left:auto). Без этого flex-строка
-   не влезает в 320 и выталкивает корзину с тумблером за экран
-   (горизонтальный скролл всего сайта). С 40rem — одна строка
-   как раньше: flex-wrap: nowrap, порядок DOM, прежние гэпы. */
-.shop-header { border-bottom: 1px solid var(--shop-border); background: var(--shop-bg); }
+/* ── Шапка: sticky + blur канона лендинга ─────────────────────
+   Одна строка на любой ширине: лого | nav (≥48rem) | действия
+   (корзина, тема, burger). Member-ссылки (Кабинет/Выйти, Войти/
+   Регистрация) на мобиле живут в burger-details (нативный паттерн
+   лендинга) — в строке остаются только иконки 2.75rem, слипаться
+   нечему (разнос владельца «шапка в кашу», W7). */
+.shop-header {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(10px);
+  /* hairline 1 из 2 разрешённых (политика линий W7) */
+  border-bottom: 1px solid var(--border);
+}
 .shop-header-inner {
   display: flex; flex-wrap: wrap; align-items: center;
-  gap: 0.25rem 0.75rem;
-  min-height: 3.5rem;
-  padding-top: 0.25rem; padding-bottom: 0.25rem;
+  gap: 0.5rem 1rem;
+  min-height: var(--header-h);
 }
 .shop-logo {
-  order: 1; min-width: 0;
-  font-size: var(--shop-text-lg); font-weight: 600;
-  color: var(--shop-text); letter-spacing: var(--shop-tracking-heading);
+  min-width: 0;
+  font-size: 1.06rem; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--text);
   overflow-wrap: break-word;
 }
-.shop-logo:hover { text-decoration: none; color: var(--shop-brand); }
-.shop-header-spacer { order: 2; flex: 1 1 auto; }
-.cart-counter { order: 3; min-height: 2.75rem; }
-.icon-btn { order: 4; width: 2.75rem; height: 2.75rem; }
-.shop-header-inner > .header-link,
-.shop-header-inner > .header-logout { order: 5; }
-.shop-header-inner > a.header-link { margin-left: auto; }
+.shop-logo:hover { text-decoration: none; color: var(--accent); }
+.site-nav { display: none; }
+.site-nav a, .site-nav .nav-logout-btn {
+  color: var(--muted); font-size: 0.92rem; font-weight: 500;
+  padding: 0.4rem 0.6rem; border-radius: 6px;
+}
+.site-nav a:hover, .site-nav .nav-logout-btn:hover { color: var(--text); background: var(--bg-soft); text-decoration: none; }
+.header-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+
+/* burger-details (канон лендинга, без JS): иконка-кнопка 2.75rem,
+   панель во всю ширину шапки — ссылки крупными строками с воздухом */
+.nav-burger summary {
+  list-style: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--border); border-radius: var(--radius-btn); color: var(--muted);
+}
+.nav-burger summary::-webkit-details-marker { display: none; }
+.nav-burger[open] summary, .nav-burger summary:hover { color: var(--text); border-color: var(--accent); }
+.nav-burger-panel {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 40;
+  background: var(--card);
+  padding: 0.5rem var(--gutter) 1rem;
+  display: grid; gap: 0.25rem;
+  box-shadow: var(--shadow);
+}
+.nav-burger-panel a, .nav-burger-panel .nav-logout-btn {
+  padding: 0.6rem 0.4rem; border-radius: 6px;
+  color: var(--text); font-weight: 500; text-align: left;
+}
+.nav-burger-panel a:hover, .nav-burger-panel .nav-logout-btn:hover { background: var(--bg-soft); text-decoration: none; }
+.nav-logout { display: inline-flex; }
+.nav-logout-btn { border: 0; background: none; font: inherit; cursor: pointer; }
+
+/* Корзина-счётчик: пилюля в тинте акцента; пустая — тихая */
 .cart-counter {
   position: relative; display: inline-flex; align-items: center; gap: 0.375rem;
-  padding: 0.375rem 0.625rem; border-radius: var(--shop-radius-pill);
-  font-size: var(--shop-text-sm); color: var(--shop-text-2);
-  background: var(--shop-brand-tint); color: var(--shop-brand);
+  min-height: 2.75rem; padding: 0.375rem 0.75rem; border-radius: var(--radius-pill);
+  font-size: var(--text-sm); font-weight: 600;
+  background: var(--accent-tint); color: var(--accent);
 }
-.cart-counter:hover { text-decoration: none; filter: brightness(1.05); }
-.cart-counter[data-empty="1"] { background: transparent; color: var(--shop-text-3); }
+.cart-counter:hover { text-decoration: none; color: var(--accent-strong); }
+.cart-counter[data-empty="1"] { background: transparent; color: var(--muted); }
+.cart-counter svg { width: 1.1rem; height: 1.1rem; }
+
+/* Иконка-кнопка (тумблер темы): 2.75rem = 44px тап-таргет (D31) */
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  border: 0; border-radius: var(--shop-radius-pill);
-  background: transparent; color: var(--shop-text-2); cursor: pointer;
+  width: 2.75rem; height: 2.75rem;
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: transparent; color: var(--muted); cursor: pointer;
 }
-.icon-btn:hover { background: var(--shop-surface-2); color: var(--shop-text); }
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
 
 /* ── Тумблер темы: SVG-морф солнце→луна (W6 №23, web.dev-паттерн) ──
    Одна иконка: светлая — солнце с лучами; тёмная — вырезка-маска съезжает
    на диск (затмение → серп), лучи разлетаются и гасят opacity. Анимация
-   гейтится prefers-reduced-motion; на таче тап-таргет остаётся 2.75rem. */
+   гейтится prefers-reduced-motion; тап-таргет остаётся 2.75rem. */
 .theme-toggle .theme-mask-hole { transform: translate(0, 0); }
 .theme-toggle .theme-rays { opacity: 1; transform: scale(1); transform-origin: 12px 12px; }
 [data-theme="dynamica-dark"] .theme-toggle .theme-mask-hole { transform: translate(-19px, 8px); }
 [data-theme="dynamica-dark"] .theme-toggle .theme-rays { opacity: 0; transform: scale(1.75); }
 @media (prefers-reduced-motion: no-preference) {
   .theme-toggle .theme-mask-hole,
-  .theme-toggle .theme-rays { transition: transform 300ms var(--shop-ease), opacity 300ms var(--shop-ease); }
+  .theme-toggle .theme-rays { transition: transform 300ms var(--ease), opacity 300ms var(--ease); }
 }
-/* member-контур в шапке: тихие текстовые ссылки; выход — форма-кнопка.
-   На телефоне вертикальный паддинг добирает тап-таргет до ≥ 40px. */
-.header-link {
-  color: var(--shop-text-2); font-size: var(--shop-text-sm); text-decoration: none;
-  padding: 0.6875rem 0;
-  transition: color var(--shop-theme-fade);
-}
-.header-link:hover { color: var(--shop-text); }
-.header-logout { display: inline-flex; }
-.header-logout-btn { padding: 0.625rem 0; border: 0; background: none; font-family: inherit; cursor: pointer; }
-/* ЛК: узкая колонка форм входа/регистрации и список заказов кабинета */
-.auth-narrow { max-width: 26rem; margin-inline: auto; }
-.auth-form { display: grid; gap: 0.875rem; margin-top: 1.25rem; text-align: left; }
-.auth-form .btn { justify-self: stretch; }
-.account-orders { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 0.75rem; }
-.account-order {
-  padding: 1rem 1.25rem; border: 1px solid var(--shop-border); border-radius: var(--shop-radius);
-  background: var(--shop-surface);
-}
-.account-order-main { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
-.account-order-link { font-weight: 600; color: var(--shop-text); }
-.account-order-date { color: var(--shop-text-3); font-size: var(--shop-text-sm); }
-.account-order-summary { margin: 0.375rem 0 0; color: var(--shop-text-2); font-size: var(--shop-text-sm); }
-.account-order-amount { margin: 0.375rem 0 0; font-weight: 600; }
-/* Футер из настроек магазина (D25): колонки — контакты/адрес/реквизиты;
-   на телефоне — один столбец */
-.footer-grid { display: grid; gap: 1.25rem; }
-.footer-brand { margin: 0 0 0.5rem; font-weight: 500; color: var(--shop-text-2); }
-.footer-line { margin: 0 0 0.25rem; overflow-wrap: break-word; }
-.footer-link { color: var(--shop-text-2); }
-.footer-link:hover { color: var(--shop-brand); }
-.footer-legal { margin: 0; font-size: var(--shop-text-xs); color: var(--shop-text-3); white-space: pre-line; }
-.footer-powered {
-  margin: 1.25rem 0 0; padding-top: 0.75rem;
-  border-top: 1px solid var(--shop-border);
-  font-size: var(--shop-text-xs); color: var(--shop-text-4);
-}
-.shop-footer { border-top: 1px solid var(--shop-border); margin-top: var(--shop-section-y); }
-.shop-footer-inner { padding: 1.5rem 0; font-size: var(--shop-text-sm); color: var(--shop-text-3); }
 
-/* ── Шапка каталога/категории (W6 №12-15): единый ритм ─────────
-   крошки → строка [H1 + счётчик товаров] → описание (clamp 2 + «Ещё»)
-   → тулбар → чипы → грид. H1 умеренный clamp(20px → 32px) — не герой;
-   счётчик muted 14px на одной baseline-строке с H1. До первой карточки
-   на мобиле — минимум высоты (крошки/заголовок/тулбар ≈ 120px). */
-.cat-head { padding-top: calc(var(--shop-section-y) * 0.5); }
-.cat-title-row {
-  display: flex; flex-wrap: wrap; align-items: baseline;
-  gap: 0.125rem var(--shop-space-3);
-  margin-bottom: var(--shop-space-1);
+/* ── Подвал: hairline 2 из 2 разрешённых (политика линий W7) ── */
+.shop-footer { border-top: 1px solid var(--border); margin-top: var(--section-y); }
+.shop-footer-inner { padding: 2rem 0; font-size: 0.9rem; color: var(--muted); }
+.footer-grid { display: grid; gap: 1.25rem; }
+.footer-brand { margin: 0 0 0.5rem; font-weight: 600; color: var(--text); }
+.footer-line { margin: 0 0 0.25rem; overflow-wrap: break-word; }
+.footer-link { color: var(--muted); }
+.footer-link:hover { color: var(--accent); }
+.footer-legal { margin: 0; font-size: var(--text-xs); color: var(--muted); white-space: pre-line; }
+/* без hairline: воздух + приглушение (политика линий W7) */
+.footer-powered { margin: 1.5rem 0 0; font-size: var(--text-xs); color: var(--muted); opacity: 0.75; }
+
+/* ── Hero каталога/категории (канон hero лендинга, W7) ────────
+   Центрированный, фон — градиент тинта акцента; kicker-пилюля,
+   крупный H1 по clamp-формуле канона; счётчик товаров — ОТДЕЛЬНОЙ
+   строкой под H1 (разнос владельца «H1 слипся со счётчиком»);
+   описание — lead. Крошки — тихой строкой сверху слева. */
+.cat-hero {
+  padding: 3rem 0 2.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, var(--bg)), var(--bg) 78%);
+}
+.cat-hero .shop-container > .breadcrumbs { text-align: left; }
+.kicker {
+  display: inline-flex; align-items: center;
+  margin: 0 0 0.9rem; padding: 0.2rem 0.7rem; border-radius: var(--radius-pill);
+  background: var(--accent-tint); color: var(--accent);
+  font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
 }
 .cat-title {
-  margin: 0; font-size: clamp(1.25rem, 1rem + 1.6vw, 2rem);
-  font-weight: 700; line-height: 1.2; letter-spacing: var(--shop-tracking-heading);
+  margin: 0;
+  font-size: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  line-height: 1.12; letter-spacing: -0.02em; font-weight: 700;
 }
-.cat-count { color: var(--shop-text-3); font-size: var(--shop-text-sm); }
-.cat-desc { margin: 0; max-width: 42rem; color: var(--shop-text-2); }
+/* счётчик — своей строкой (не в baseline-ряду с H1) */
+.cat-count { display: block; margin-top: 0.6rem; color: var(--muted); font-size: 0.95rem; }
+.cat-desc { margin: 1rem auto 0; max-width: 38rem; color: var(--muted); font-size: 1.05em; }
 /* короткое описание сверху: 2 строки + «Ещё» (состояние ведёт скрипт каталога) */
 .cat-desc[data-clamp="1"] {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden;
 }
 .desc-toggle {
-  display: none; margin: 0.25rem 0 0; padding: 0.5rem 0; border: 0; background: none;
-  color: var(--shop-brand); font-size: var(--shop-text-sm); font-family: inherit;
+  display: none; margin: 0.4rem auto 0; padding: 0.5rem 0; border: 0; background: none;
+  color: var(--accent); font-size: var(--text-sm); font-family: inherit;
   cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
 }
 .desc-toggle[data-visible="1"] { display: inline-block; }
 /* полное SEO-описание — под гридом, перед футером */
 .cat-desc-full {
-  margin: var(--shop-section-y) 0 0; max-width: var(--shop-container-prose);
-  color: var(--shop-text-2); font-size: var(--shop-text-sm);
+  margin: var(--section-y) 0 0; max-width: var(--container-prose);
+  color: var(--muted); font-size: var(--text-sm);
 }
 
-/* ── Чипы категорий ───────────────────────────────────────────
-   ОДНА горизонтальная строка на ЛЮБОЙ ширине (v1.6.1: multi-line
-   ragged-wrap запрещён — три рваных ряда на 320 выглядели мусорно).
-   База: nowrap + overflow-x: auto + scroll-snap (переполнение = скролл,
-   вертикальный перенос — нет), скроллбар скрыт, справа лёгкий fade —
-   намёк на прокрутку; на ≥48rem фейд выключен (десктоп обычно без
-   переполнения, а постоянная дымка на краю выглядит грязно). */
-.chip-row {
-  display: flex; flex-wrap: nowrap; gap: 0.5rem;
-  margin: 1.5rem 0;
-  overflow-x: auto; overflow-y: hidden;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
+/* ── Хлебные крошки (D26, W6 №2-4) — тихая строка ─────────────
+   Разделитель — CSS ::before (не DOM-текст: скринридеры его не
+   читают); последний элемент — span[aria-current] без ссылки.
+   Мобайл: одна строка nowrap + overflow-x + фейд справа; JS
+   автоскроллит к текущему (partial крошек несёт свой скрипт). */
+.breadcrumbs { margin-bottom: var(--gutter); }
+.crumb-list {
+  display: flex; flex-wrap: nowrap; align-items: center;
+  gap: 0; margin: 0; padding: 0; list-style: none;
+  font-size: 0.8125rem; color: var(--muted);
+  overflow-x: auto; overflow-y: hidden; white-space: nowrap;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
 }
-.chip-row::-webkit-scrollbar { display: none; }
-.chip {
-  display: inline-flex; align-items: center; gap: 0.375rem;
-  flex: 0 0 auto; scroll-snap-align: start;
-  min-height: 2.75rem; padding: 0.375rem 1rem; border-radius: var(--shop-radius-pill);
-  border: 1px solid var(--shop-border); background: var(--shop-surface);
-  font-size: var(--shop-text-sm); color: var(--shop-text-2); cursor: pointer;
-  transition: border-color 200ms var(--shop-ease), color 200ms var(--shop-ease);
+.crumb-list::-webkit-scrollbar { display: none; }
+.crumb-item { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.crumb-item + .crumb-item::before {
+  content: "/"; margin: 0 0.375rem; color: var(--muted); opacity: 0.6;
 }
-.chip:hover { color: var(--shop-text); border-color: var(--shop-border-strong); text-decoration: none; }
-.chip[aria-current="true"] {
-  background: var(--shop-brand-tint); border-color: color-mix(in oklch, var(--shop-brand) 30%, transparent);
-  color: var(--shop-brand);
+.crumb {
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  padding: 0 0.25rem; color: var(--muted); text-decoration: none;
 }
-/* счётчик товаров в чипе (D27); chip-child — второй уровень дерева (D18):
-   иерархию несёт ПОРЯДОК (потомки сразу за родителем), отступ-«дыра»
-   margin-left ликвидирована — чипы ровным рядом (v1.6.1) */
-.chip-count {
-  display: inline-flex; align-items: center; min-height: 1.25rem;
-  padding: 0 0.5rem; border-radius: var(--shop-radius-pill);
-  background: var(--shop-surface-2); color: var(--shop-text-3);
-  font-size: var(--shop-text-xs);
-}
-.chip[aria-current="true"] .chip-count {
-  background: color-mix(in oklch, var(--shop-brand) 15%, transparent); color: var(--shop-brand);
+.crumb:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.crumb-current {
+  display: inline-flex; align-items: center; min-height: 2.75rem;
+  color: var(--text); font-weight: 500;
 }
 
-/* ── Тулбар каталога (W6 №6, №16): sticky-инструменты ─────────
-   Мобайл (база): одна sticky-строка ~44px — слева «Фильтры» (иконка +
-   бейдж применённых), справа «Сортировка: <текущая>»; обе открывают
-   нижние листы. Десктопная форма (поиск/селект) скрыта.
-   ≥48rem: десктопная форма одной строкой ≤48px (контракт пробы «тулбар
-   компактен»: поиск ≤20rem, селект ≤12.5rem, группа справа), мобильные
-   кнопки скрыты. Sticky: фон --bg, тонкий бордер снизу, full-bleed
-   подложка (отрицательные margin-inline по гаттеру контейнера). */
+/* ── Тулбар каталога (W6 №6, №16 → канон W7) ──────────────────
+   Мобайл (база): одна sticky-строка под шапкой — «Фильтры» (бейдж)
+   + «Сортировка: <текущая>», обе открывают нижние листы. ≥48rem —
+   десктопная форма одной строкой (поиск ≤20rem, селект ≤12.5rem,
+   группа справа), мобильные кнопки скрыты. Sticky: фон --bg;
+   НИКАКИХ hairline (политика W7) — отделение от контента несёт
+   мягкая тень канона. */
 .cat-tools {
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: var(--header-h); z-index: 30;
   display: flex; flex-wrap: wrap; align-items: center;
   gap: 0.25rem 0.625rem;
-  margin: 0 -1rem; padding: 0.25rem 1rem;
-  background: var(--shop-bg);
-  border-bottom: 1px solid var(--shop-border);
+  margin: 0 calc(var(--gutter) * -1); padding: 0.25rem var(--gutter);
+  background: var(--bg);
+  box-shadow: var(--shadow);
 }
 .toolbar-mobile { display: flex; flex: 1 1 100%; align-items: center; justify-content: space-between; gap: 0.625rem; }
+/* «Фильтры» — по содержимому, «Сортировка: …» — на остальную ширину
+   (подпись с ellipsis, тулбар одной строкой ~44px — находка критика W7) */
+.toolbar-mobile .toolbar-btn:first-child { flex: 0 0 auto; }
+.toolbar-mobile .toolbar-btn + .toolbar-btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
 .toolbar-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  min-height: 2.75rem; padding: 0.375rem 0.875rem; /* 44px, D31 (компакт на ≥62rem) */
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-md);
-  background: var(--shop-surface); color: var(--shop-text);
-  font-size: var(--shop-text-sm); font-family: inherit; cursor: pointer;
-  transition: border-color 200ms var(--shop-ease), background-color 200ms var(--shop-ease);
+  min-height: 2.75rem; padding: 0.375rem 0.875rem; /* 44px, D31 (компакт на ≥48rem) */
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); color: var(--text);
+  font-size: var(--text-sm); font-family: inherit; cursor: pointer;
+  transition: border-color 200ms var(--ease), background-color 200ms var(--ease);
+  /* находка критика W7: подпись сортировки не переносится на 2-ю строку
+     (<480px) — тулбар держит одну строку ~44px, хвост подписи — ellipsis */
+  min-width: 0; white-space: nowrap;
 }
-.toolbar-btn:hover { border-color: var(--shop-border-strong); background: var(--shop-surface-2); }
-.toolbar-btn svg { width: 1rem; height: 1rem; color: var(--shop-text-3); }
+.toolbar-btn > span { overflow: hidden; text-overflow: ellipsis; }
+.toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+.toolbar-btn svg { width: 1rem; height: 1rem; color: var(--muted); }
 .toolbar-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.25rem; height: 1.25rem; padding: 0 0.375rem;
-  border-radius: var(--shop-radius-pill);
-  background: var(--shop-brand); color: var(--shop-brand-contrast);
-  font-size: var(--shop-text-xs); font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--accent); color: var(--on-accent);
+  font-size: var(--text-xs); font-weight: 600;
 }
 /* десктопная форма в базе скрыта (мобайл — кнопки-листы) */
 .search-box, .tools-right { display: none; }
 .search-box { position: relative; min-width: 0; }
 .search-icon {
   position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
-  width: 1rem; height: 1rem; color: var(--shop-text-4); pointer-events: none;
+  width: 1rem; height: 1rem; color: var(--muted); opacity: 0.7; pointer-events: none;
 }
 .field-input.search-input { padding-left: 2.375rem; min-height: 2.75rem; }
 /* лейбл сортировки — только скринридерам (видимый лейбл раздувал тулбар) */
@@ -287,7 +308,7 @@ img { display: block; max-width: 100%; }
 }
 .sort-chevron {
   position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
-  width: 0.875rem; height: 0.875rem; color: var(--shop-text-3); pointer-events: none;
+  width: 0.875rem; height: 0.875rem; color: var(--muted); pointer-events: none;
 }
 .search-submit { flex: 0 0 auto; }
 
@@ -310,154 +331,172 @@ img { display: block; max-width: 100%; }
 .applied-chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
   flex: 0 0 auto; scroll-snap-align: start;
-  min-height: 2.75rem; padding: 0.25rem 0.75rem; border-radius: var(--shop-radius-pill); /* 44px, D31 */
-  border: 1px solid color-mix(in oklch, var(--shop-brand) 30%, transparent);
-  background: var(--shop-brand-tint); color: var(--shop-brand);
-  font-size: var(--shop-text-sm); text-decoration: none;
-  transition: border-color 200ms var(--shop-ease), color 200ms var(--shop-ease);
+  min-height: 2.75rem; padding: 0.25rem 0.75rem; border-radius: var(--radius-pill); /* 44px, D31 */
+  background: var(--accent-tint); color: var(--accent);
+  font-size: var(--text-sm); font-weight: 500; text-decoration: none;
+  transition: background-color 200ms var(--ease), color 200ms var(--ease);
 }
-.applied-chip:hover { border-color: var(--shop-brand); color: var(--shop-brand); text-decoration: none; }
-.applied-chip .applied-x { font-size: var(--shop-text-md); line-height: 1; }
+.applied-chip:hover { background: var(--accent-tint-strong); color: var(--accent-strong); text-decoration: none; }
+.applied-chip .applied-x { font-size: var(--text-md); line-height: 1; }
 .applied-reset {
   flex: 0 0 auto; min-height: 2.75rem; padding: 0.25rem 0.5rem; border: 0; background: none; /* 44px, D31 */
-  color: var(--shop-text-3); font-size: var(--shop-text-sm); font-family: inherit;
+  color: var(--muted); font-size: var(--text-sm); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
-.applied-reset:hover { color: var(--shop-error); }
+.applied-reset:hover { color: var(--err); }
+
+/* ── Чипы категорий ───────────────────────────────────────────
+   ОДНА горизонтальная строка на ЛЮБОЙ ширине (v1.6.1: multi-line
+   ragged-wrap запрещён). База: nowrap + overflow-x: auto + scroll-snap
+   (переполнение = скролл), скроллбар скрыт, справа лёгкий фейд —
+   намёк на прокрутку; на ≥48rem фейд выключен. Чип — канон-бордер
+   + пилюля; активный — тинт акцента. */
+.chip-row {
+  display: flex; flex-wrap: nowrap; gap: 0.5rem;
+  margin: 1.25rem 0 1.5rem;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  flex: 0 0 auto; scroll-snap-align: start;
+  min-height: 2.75rem; padding: 0.375rem 1rem; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); background: var(--card);
+  font-size: var(--text-sm); color: var(--muted); cursor: pointer;
+  transition: border-color 200ms var(--ease), color 200ms var(--ease);
+}
+.chip:hover { color: var(--text); border-color: var(--accent); text-decoration: none; }
+.chip[aria-current="true"] {
+  background: var(--accent-tint); color: var(--accent); border-color: transparent;
+}
+/* счётчик товаров в чипе (D27); chip-child — второй уровень дерева (D18):
+   иерархию несёт ПОРЯДОК (потомки сразу за родителем), отступ-«дыра»
+   margin-left ликвидирована — чипы ровным рядом (v1.6.1) */
+.chip-count {
+  display: inline-flex; align-items: center; min-height: 1.25rem;
+  padding: 0 0.5rem; border-radius: var(--radius-pill);
+  background: var(--bg-soft); color: var(--muted);
+  font-size: var(--text-xs);
+}
+.chip[aria-current="true"] .chip-count {
+  background: var(--accent-tint-strong); color: var(--accent);
+}
 
 /* ── Нижние листы: фильтры и сортировка (W6 №7-8, №11) ────────
    fixed снизу, translateY-анимация, safe-area-inset-bottom; оверлей —
    клик закрывает; Esc закрывает (скрипт); футер листа — sticky кнопка
-   «Показать N» (N — живой счётчик по черновику формы). */
+   «Показать N» (N — живой счётчик по черновику формы).
+   Без внутренних hairline (политика W7): шапка/подвал листа —
+   воздух и --bg-soft-подложка. */
 .sheet-overlay {
   position: fixed; inset: 0; z-index: 90;
-  background: color-mix(in oklch, var(--shop-text) 40%, transparent);
+  background: color-mix(in srgb, var(--text) 40%, transparent);
   opacity: 0; visibility: hidden;
-  transition: opacity 200ms var(--shop-ease), visibility 0s linear 200ms;
+  transition: opacity 200ms var(--ease), visibility 0s linear 200ms;
 }
 .sheet-overlay[data-open="1"] {
   opacity: 1; visibility: visible;
-  transition: opacity 200ms var(--shop-ease);
+  transition: opacity 200ms var(--ease);
 }
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
   display: flex; flex-direction: column;
   max-height: 85dvh;
-  background: var(--shop-surface);
-  border-radius: var(--shop-radius-lg) var(--shop-radius-lg) 0 0;
-  box-shadow: var(--shop-shadow-pop);
+  background: var(--card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow);
   transform: translateY(100%); visibility: hidden;
-  transition: transform 260ms var(--shop-ease), visibility 0s linear 260ms;
+  transition: transform 260ms var(--ease), visibility 0s linear 260ms;
   padding-bottom: env(safe-area-inset-bottom);
 }
 .sheet[data-open="1"] {
   transform: translateY(0); visibility: visible;
-  transition: transform 260ms var(--shop-ease);
+  transition: transform 260ms var(--ease);
 }
 .sheet-head {
   display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.75rem 1rem; border-bottom: 1px solid var(--shop-border);
+  padding: 0.9rem 1.25rem 0.5rem;
 }
-.sheet-title { font-weight: 600; font-size: var(--shop-text-md); }
+.sheet-title { font-weight: 600; font-size: var(--text-md); }
 .sheet-reset {
   margin-left: auto; padding: 0.5rem 0; border: 0; background: none;
-  color: var(--shop-text-3); font-size: var(--shop-text-sm); font-family: inherit;
+  color: var(--muted); font-size: var(--text-sm); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
-.sheet-reset:hover { color: var(--shop-brand); }
+.sheet-reset:hover { color: var(--accent); }
 .sheet-close {
   display: inline-flex; align-items: center; justify-content: center;
   width: 2.75rem; height: 2.75rem; margin-right: -0.5rem;
-  border: 0; border-radius: var(--shop-radius-pill);
-  background: none; color: var(--shop-text-3); cursor: pointer;
-  font-size: var(--shop-text-xl); line-height: 1;
+  border: 0; border-radius: var(--radius-pill);
+  background: none; color: var(--muted); cursor: pointer;
+  font-size: var(--text-lg); line-height: 1;
 }
-.sheet-close:hover { background: var(--shop-surface-2); color: var(--shop-text); }
-.sheet-body { overflow-y: auto; padding: 1rem; display: grid; gap: 1.25rem; }
+.sheet-close:hover { background: var(--bg-soft); color: var(--text); }
+.sheet-body { overflow-y: auto; padding: 1rem 1.25rem; display: grid; gap: 1.25rem; }
 .sheet-group { border: 0; padding: 0; margin: 0; min-width: 0; }
 .sheet-legend, .sheet-label {
   display: block; margin: 0 0 0.5rem; padding: 0;
-  font-size: var(--shop-text-sm); font-weight: 600; color: var(--shop-text);
+  font-size: var(--text-sm); font-weight: 600; color: var(--text);
 }
 .sheet-option {
   display: flex; align-items: center; gap: 0.625rem;
-  min-height: 2.75rem; cursor: pointer; color: var(--shop-text);
+  min-height: 2.75rem; cursor: pointer; color: var(--text);
 }
-.sheet-option input { width: 1.125rem; height: 1.125rem; accent-color: var(--shop-brand); flex: 0 0 auto; }
-.sheet-count { margin-left: auto; color: var(--shop-text-3); font-size: var(--shop-text-sm); }
+.sheet-option input { width: 1.125rem; height: 1.125rem; accent-color: var(--accent); flex: 0 0 auto; }
+.sheet-count { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }
 .sheet-foot {
   position: sticky; bottom: 0;
-  padding: 0.75rem 1rem; border-top: 1px solid var(--shop-border);
-  background: var(--shop-surface);
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-soft); /* подложка вместо hairline (политика W7) */
 }
 .sheet-apply { width: 100%; }
 .sheet-apply .sheet-n { font-weight: 700; }
 /* лок скролла страницы при открытом листе (вешает скрипт каталога) */
 html[data-sheet-open="1"] { overflow: hidden; }
-.results-note { margin: var(--shop-space-1) 0; color: var(--shop-text-3); font-size: var(--shop-text-sm); }
-
-/* ── Хлебные крошки (D26, W6 №2-4) — тихая строка над заголовком ──
-   13px muted; разделитель — CSS ::after (не DOM-текст: скринридеры его
-   не читают); последний элемент — span[aria-current] без ссылки.
-   Мобайл: одна строка nowrap + overflow-x + фейд справа; JS автоскроллит
-   к текущему элементу (partial крошек несёт свой скрипт). */
-.breadcrumbs { margin-bottom: var(--shop-space-1); }
-.crumb-list {
-  display: flex; flex-wrap: nowrap; align-items: center;
-  gap: 0; margin: 0; padding: 0; list-style: none;
-  font-size: 0.8125rem; color: var(--shop-text-3);
-  overflow-x: auto; overflow-y: hidden; white-space: nowrap;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
-}
-.crumb-list::-webkit-scrollbar { display: none; }
-.crumb-item { display: inline-flex; align-items: center; flex: 0 0 auto; }
-.crumb-item + .crumb-item::before {
-  content: "/"; margin: 0 0.375rem; color: var(--shop-text-4);
-}
-.crumb {
-  display: inline-flex; align-items: center; min-height: 2.75rem;
-  padding: 0 0.25rem; color: var(--shop-text-3); text-decoration: none;
-}
-.crumb:hover { color: var(--shop-brand); text-decoration: underline; text-underline-offset: 3px; }
-.crumb-current {
-  display: inline-flex; align-items: center; min-height: 2.75rem;
-  color: var(--shop-text); font-weight: 500;
-}
 
 /* ── Карточный грид (ЕДИНСТВЕННЫЙ: каталог + «Похожие») ──────
-   Мобильный-фёрст: 1 колонка (база, gap 12px) → 2 (30rem) → 4 (62rem,
-   gap 20px). minmax(0, 1fr) — колонка не распирается длинным словом. */
+   Мобильный-фёрст: 1 колонка (база, воздух 1.1rem — канон cards-grid;
+   разнос владельца «карточки сливаются в ленту») → 2 (30rem) →
+   4 (62rem). minmax(0, 1fr) — колонка не распирается длинным словом. */
 .product-grid,
 .rel-grid {
-  display: grid; gap: var(--shop-space-2);
+  display: grid; gap: 1.1rem;
   grid-template-columns: minmax(0, 1fr);
 }
-/* ── Карточка товара (W6 №20-22) ─────────────────────────────
-   Фото — ЕДИНЫЙ аспект 3:4 (fashion-дефолт; грид не «прыгает»),
-   object-fit: cover, лениво, width/height против CLS. Hover — свап на
-   второе фото (transition 200ms, на таче не активен). Название — 2
-   строки clamp; цена 18px semibold; «Нет в наличии» — оверлей на фото. */
+/* ── Карточка товара (W6 №20-22 → канон-карточка W7) ──────────
+   Канон: border var(--border), radius 12px, тень --shadow.
+   Фото — ЕДИНЫЙ аспект 3:4, object-fit: cover, лениво, width/height
+   против CLS. Hover — свап на второе фото (на таче не активен).
+   Название — 2 строки clamp; цена semibold; «Нет в наличии» —
+   оверлей на фото (единственное место дубля: бейдж в теле при
+   stock=0 не рендерится — W7 снял дублирование). */
 .product-card {
   display: flex; flex-direction: column;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-md);
-  background: var(--shop-surface); box-shadow: var(--shop-shadow-card);
+  border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--card); box-shadow: var(--shadow);
   overflow: hidden; color: inherit;
-  transition: box-shadow 220ms var(--shop-ease), transform 220ms var(--shop-ease);
+  transition: box-shadow 220ms var(--ease), transform 220ms var(--ease), border-color 220ms var(--ease);
 }
-.product-card:hover { box-shadow: var(--shop-shadow-pop); transform: translateY(-2px); text-decoration: none; }
+.product-card:hover {
+  box-shadow: var(--shadow); transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  text-decoration: none;
+}
 .product-card-photo {
   position: relative;
   aspect-ratio: 3 / 4; width: 100%;
-  background: var(--shop-surface-2); color: var(--shop-text-4);
+  background: var(--bg-soft); color: var(--muted);
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--shop-text-sm);
+  font-size: var(--text-sm);
 }
 .product-card-photo img {
   width: 100%; height: 100%; object-fit: cover;
-  transition: opacity 200ms var(--shop-ease);
+  transition: opacity 200ms var(--ease);
 }
 .product-card-photo .card-img-alt { position: absolute; inset: 0; opacity: 0; }
 @media (hover: hover) and (pointer: fine) {
@@ -467,60 +506,59 @@ html[data-sheet-open="1"] { overflow: hidden; }
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; justify-content: center;
   min-height: 2.25rem; padding: 0.25rem 0.75rem;
-  background: color-mix(in oklch, var(--shop-surface) 88%, transparent);
-  color: var(--shop-error); font-size: var(--shop-text-sm); font-weight: 600;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--err); font-size: var(--text-sm); font-weight: 600;
 }
-.product-card-body { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.875rem 1rem 1rem; }
+.product-card-body { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem 1.25rem 1.25rem; }
 .product-card-title {
-  margin: 0; font-size: var(--shop-text-sm); font-weight: 500;
-  line-height: 1.35; color: var(--shop-text);
+  margin: 0; font-size: var(--text-sm); font-weight: 600;
+  line-height: 1.35; color: var(--text);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden;
   /* резерв высоты 2 строк — карточки в ряду равной высоты */
   min-height: calc(1.35em * 2);
 }
-.product-card-price { font-size: 1.125rem; font-weight: 600; }
-.product-card-price .rub { color: var(--shop-text-3); font-weight: 400; margin-left: 0.25rem; }
+.product-card-price { font-size: var(--text-lg); font-weight: 600; }
+.product-card-price .rub { color: var(--muted); font-weight: 400; margin-left: 0.25rem; }
 .product-card-stock { margin-top: auto; display: flex; }
 
-/* ── Бейджи статусов — тинты, не заливки ────────────────────── */
+/* ── Бейджи статусов — тинты, не заливки (модель канона) ────── */
 .badge {
   display: inline-flex; align-items: center; gap: 0.375rem;
-  padding: 0.125rem 0.625rem; border-radius: var(--shop-radius-pill);
-  font-size: var(--shop-text-xs); font-weight: 600;
+  padding: 0.125rem 0.625rem; border-radius: var(--radius-pill);
+  font-size: var(--text-xs); font-weight: 600;
 }
-.badge-success { background: var(--shop-success-tint); color: var(--shop-success); }
-.badge-warning { background: var(--shop-warning-tint); color: var(--shop-warning); }
-.badge-error   { background: var(--shop-error-tint); color: var(--shop-error); }
-.badge-brand   { background: var(--shop-brand-tint); color: var(--shop-brand); }
+.badge-success { background: var(--ok-tint); color: var(--ok); }
+.badge-warning { background: var(--warn-tint); color: var(--warn); }
+.badge-error   { background: var(--err-tint); color: var(--err); }
 
-/* ── Карточка товара ─────────────────────────────────────────
+/* ── Страница товара ─────────────────────────────────────────
    База: фото над текстом (одна колонка), CTA «В корзину» — на всю
    ширину строки покупки (канон мобильного e-commerce). 48rem —
-   галерея слева (30rem), инфо справа. */
-.product-page-cols { display: grid; gap: var(--shop-gap); grid-template-columns: minmax(0, 1fr); }
+   галерея слева, инфо справа (пропорция 2:3 — едет за корнем). */
+.product-page-cols { display: grid; gap: calc(var(--section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
 .product-gallery { display: grid; gap: 0.75rem; align-content: start; }
 .product-photo {
   position: relative;
-  aspect-ratio: 4 / 5; width: 100%; border-radius: var(--shop-radius-lg);
-  background: var(--shop-surface-2); overflow: hidden;
-  display: flex; align-items: center; justify-content: center; color: var(--shop-text-4);
+  aspect-ratio: 4 / 5; width: 100%; border-radius: var(--radius-lg);
+  background: var(--bg-soft); overflow: hidden;
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
 }
 .product-photo img { width: 100%; height: 100%; object-fit: cover; }
-/* стрелки галереи — поверх фото, тап-таргет 2.75rem; тинт поверх снимка */
+/* стрелки галереи — поверх фото, тап-таргет 2.75rem; подложка карточная */
 .gallery-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem; border-radius: var(--shop-radius-pill);
-  border: 1px solid var(--shop-border);
-  background: color-mix(in oklch, var(--shop-surface) 85%, transparent);
-  color: var(--shop-text); font-size: var(--shop-text-xl); line-height: 1;
-  cursor: pointer; transition: background-color var(--shop-theme-fade);
+  width: 2.75rem; height: 2.75rem; border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  color: var(--text); font-size: var(--text-lg); line-height: 1;
+  cursor: pointer; transition: background-color var(--theme-fade);
 }
-.gallery-nav:hover { background: var(--shop-surface); }
+.gallery-nav:hover { background: var(--card); }
 .gallery-prev { left: 0.5rem; }
 .gallery-next { right: 0.5rem; }
-/* миниатюры — свайп-полоса (scroll-snap), активная в рамке бренда */
+/* миниатюры — свайп-полоса (scroll-snap), активная в рамке акцента */
 .gallery-thumbs {
   display: flex; gap: 0.5rem; overflow-x: auto;
   scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
@@ -528,20 +566,23 @@ html[data-sheet-open="1"] { overflow: hidden; }
 }
 .gallery-thumb {
   flex: 0 0 auto; width: 4rem; height: 5rem; padding: 0;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface-2); overflow: hidden; cursor: pointer;
-  scroll-snap-align: start; transition: border-color var(--shop-theme-fade), box-shadow var(--shop-theme-fade);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--bg-soft); overflow: hidden; cursor: pointer;
+  scroll-snap-align: start; transition: border-color var(--theme-fade), box-shadow var(--theme-fade);
 }
 .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.gallery-thumb:hover { border-color: var(--shop-border-strong); }
+.gallery-thumb:hover { border-color: var(--accent); }
 .gallery-thumb.is-active {
-  border-color: var(--shop-brand);
-  box-shadow: 0 0 0 2px var(--shop-brand-tint);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-tint);
 }
-.product-title { font-size: var(--shop-text-3xl); }
-.product-price { font-size: var(--shop-text-2xl); font-weight: 600; }
-.product-price .rub { font-weight: 400; color: var(--shop-text-3); margin-left: 0.25rem; }
-.product-desc { color: var(--shop-text-2); white-space: pre-line; }
+.product-title {
+  font-size: clamp(1.5rem, 1.25rem + 1.1vw, 2rem);
+  line-height: 1.2; letter-spacing: -0.015em;
+}
+.product-price { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+.product-price .rub { font-weight: 400; color: var(--muted); margin-left: 0.25rem; }
+.product-desc { color: var(--muted); white-space: pre-line; }
 .buy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.25rem 0; }
 .buy-row > .btn { flex: 1 1 100%; }
 /* Степпер количества ± (D23): карточный вариант — кнопки вокруг инпута */
@@ -549,229 +590,248 @@ html[data-sheet-open="1"] { overflow: hidden; }
 .qty-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 2.75rem; height: 2.75rem; padding: 0;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface); color: var(--shop-text-2);
-  font-size: var(--shop-text-lg); line-height: 1; cursor: pointer;
-  transition: color var(--shop-theme-fade), border-color var(--shop-theme-fade);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); color: var(--muted);
+  font-size: var(--text-lg); line-height: 1; cursor: pointer;
+  transition: color var(--theme-fade), border-color var(--theme-fade);
 }
-.qty-btn:hover { color: var(--shop-text); border-color: var(--shop-border-strong); }
-.qty-btn:active { background: var(--shop-surface-2); }
+.qty-btn:hover { color: var(--text); border-color: var(--accent); }
+.qty-btn:active { background: var(--bg-soft); }
 .qty-input {
   width: 4.5rem; height: 2.75rem; text-align: center;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface); color: var(--shop-text);
-  font-size: var(--shop-text-md);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--card); color: var(--text);
+  font-size: var(--text-md);
 }
 /* Характеристики товара (features string[]) — тихий список с тире */
-.features-heading { margin: 1.25rem 0 0.625rem; font-size: var(--shop-text-lg); }
+.features-heading { margin: 1.25rem 0 0.625rem; font-size: var(--text-lg); }
 .feature-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.375rem; }
-.feature-item { position: relative; padding-left: 1.25rem; color: var(--shop-text-2); }
-.feature-item::before { content: "—"; position: absolute; left: 0; color: var(--shop-text-4); }
+.feature-item { position: relative; padding-left: 1.25rem; color: var(--muted); }
+.feature-item::before { content: "—"; position: absolute; left: 0; color: var(--muted); opacity: 0.6; }
 
-/* ── Кнопки ─────────────────────────────────────────────────── */
+/* ── Кнопки — канон лендинга ──────────────────────────────────
+   radius 10px, weight 600, padding .65rem 1.25rem; primary —
+   акцент, secondary — ghost с бордером (hover — акцент). */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.625rem 1.5rem; min-height: 2.75rem; border-radius: var(--shop-radius-md);
+  padding: 0.65rem 1.25rem; min-height: 2.75rem; border-radius: var(--radius-btn);
   border: 1px solid transparent; cursor: pointer;
-  font-size: var(--shop-text-sm); font-weight: 500; font-family: inherit;
-  transition: background-color 200ms var(--shop-ease), opacity 200ms var(--shop-ease);
+  font: inherit; font-size: 0.95rem; font-weight: 600;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  text-align: center;
 }
-.btn-primary { background: var(--shop-brand); color: var(--shop-brand-contrast); }
-.btn-primary:hover { opacity: 0.9; text-decoration: none; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-strong); color: var(--on-accent); text-decoration: none; }
 .btn-secondary {
-  background: var(--shop-surface); color: var(--shop-text);
-  border-color: var(--shop-border);
+  background: transparent; color: var(--text);
+  border-color: var(--border);
 }
-.btn-secondary:hover { background: var(--shop-surface-2); text-decoration: none; }
-.btn-lg { padding: 0.875rem 2rem; border-radius: var(--shop-radius-lg); font-size: var(--shop-text-md); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.btn-lg { padding: 0.875rem 2rem; font-size: var(--text-md); }
 .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Пагинация — тихие квадраты, активная в тинте ───────────── */
-.pagination { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: var(--shop-section-y); }
+.pagination { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: var(--section-y); }
 .page-link {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 2.75rem; height: 2.75rem; padding: 0 0.5rem;
-  border-radius: var(--shop-radius-sm); font-size: var(--shop-text-sm);
-  color: var(--shop-text-2);
+  border-radius: var(--radius-btn); font-size: var(--text-sm);
+  color: var(--muted);
 }
-.page-link:hover { background: var(--shop-surface-2); text-decoration: none; color: var(--shop-text); }
-.page-link[aria-current="true"] { background: var(--shop-brand-tint); color: var(--shop-brand); }
+.page-link:hover { background: var(--bg-soft); text-decoration: none; color: var(--text); }
+.page-link[aria-current="true"] { background: var(--accent-tint); color: var(--accent); }
 
 /* ── Checkout: двухколоночная типографика, ноль карточек ─────
    База: одна колонка (заказ → форма → итог); 48rem — заказ+форма
-   слева, «Итого» справа. Строки корзины на телефоне — СТЕК:
-   имя на своей строке, ниже «× количество … сумма …… крестик»;
-   крестик 2.75rem — тап-таргет, а не 28-й пиксель. */
-.checkout-grid { display: grid; gap: calc(var(--shop-section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
+   слева, «Итого» справа. Строки корзины — воздух вместо hairline
+   (политика W7); итог — --bg-soft-подложка. На телефоне строки —
+   СТЕК; крестик 2.75rem — тап-таргет. */
+.checkout-grid { display: grid; gap: calc(var(--section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
 .checkout-main { max-width: none; }
 .checkout-heading { margin-top: 0; }
-.cart-lines { list-style: none; margin: 0; padding: 0; }
+.cart-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
 .cart-line {
   display: flex; flex-wrap: wrap; align-items: baseline;
   gap: 0.25rem 0.5rem;
-  padding: 0.75rem 0; border-bottom: 1px solid var(--shop-border);
+  padding: 0.75rem 0; /* воздух вместо border-bottom (политика W7) */
 }
 .cart-line-name { flex: 1 1 100%; min-width: 0; }
 /* степпер строки чекаута (D23): − qty + одной рамкой; тап-таргеты 2.75rem */
 .cart-line-stepper {
   order: 3; display: inline-flex; align-items: center; align-self: center;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface); overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); overflow: hidden;
 }
 .cart-line-stepper .qty-btn {
   width: 2.75rem; height: 2.75rem;
   border: 0; border-radius: 0; background: transparent;
 }
-.cart-line-stepper .qty-btn:active { background: var(--shop-surface-2); }
-.cart-line-qty { min-width: 2rem; text-align: center; color: var(--shop-text); font-weight: 500; }
+.cart-line-stepper .qty-btn:active { background: var(--bg-soft); }
+.cart-line-qty { min-width: 2rem; text-align: center; color: var(--text); font-weight: 600; }
 .cart-line-sum { order: 4; margin-left: auto; font-weight: 600; white-space: nowrap; }
 /* «×» у позиции и «Очистить корзину»: тихие действия, не конкурирующие с CTA */
 .cart-line-remove {
   order: 5; margin-left: 0.5rem;
   flex: none; align-self: center;
   width: 2.75rem; height: 2.75rem; line-height: 1;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface); color: var(--shop-text-3);
-  font-size: var(--shop-text-md); cursor: pointer;
-  transition: color var(--shop-theme-fade), border-color var(--shop-theme-fade);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); color: var(--muted);
+  font-size: var(--text-md); cursor: pointer;
+  transition: color var(--theme-fade), border-color var(--theme-fade);
 }
-.cart-line-remove:hover { color: var(--shop-error); border-color: color-mix(in oklch, var(--shop-error) 50%, transparent); }
+.cart-line-remove:hover { color: var(--err); border-color: color-mix(in srgb, var(--err) 50%, transparent); }
 .cart-clear {
   margin-top: 0.75rem; padding: 0; border: 0; background: none;
-  color: var(--shop-text-3); font-size: var(--shop-text-xs); font-family: inherit;
+  color: var(--muted); font-size: var(--text-xs); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
-  transition: color var(--shop-theme-fade);
+  transition: color var(--theme-fade);
 }
-.cart-clear:hover { color: var(--shop-error); }
+.cart-clear:hover { color: var(--err); }
 .cart-total-row {
   display: flex; justify-content: space-between; padding: 1rem 0 0;
-  font-size: var(--shop-text-lg); font-weight: 600;
+  font-size: var(--text-lg); font-weight: 600;
 }
 .field { margin-bottom: 1rem; }
-.field-label { display: block; margin-bottom: 0.375rem; font-size: var(--shop-text-sm); font-weight: 500; }
-/* Инпуты на телефоне — 16px: Safari iOS с фокусом на поле мельче
-   16px зумит страницу (нечитаемость + прыжок вёрстки). */
+.field-label { display: block; margin-bottom: 0.35rem; font-size: 0.92rem; font-weight: 600; }
+/* Инпуты — канон: radius 10px, focus = outline 2px accent.
+   На телефоне 1rem (16px): Safari iOS с фокусом на поле мельче
+   16px зумит страницу. */
 .field-input, .field-textarea {
-  width: 100%; padding: 0.625rem 0.75rem;
-  border: 1px solid var(--shop-border); border-radius: var(--shop-radius-sm);
-  background: var(--shop-surface); color: var(--shop-text);
-  font-size: var(--shop-text-md); font-family: inherit;
+  width: 100%; padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--card); color: var(--text);
+  font-size: var(--text-md); font-family: inherit;
 }
-.field-input::placeholder, .field-textarea::placeholder { color: var(--shop-text-4); }
+.field-input::placeholder, .field-textarea::placeholder { color: var(--muted); opacity: 0.7; }
 .field-input:focus, .field-textarea:focus {
-  outline: none; border-color: color-mix(in oklch, var(--shop-brand) 50%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--shop-brand) 30%, transparent);
+  outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent);
 }
-.field-hint { margin-top: 0.25rem; font-size: var(--shop-text-xs); color: var(--shop-text-3); }
+.field-hint { margin-top: 0.25rem; font-size: var(--text-xs); color: var(--muted); }
 .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; } /* honeypot */
 .form-error {
   display: none; margin: 0 0 1rem; padding: 0.625rem 0.875rem;
-  border-radius: var(--shop-radius-sm);
-  background: var(--shop-error-tint); color: var(--shop-error);
-  font-size: var(--shop-text-sm);
+  border-radius: var(--radius-input);
+  background: var(--err-tint); color: var(--err);
+  font-size: var(--text-sm);
 }
 .form-error[data-visible="1"] { display: block; }
-.summary-row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.375rem 0; font-size: var(--shop-text-sm); color: var(--shop-text-2); }
-.summary-total { border-top: 1px solid var(--shop-border); margin-top: 0.5rem; padding-top: 0.75rem; font-size: var(--shop-text-md); font-weight: 600; color: var(--shop-text); }
+.summary-row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.375rem 0; font-size: var(--text-sm); color: var(--muted); }
+/* итог — мягкая подложка вместо border-top (политика W7) */
+.summary-total {
+  display: flex; justify-content: space-between; gap: 0.75rem;
+  margin-top: 0.75rem; padding: 1rem 1.25rem;
+  background: var(--bg-soft); border-radius: var(--radius-card);
+  font-weight: 600; color: var(--text);
+}
 .summary-note { margin-top: 1rem; }
 
 /* ── Status-screen (заказ, 404) — чистая типографика, 36rem ── */
 .status-screen {
-  max-width: var(--shop-container-narrow); margin: 0 auto;
-  padding: calc(var(--shop-section-y) * 0.75) var(--shop-gutter);
+  max-width: var(--container-narrow); margin: 0 auto;
+  padding: calc(var(--section-y) * 0.75) var(--gutter);
   text-align: center;
 }
 .status-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 3.5rem; height: 3.5rem; border-radius: var(--shop-radius-pill);
-  font-size: var(--shop-text-xl); margin-bottom: 1.25rem;
+  width: 3.5rem; height: 3.5rem; border-radius: var(--radius-pill);
+  font-size: var(--text-lg); margin-bottom: 1.25rem;
 }
-.status-badge.success { background: var(--shop-success-tint); color: var(--shop-success); }
-.status-badge.brand { background: var(--shop-brand-tint); color: var(--shop-brand); }
-.status-badge.error { background: var(--shop-error-tint); color: var(--shop-error); }
+.status-badge.success { background: var(--ok-tint); color: var(--ok); }
+.status-badge.brand { background: var(--accent-tint); color: var(--accent); }
+.status-badge.error { background: var(--err-tint); color: var(--err); }
 .status-title {
-  font-size: var(--shop-text-3xl); font-weight: 600;
-  letter-spacing: var(--shop-tracking-heading); text-wrap: balance;
+  font-size: clamp(1.5rem, 1.25rem + 1.1vw, 2rem);
+  font-weight: 700; letter-spacing: -0.015em; text-wrap: balance;
 }
-.status-text { margin-top: 0.75rem; color: var(--shop-text-2); }
-.status-order-no { margin-top: 0.5rem; font-family: var(--shop-font-mono); font-size: var(--shop-text-sm); color: var(--shop-text-3); }
+.status-text { margin-top: 0.75rem; color: var(--muted); }
+.status-order-no { margin-top: 0.5rem; font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); }
 .status-actions { margin-top: 1.75rem; }
-.status-help { margin-top: 1rem; font-size: var(--shop-text-xs); color: var(--shop-text-3); }
+.status-help { margin-top: 1rem; font-size: var(--text-xs); color: var(--muted); }
 
-/* ── Списки с разделителями («Похожие» — грид ≤4) ──────────── */
-.rel-heading { margin: calc(var(--shop-section-y) * 1.25) 0 1.25rem; font-size: var(--shop-text-2xl); }
+/* ── «Похожие» — грид ≤4 ────────────────────────────────────── */
+.rel-heading { margin: calc(var(--section-y) * 1.25) 0 1.25rem; font-size: clamp(1.5rem, 1.25rem + 1.1vw, 2rem); }
 
 /* Пустые состояния — строка текста, не карточка */
-.empty-note { padding: calc(var(--shop-section-y) * 0.75) 0; color: var(--shop-text-3); text-align: center; }
+.empty-note { padding: calc(var(--section-y) * 0.75) 0; color: var(--muted); text-align: center; }
+
+/* ── ЛК: узкая колонка форм входа/регистрации, заказы — карточки канона ── */
+.auth-narrow { max-width: 26rem; margin-inline: auto; }
+.auth-form { display: grid; gap: 0.875rem; margin-top: 1.25rem; text-align: left; }
+.auth-form .btn { justify-self: stretch; }
+.account-orders { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 1.1rem; }
+.account-order {
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--card); box-shadow: var(--shadow);
+}
+.account-order-main { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
+.account-order-link { font-weight: 600; color: var(--text); }
+.account-order-link:hover { color: var(--accent); }
+.account-order-date { color: var(--muted); font-size: var(--text-sm); }
+.account-order-summary { margin: 0.375rem 0 0; color: var(--muted); font-size: var(--text-sm); }
+.account-order-amount { margin: 0.375rem 0 0; font-weight: 600; }
 
 /* ============================================================
    УЛУЧШЕНИЯ — только min-width (мобильный-фёрст).
-   30rem — грид 1→2; 40rem — десктопная шапка/ритм/контролы;
-   48rem — product и checkout в 2 колонки; 62rem — грид 2→4.
+   30rem — грид 1→2; 48rem (=768px, ЕДИНСТВЕННЫЙ ГЛАВНЫЙ брейкпоинт
+   канона) — десктопная шапка/тулбар/сплиты; 62rem — грид 2→4.
+   Дальше раскладку пропорционально масштабирует корень.
    ============================================================ */
 
 /* ≥ 30rem (480): две колонки каталога/«Похожих». Тулбар с W6 живёт
    кнопками-листами до 48rem (дравер), десктопная форма — с 48rem. */
 @media (min-width: 30rem) {
-  .product-grid, .rel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--shop-space-2); }
+  .product-grid, .rel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
 }
 
-/* ≥ 40rem (640): десктопная шапка одной строкой + компакный ритм */@media (min-width: 40rem) {
-  .shop-container { padding: 0 var(--shop-gutter); }
-  .section-y { padding-top: var(--shop-section-y); padding-bottom: var(--shop-section-y); }
-  .hero { padding-top: var(--shop-section-y); }
-  .shop-header-inner { flex-wrap: nowrap; gap: 1.5rem; padding-top: 0; padding-bottom: 0; }
-  .shop-logo, .shop-header-spacer, .cart-counter, .icon-btn,
-  .shop-header-inner > .header-link,
-  .shop-header-inner > .header-logout { order: 0; }
-  .shop-header-inner > a.header-link { margin-left: 0; }
-  .header-link, .header-logout-btn { padding: 0; }
-  .header-logout { margin-left: 0.25rem; }
-  .cart-counter { min-height: 0; }
-  .icon-btn { width: 2.5rem; height: 2.5rem; } /* тумблер 40px (W6 №23: 40–44 десктоп) */
+/* ≥ 48rem (=768px — канон лендинга): десктоп одной строкой.
+   Body фикс вместо clamp: плавность несёт корень (канон). */
+@media (min-width: 48rem) {
+  body { font-size: 1.0625rem; }
+  .section-y { padding-top: var(--section-y); padding-bottom: var(--section-y); }
+  .cat-hero { padding: 4.5rem 0 4rem; } /* канон hero лендинга */
+  /* шапка: ссылки выходят из burger в строку, burger прячется */
+  .site-nav { display: flex; gap: 0.25rem; }
+  .nav-burger { display: none; }
+  .shop-header-inner { flex-wrap: nowrap; }
+  /* тулбар: десктопная форма, мобильные кнопки скрыты */
+  .toolbar-mobile { display: none; }
+  .search-box { display: block; flex: 1 1 16rem; min-width: 10rem; max-width: 20rem; }
+  .applied-row-desktop { display: flex; }
+  .applied-row-mobile { display: none; }
+  .tools-right { display: flex; flex: 0 0 auto; margin-left: auto; gap: 0.625rem; }
+  .sort-box { flex: 0 1 12.5rem; min-width: 10rem; max-width: 12.5rem; }
+  /* компактные контролы десктопа (крупность несёт корень) */
   .chip { min-height: 0; padding: 0.375rem 0.875rem; }
-  .toolbar-btn, .applied-chip, .applied-reset { min-height: 2.25rem; } /* тулбар компактнеет вслед за чипами */
+  .icon-btn { width: 2.25rem; height: 2.25rem; } /* канон .theme-toggle */
+  .toolbar-btn, .applied-chip, .applied-reset { min-height: 2.25rem; }
   .page-link { min-width: 2.25rem; height: 2.25rem; }
-  /* тулбар компактнеет вслед за чипами/пагинацией (вертикальный ритм десктопа) */
   .field-input.search-input, .field-input.sort-select { min-height: 2.25rem; }
+  .btn { min-height: 0; }
   .btn.search-submit { min-height: 2.25rem; }
-  .field-input, .field-textarea, .qty-input { font-size: var(--shop-text-sm); }
-  .checkout-grid { gap: var(--shop-section-y); }
-  .status-screen { padding: calc(var(--shop-section-y) * 1.5) var(--shop-gutter); }
+  .field-input, .field-textarea, .qty-input { font-size: var(--text-sm); }
+  /* фейды скролла не нужны — переполнения обычно нет */
+  .chip-row { -webkit-mask-image: none; mask-image: none; margin: 1.5rem 0 2rem; }
+  .crumb-list {
+    -webkit-mask-image: none; mask-image: none;
+    flex-wrap: wrap; white-space: normal; overflow: visible;
+  }
+  /* сплиты: пропорции едут за корнем */
+  .product-page-cols { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--section-y); align-items: start; }
+  .checkout-grid { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: var(--section-y); }
+  .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* строки корзины — обратно в одну строку (имя жмётся, не стек);
-     степпер строки компактнеет (2rem-кнопки) */
+     степпер строки компактнеет */
   .cart-line { flex-wrap: nowrap; gap: 0.75rem; }
   .cart-line-name { flex: 1 1 auto; order: 0; }
   .cart-line-stepper, .cart-line-sum { order: 0; margin-left: 0; }
   .cart-line-stepper .qty-btn { width: 2rem; height: 2rem; }
   .cart-line-remove { order: 0; margin-left: 0; width: 1.75rem; height: 1.75rem; }
   .buy-row > .btn { flex: 0 0 auto; }
-  .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .status-screen { padding: calc(var(--section-y) * 1.5) var(--gutter); }
 }
 
-/* ≥ 48rem (768): карточка товара и checkout — 2 колонки;
-   тулбар переключается на десктопную форму (поиск + чипы применённых +
-   сортировка+Найти) — контракт пробы «тулбар компактен»: контролы НЕ
-   растянуты (поле ≤ 20rem, селект ≤ 12.5rem), группа справа;
-   чипам/крошкам фейд-подсказка прокрутки не нужна. */
-@media (min-width: 48rem) {
-  .chip-row { -webkit-mask-image: none; mask-image: none; }
-  .crumb-list {
-    -webkit-mask-image: none; mask-image: none;
-    flex-wrap: wrap; white-space: normal; overflow: visible;
-  }
-  .toolbar-mobile { display: none; }
-  .cat-tools { margin-inline: calc(var(--shop-gutter) * -1); padding: 0.25rem var(--shop-gutter); }
-  .search-box { display: block; flex: 1 1 16rem; min-width: 10rem; max-width: 20rem; }
-  .applied-row-desktop { display: flex; }
-  .applied-row-mobile { display: none; }
-  .tools-right { display: flex; flex: 0 0 auto; margin-left: auto; gap: 0.625rem; }
-  .sort-box { flex: 0 1 12.5rem; min-width: 10rem; max-width: 12.5rem; }
-  .product-page-cols { grid-template-columns: minmax(0, 30rem) minmax(0, 1fr); align-items: start; }
-  .checkout-grid { grid-template-columns: minmax(0, 1fr) 20rem; }
-}
-
-/* ≥ 62rem (992): каталог/«Похожие» — 4 колонки, десктопный гэп 20px (W6 №19) */
+/* ≥ 62rem (992): каталог/«Похожие» — 4 колонки (W6 №19), воздух 1.25rem */
 @media (min-width: 62rem) {
-  .product-grid, .rel-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--shop-space-4); }
+  .product-grid, .rel-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
 }

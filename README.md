@@ -62,17 +62,30 @@ category, `member|empty` для checkout, `empty` для account, `paid|not_foun
 
 ## Правки стилей и разметки
 
-- **Тема/бренд — только `static/css/tokens.css`.** Все цвета (oklch), радиусы,
-  тени, шкала текста и контейнеры — переменные `--shop-*`; тёмная тема — тот же
-  файл, блок `[data-theme="dynamica-dark"]`.
+- **Тема/бренд — только `static/css/tokens.css`** (канон лендинг-визарда, W7).
+  Акцент — палитра визарда: файл несёт литералы `${variant.accent}` /
+  `${variant.accent_strong}` / `${variant.on_accent}` (и `*_on_dark`-пара),
+  визард при установке подставляет hex выбранной на шаге «Акцентный цвет»
+  палитры (indigo/emerald/graphite/amber — те же 4, что у лендинга).
+  Нейтральные (`--bg/--bg-soft/--card/--text/--muted/--border/--shadow`),
+  радиусы (карточка 12px, кнопка/инпут 10px), тень и статусы (тинты) —
+  тоже там; тёмная тема — блок `[data-theme="dynamica-dark"]`.
 - **Разметка** — правьте `templates/*.liquid` и `static/css/shop.css`.
   Шаблоны рендерятся Liquid-движком платформы: доступные переменные — это
   биндинги страниц (`p.data.products`, `results.ci.items`, `cat.data.categories`,
   `g_site.data.*`, … — см. моки в `mock/`, они повторяют их форму),
   `site.version` для кэш-бастинга статики и `host` (фоллбек canonical).
   CSS — мобильный-фёрст от 320px: базовые стили = малые экраны, улучшения
-  только через `@media (min-width: …)` (30/40/48/62rem), тап-таргеты ≥ 2.75rem (44px),
-  инпуты ≥ 16px, никаких `max-width`-медиазапросов (проверяет smoke).
+  только через `@media (min-width: …)`; главный десктопный брейкпоинт —
+  48rem (=768px канона), у грида каталога микрошаги 30rem/62rem; масштаб
+  несёт корень `html { font-size: calc(100vw/90) }` от 768px (фикс 16px
+  с 1440px, tokens.css) — отступы в rem имеют один источник правды.
+  Тап-таргеты ≥ 2.75rem (44px), инпуты ≥ 16px, никаких `max-width`-
+  медиазапросов (проверяет smoke).
+- **Политика горизонтальных линий (W7, жёстко):** в shop.css ровно ДВЕ
+  hairline — `border-bottom` шапки и `border-top` футера; все прочие
+  разделители запрещены — воздух (rem) и `--bg-soft`-подложки
+  (проба w7-canon в smoke ловит регрессию grep'ом).
 - Паттерн страницы:
   `{% include "partials/ui-text" %}` → `page_*` assigns → `{% capture content %}…{% endcapture %}`
   → `{% include "base" %}` (include делит скоуп — словарь и `canon_base`

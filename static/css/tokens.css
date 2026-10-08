@@ -1,132 +1,122 @@
 /* ============================================================
-   shop-storefront — дизайн-токены витрины (--shop-*)
+   shop-storefront — дизайн-токены витрины: канон лендинг-визарда.
    Единственное место правки темы/бренда (см. README, «Смена темы»).
-   Значения наследуют темы ядра платформы dynamica-light / dynamica-dark.
+
+   Акцентные токены (--accent / --accent-strong / --on-accent) —
+   ПАЛИТРА, выбранная шагом «Акцентный цвет» визарда магазина:
+   визард подставляет ${variant.*} при установке (механика лендинг-
+   визарда 1:1 — 4 палитры indigo/emerald/graphite/amber). В живом
+   CSS вместо ${variant.accent} стоит конкретный hex выбранной
+   палитры; в этом исходнике литерал ${variant.accent} — норма.
+
+   Нейтральные токены (--bg/--bg-soft/--card/--text/--muted/--border/
+   --shadow) — канон лендинга; тёмная тема — их перезапись по
+   [data-theme="dynamica-dark"] (магазин ведёт ТЕМУ САМ: тумблер
+   static/js/theme.js, кука dynamica-theme, значения dynamica-light /
+   dynamica-dark — НЕ html[data-theme="dark"] лендинга).
+
+   Масштаб (канон лендинга): мобайл-фёрст, база = телефон; от 768px
+   корень html { font-size: calc(100vw / 90) } — вся rem-раскладка
+   едет пропорционально (макет 1440px = корень 16px); с 1440px корень
+   зафиксирован — дальше растут только «уши» по бокам контейнера.
+   Отступы в rem имеют один источник правды — корень.
+
    Без Tailwind-билда: CSS отдаётся статикой, ссылки несут ?v={{ site.version }}.
-   ------------------------------------------------------------
-   Тёмная тема держится 1:1 с ядром — bg=surface=base-100, surface-2=base-200
-   (карточка отделяется рамкой и тенью, не заливкой — как в light).
-   Вариант «карточка светлеет»: заменить --shop-surface на oklch(22% 0.045 266)
-   и --shop-surface-2 на oklch(28% 0.04 266) — правка двух значений.
    ============================================================ */
 
 /* ── Светлая тема (default) ─────────────────────────────────── */
 :root {
-  color-scheme: light; /* нативные скроллбары/контролы под тему (W6 №24) */
+  color-scheme: light; /* нативные скроллбары/контролы под тему */
 
-  /* фон страницы / поверхность карточки / утопленная поверхность */
-  --shop-bg:          oklch(100% 0 0);          /* = light base-100 */
-  --shop-surface:     oklch(100% 0 0);
-  --shop-surface-2:   oklch(98% 0.005 247);     /* = base-200: фон, чипы, превью */
-  /* текст: основной / вторичный / подсказка / placeholder-disabled (тон-иерархия админки) */
-  --shop-text:        oklch(20% 0.04 266);
-  --shop-text-2:      color-mix(in oklch, oklch(20% 0.04 266) 70%, transparent);
-  --shop-text-3:      color-mix(in oklch, oklch(20% 0.04 266) 50%, transparent);
-  --shop-text-4:      color-mix(in oklch, oklch(20% 0.04 266) 40%, transparent);
+  /* акцент — подстановка палитры визардом (см. шапку файла) */
+  --accent: ${variant.accent};
+  --accent-strong: ${variant.accent_strong};
+  --on-accent: ${variant.on_accent};
 
-  /* бренд */
-  --shop-brand:       oklch(58% 0.22 273);      /* ≈ #4F46E5 */
-  --shop-brand-contrast: oklch(100% 0 0);
-  --shop-brand-tint:  color-mix(in oklch, oklch(58% 0.22 273) 10%, transparent);
+  /* нейтрали канона лендинга */
+  --bg: #ffffff;
+  --bg-soft: #f5f6f8;
+  --card: #ffffff;
+  --text: #1a1d21;
+  --muted: #5c6470;
+  --border: #e4e7eb;
+  --shadow: 0 8px 30px rgba(10, 14, 20, .07);
 
-  /* статусы (тинты доминируют над заливками) */
-  --shop-success:     oklch(72% 0.17 162);
-  --shop-success-tint: color-mix(in oklch, oklch(72% 0.17 162) 10%, transparent);
-  --shop-warning:     oklch(80% 0.16 80);
-  --shop-warning-tint: color-mix(in oklch, oklch(80% 0.16 80) 10%, transparent);
-  --shop-error:       oklch(64% 0.22 25);
-  --shop-error-tint:  color-mix(in oklch, oklch(64% 0.22 25) 10%, transparent);
+  /* статусы — тинт-модель лендинга: заливка 12% + цветной текст,
+     без сплошных заливок (W6 №25, переносится на канон без изменений) */
+  --ok: #0e9f6e;
+  --ok-tint: color-mix(in srgb, var(--ok) 12%, transparent);
+  --warn: #d97706;
+  --warn-tint: color-mix(in srgb, var(--warn) 14%, transparent);
+  --err: #dc2626;
+  --err-tint: color-mix(in srgb, var(--err) 12%, transparent);
 
-  /* границы */
-  --shop-border:      color-mix(in oklch, oklch(92% 0.01 247) 60%, transparent); /* base-300/60 */
-  --shop-border-strong: oklch(92% 0.01 247);
+  /* акцентные производные (тинты поверх var(--accent) — едут за палитрой) */
+  --accent-tint: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-tint-strong: color-mix(in srgb, var(--accent) 15%, transparent);
 
-  /* радиусы (ядро: field/selector 0.5rem, box 0.875rem; app-card 0.375rem) */
-  --shop-radius-sm:   0.375rem;   /* инпуты, чипы, мелкие кнопки */
-  --shop-radius-md:   0.5rem;     /* кнопки-CTA, карточки товара */
-  --shop-radius-lg:   0.75rem;    /* герои-визуалы, баннеры */
-  --shop-radius-pill: 9999px;     /* kicker, бейджи */
+  /* радиусы канона лендинга: карточка 12px, кнопка/инпут 10px, пилюля */
+  --radius-card: 12px;
+  --radius-btn: 10px;
+  --radius-input: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
 
-  /* тени — темозависимый tint через base-content (две, и только две) */
-  --shop-shadow-card: 0 1px 2px color-mix(in oklch, oklch(20% 0.04 266) 5%, transparent),
-                      0 1px 3px color-mix(in oklch, oklch(20% 0.04 266) 7%, transparent);
-  --shop-shadow-pop:  0 4px 6px -1px color-mix(in oklch, oklch(20% 0.04 266) 8%, transparent),
-                      0 10px 15px -3px color-mix(in oklch, oklch(20% 0.04 266) 5%, transparent),
-                      0 0 0 1px color-mix(in oklch, oklch(20% 0.04 266) 3%, transparent);
+  /* типографика: системный стек канона; размеры в rem — масштаб несёт корень */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;    /* база и инпуты телефона (16px — iOS не зумит) */
+  --text-lg: 1.125rem;
 
-  /* типографика (MVP: системный стек; woff2 — руками flowctl files push, README) */
-  --shop-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --shop-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --shop-text-xs:  0.75rem;    /* eyebrow, мета, подписи */
-  --shop-text-sm:  0.875rem;   /* тело карточек, инпуты */
-  --shop-text-md:  1rem;       /* база (body 16px/1.6) */
-  --shop-text-lg:  1.125rem;   /* заголовок карточки, lede */
-  --shop-text-xl:  1.25rem;
-  --shop-text-2xl: 1.5rem;     /* заголовок секции */
-  --shop-text-3xl: 1.875rem;   /* статус-экран, текстовый блок */
-  --shop-text-5xl: 3rem;       /* заголовок героя */
-  --shop-leading-body: 1.6;
-  --shop-leading-heading: 1.25;
-  --shop-leading-hero: 1.1;
-  --shop-tracking-heading: -0.01em;
-  --shop-tracking-caps: 0.08em;
-  --shop-tracking-kicker: 0.18em;
+  /* геометрия витрины */
+  --container: 72rem;        /* каталог, шапка, футер */
+  --container-prose: 44rem;  /* описания, checkout-колонка */
+  --container-narrow: 36rem; /* статус-экран заказа */
+  --gutter: 1.25rem;         /* канон .wrap */
+  --section-y: 4rem;         /* канон секций лендинга */
+  --tools-h: 3.5rem;         /* sticky-тулбар = строке шапки */
 
-  /* контейнеры и spacing-ритм лендинга */
-  --shop-container:   72rem;   /* каталог, хедер, футер (max-w-6xl) */
-  --shop-container-prose: 48rem; /* описания, checkout-колонка (max-w-3xl) */
-  --shop-container-narrow: 36rem; /* статус-экран заказа (max-w-xl) */
-  --shop-gutter: 1.5rem;       /* px-6 */
-  --shop-section-y: 3rem;      /* py-12 */
-  --shop-gap: 1.5rem;          /* gap сеток */
+  /* высота sticky-шапки (тулбар прилипает ПОД ней) */
+  --header-h: 3.5rem;
 
-  /* spacing-шкала 8px (W6 №12): вертикальный ритм каталога держится
-     токенами — крошки 8, H1-строка 8–16, тулбар 16–24, грид 12/20 */
-  --shop-space-1: 0.5rem;   /* 8px */
-  --shop-space-2: 0.75rem;  /* 12px */
-  --shop-space-3: 1rem;     /* 16px */
-  --shop-space-4: 1.25rem;  /* 20px */
-  --shop-space-5: 1.5rem;   /* 24px */
-  --shop-space-6: 2rem;     /* 32px */
-
-  /* высота sticky-инструментов каталога (тулбар ≤ 48px, W6 №16) */
-  --shop-tools-h: 2.75rem;
-
-  /* фокус и анимация */
-  --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(58% 0.22 273) 35%, transparent);
-  --shop-ease: cubic-bezier(0.19, 1, 0.22, 1); /* ease-out-expo */
-  --shop-theme-fade: 150ms ease; /* глобальный кросс-фейд темы */
+  /* анимация */
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --theme-fade: 150ms ease; /* глобальный кросс-фейд темы */
 }
 
-/* ── Тёмная тема — 1:1 с ядром dynamica-dark ────────────────── */
+/* ── Тёмная тема — канон лендинга (нейтрали) + светлеющий акцент ──
+   В тёмной теме акцент светлеет — исходный тон терял контраст на
+   тёмном фоне; текст на акценте становится тёмным. */
 [data-theme="dynamica-dark"] {
-  color-scheme: dark; /* нативные скроллбары/контролы под тему (W6 №24) */
+  color-scheme: dark;
 
-  --shop-bg:        oklch(20% 0.04 266);    /* = dark base-100 */
-  --shop-surface:   oklch(20% 0.04 266);    /* 1:1 с ядром; «карточка светлеет» → 22% 0.045 266 */
-  --shop-surface-2: oklch(22% 0.045 266);   /* = dark base-200; вариант выше → 28% 0.04 266 */
-  --shop-text:   oklch(94% 0.01 247);
-  --shop-text-2: color-mix(in oklch, oklch(94% 0.01 247) 70%, transparent);
-  --shop-text-3: color-mix(in oklch, oklch(94% 0.01 247) 50%, transparent);
-  --shop-text-4: color-mix(in oklch, oklch(94% 0.01 247) 40%, transparent);
-  --shop-brand:  oklch(72% 0.18 273);
-  --shop-brand-contrast: oklch(15% 0.04 273);
-  --shop-brand-tint: color-mix(in oklch, oklch(72% 0.18 273) 10%, transparent);
-  --shop-success: oklch(78% 0.16 162);
-  --shop-success-tint: color-mix(in oklch, oklch(78% 0.16 162) 10%, transparent);
-  --shop-warning: oklch(82% 0.15 80);
-  --shop-warning-tint: color-mix(in oklch, oklch(82% 0.15 80) 10%, transparent);
-  --shop-error:  oklch(72% 0.2 25);
-  --shop-error-tint: color-mix(in oklch, oklch(72% 0.2 25) 10%, transparent);
-  --shop-border: color-mix(in oklch, oklch(28% 0.04 266) 60%, transparent);
-  --shop-border-strong: oklch(28% 0.04 266);
-  --shop-shadow-card: 0 1px 2px color-mix(in oklch, oklch(94% 0.01 247) 5%, transparent),
-                      0 1px 3px color-mix(in oklch, oklch(94% 0.01 247) 7%, transparent);
-  --shop-shadow-pop:  0 4px 6px -1px color-mix(in oklch, oklch(94% 0.01 247) 8%, transparent),
-                      0 10px 15px -3px color-mix(in oklch, oklch(94% 0.01 247) 5%, transparent),
-                      0 0 0 1px color-mix(in oklch, oklch(94% 0.01 247) 3%, transparent);
-  --shop-focus-ring: 0 0 0 3px color-mix(in oklch, oklch(72% 0.18 273) 35%, transparent);
+  --accent: ${variant.accent_on_dark};
+  --accent-strong: ${variant.accent_on_dark_strong};
+  /* акцент в тёмной теме светлее — текст на нём нужен тёмный */
+  --on-accent: ${variant.on_accent_dark};
+
+  --bg: #0f1115;
+  --bg-soft: #151920;
+  --card: #171b22;
+  --text: #e8eaed;
+  --muted: #9aa3af;
+  --border: #2a3038;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .45);
+
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --accent-tint: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-tint-strong: color-mix(in srgb, var(--accent) 20%, transparent);
 }
+
+/* ── Масштаб: макет 1440px = корень 16px. От 768px корень = 100vw/90
+      (это 16px на ширине 1440) — вся rem-раскладка едет пропорционально;
+      с 1440px корень зафиксирован — дальше растут только уши. ── */
+@media (min-width: 768px) { html { font-size: calc(100vw / 90); } }
+@media (min-width: 1440px) { html { font-size: 16px; } }
 
 /* Контентные фото в тёмной теме приглушаются (W6 №25): яркое фото на тёмном
    фоне слепит — фильтр ТОЛЬКО на контентных снимках (карточка, галерея,
@@ -144,8 +134,8 @@
   html.theme-transition *,
   html.theme-transition *::before,
   html.theme-transition *::after {
-    transition: color var(--shop-theme-fade) ease,
-                background-color var(--shop-theme-fade) ease,
-                border-color var(--shop-theme-fade) ease;
+    transition: color var(--theme-fade) ease,
+                background-color var(--theme-fade) ease,
+                border-color var(--theme-fade) ease;
   }
 }

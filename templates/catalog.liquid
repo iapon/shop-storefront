@@ -508,7 +508,11 @@
       var label = ui.querySelector('[data-apply-label]');
       var btn = ui.querySelector('[data-drawer-apply]');
       if (!label || !btn || !INDEX.length) return;
-      label.textContent = (btn.getAttribute('data-apply-tpl') || '').replace('{{n}}', countOf(draft()));
+      /* плейсхолдер — ТОЛЬКО через ph_n из бутстрапа: сырой литерал {{n}} в
+         тексте шаблона Liquid-движок съест как output-тег (n не определён →
+         пусто), и replace('') вклеит число в начало строки (урок живого
+         деплоя W6; канон — коммит 19ae8c7 stock-badge). */
+      label.textContent = (btn.getAttribute('data-apply-tpl') || '').replace('{{ ph_n }}', countOf(draft()));
     }
     var radios = ui.querySelectorAll('input[name="drawer-cat"]');
     for (var ri = 0; ri < radios.length; ri++) radios[ri].addEventListener('change', syncN);

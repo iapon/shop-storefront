@@ -726,6 +726,11 @@ const mediaBlock = (cssSrc, header) => {
   check(/>Показать 26</.test(catHtml), 'дравер: стартовая подпись «Показать N» не равна общему числу товаров');
   check(/data-count-slug="plates"/.test(catHtml) && /<span class="sheet-count">1<\/span>/.test(catHtml), 'дравер: у радио категорий нет счётчиков опций');
   check(catHtml.includes('data-products-index'), 'дравер: нет индекса товаров для живого счётчика');
+  // Урок живого деплоя W6: сырой литерал {{n}} в тексте шаблона Liquid-движок
+  // съедает как output-тег — в отрендеренном JS плейсхолдер обязан доехать
+  // (через {{ ph_n }} из бутстрапа), а replace('') — запрещённый симптом.
+  check(/\)\.replace\('\{\{n\}\}'/.test(catHtml), 'дравер: JS-плейсхолдер {{n}} не доехал в рендер (заменять только через {{ ph_n }})');
+  check(!catHtml.includes(".replace(''"), 'дравер: replace(\'\') — плейсхолдер съеден Liquid-движком');
   const idx = /<script type="application\/json" data-products-index>([\s\S]*?)<\/script>/.exec(catHtml);
   let idxOk = false;
   try { idxOk = Array.isArray(JSON.parse(idx[1])) && JSON.parse(idx[1]).length === 5; } catch (e) { idxOk = false; }

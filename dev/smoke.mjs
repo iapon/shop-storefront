@@ -597,14 +597,15 @@ await smokeQtySteppers();
   }
 }
 
-/* ── Проба «тулбар компактен» (v1.6.1 → W6 №6/№16) ────────────────────
-   Контракт W6: тулбар — sticky-строка. В БАЗЕ (320) десктопная форма
-   скрыта (поиск/сортировка display:none), живут мобильные кнопки-листы
-   (.toolbar-mobile: «Фильтры» + «Сортировка: <текущая>», тап-таргет
-   2.75rem); на ≥48rem — обратная раскладка одной строкой ≤48px (поиск
-   ≤20rem, селект ≤12.5rem, группа прижата вправо, мобильные кнопки
-   скрыты). Смок рендерит HTML без стилей — контракт по исходнику CSS
-   (комментарии вычищены) + по разметке шаблонов (лупа, шеврон, кнопки). */
+/* ── Проба «тулбар компактен» (W6 №6/№16 → B1 D1: В3 «Одна строка») ────
+   Контракт B1: тулбар — sticky-кластер с hairline-подчёркиванием (ТРЕТЬЯ
+   каноническая линия, мокап В3; тени/скруглений кластера НЕТ). В БАЗЕ
+   (320) десктопная форма скрыта (поиск/сортировка display:none), живут
+   мобильные кнопки-листы (.toolbar-mobile, тап-таргет 2.75rem); на ≥48rem
+   — ОДНА строка: поиск ≤20rem · дропдаун ≤12.5rem · «Найти» · вертикаль-
+   ный hairline-разделитель · чипы · счётчик справа (margin-left: auto).
+   Смок рендерит HTML без стилей — контракт по исходнику CSS (комментарии
+   вычищены) + по разметке шаблонов (лупа, разделитель, счётчик, кнопки). */
 
 /* mediaBlock: вырезать сбалансированный по скобкам блок @media-правила
    (наивный [^}] не берёт вложенные правила). */
@@ -626,18 +627,18 @@ const mediaBlock = (cssSrc, header) => {
   const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
   const remMax = (rule) => { const m = /max-width:\s*([\d.]+)rem/.exec(rule); return m ? Number(m[1]) : null; };
   // База (мобайл-фёрст): десктопная форма скрыта, кнопки-листы на месте
-  const baseSearch = /\.search-box,\s*\.tools-right\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/display:\s*none/.test(baseSearch), 'база 320: десктопная форма (поиск/сортировка) не скрыта — должны жить кнопки-листы');
+  const baseSearch = /\.search-box,\s*\.tools-right,\s*\.tools-sep,\s*\.tools-count\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/display:\s*none/.test(baseSearch), 'база 320: десктопная форма (поиск/сортировка/разделитель/счётчик) не скрыта — должны жить кнопки-листы');
   check(/\.toolbar-mobile\s*\{[^}]*display:\s*flex/.test(css), 'база 320: мобильные кнопки тулбара не показаны');
   check(/\.toolbar-btn\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'кнопки тулбара в базе ниже 2.75rem (44px, D31)');
-  // Sticky-тулбар (W6 №16 → W7): прилипает ПОД шапку, фон непрозрачный;
-  // НИКАКИХ hairline (политика линий W7) — отделение от контента несёт
-  // мягкая тень канона; border-bottom на тулбаре — регрессия.
+  // Sticky-тулбар (W6 №16 → B1 В3): прилипает ПОД шапку, фон непрозрачный;
+  // hairline №3 (border-bottom — решение владельца в мокапе В3); тени НЕТ.
   const toolsRule = /\.cat-tools\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
   check(/position:\s*sticky/.test(toolsRule) && /top:\s*var\(--header-h\)/.test(toolsRule), 'тулбар не sticky под шапкой (position: sticky; top: var(--header-h))');
-  check(/background:\s*var\(--bg\)/.test(toolsRule) && /box-shadow/.test(toolsRule), 'тулбар: нет фона и тени для sticky-состояния');
-  check(!/border-bottom/.test(toolsRule), 'тулбар: border-bottom запрещён политикой линий W7 (ровно 2 hairline — шапка и футер)');
-  // ≥48rem: одна строка, компактные ширины, мобильные кнопки скрыты
+  check(/background:\s*var\(--bg\)/.test(toolsRule), 'тулбар: нет непрозрачного фона для sticky-состояния');
+  check(/border-bottom:\s*1px solid var\(--border\)/.test(toolsRule), 'тулбар: нет hairline-подчёркивания В3 (border-bottom — hairline 3 из 3)');
+  check(!/box-shadow/.test(toolsRule), 'тулбар В3: тень кластера не снята («не меню-панель»)');
+  // ≥48rem: одна строка В3, компактные ширины, мобильные кнопки скрыты
   const searchRule = /\.search-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
   const sortRule = /\.sort-box\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
   const sw = remMax(searchRule), tw = remMax(sortRule);
@@ -645,34 +646,43 @@ const mediaBlock = (cssSrc, header) => {
   check(tw !== null && tw >= 10 && tw <= 13.75, `desktop ≥48rem: у .sort-box нет фиксированной ширины 10–13.75rem: ${sortRule}`);
   check(/\.tools-right\s*\{[^}]*margin-left:\s*auto/.test(block48), 'desktop ≥48rem: группа «сортировка+кнопка» не прижата вправо');
   check(/\.toolbar-mobile\s*\{[^}]*display:\s*none/.test(block48), 'desktop ≥48rem: мобильные кнопки тулбара не скрыты');
-  check(/\.field-input\.sort-select\s*\{[^}]*appearance:\s*none/.test(css), 'select не голый: appearance: none (+ кастомный шеврон)');
+  // В3: вертикальный hairline-разделитель и счётчик справа
+  const sepRule = /\.tools-sep\s*\{[^}]*\}/.exec(block48)?.[0] ?? '';
+  check(/display:\s*(block|inline-block)/.test(sepRule) && /width:\s*1px/.test(sepRule) && /var\(--border\)/.test(sepRule), 'desktop ≥48rem: нет вертикального hairline-разделителя .tools-sep');
+  check(/\.tools-count\s*\{[^}]*margin-left:\s*auto/.test(block48), 'desktop ≥48rem: счётчик .tools-count не прижат вправо (мокап В3)');
+  // В3 (P3 прошлого критика): поиск/дропдаун/«Найти» — одна высота 2.5rem
+  check(/\.field-input\.search-input,\s*\.dd-btn\.field-input\s*\{[^}]*height:\s*2\.5rem/.test(block48), '≥48rem: поиск и дропдаун не приведены к height 2.5rem');
+  check(/\.btn\.search-submit\s*\{[^}]*height:\s*2\.5rem/.test(block48), '≥48rem: «Найти» не приведена к height 2.5rem (равенство высот P3)');
+  // Дропдаун (D3): селект скрыт улучшателем, стили кнопки/списка/опций есть
+  check(/\.dd-source\s*\{[^}]*display:\s*none/.test(css), 'дропдаун D3: скрытый select (.dd-source) не оформлен');
+  check(/\.dd-btn\s*\{/.test(css) && /\.dd-list\s*\{/.test(css) && /\.dd-opt\s*\{/.test(css), 'дропдаун D3: нет стилей .dd-btn/.dd-list/.dd-opt');
   const catTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'catalog.liquid'), 'utf8');
   const catPageTpl = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'category.liquid'), 'utf8');
-  check(catTpl.includes('search-icon') && catTpl.includes('sort-chevron'), 'каталог: тулбар несёт иконку-лупу и шеврон сортировки');
-  check(catPageTpl.includes('sort-chevron') && catPageTpl.includes('search-icon'), 'категория: тулбар того же контракта (лупа + шеврон)');
+  check(catTpl.includes('search-icon') && catTpl.includes('tools-sep'), 'каталог: тулбар несёт иконку-лупу и вертикальный разделитель В3');
+  check(catPageTpl.includes('search-icon') && catPageTpl.includes('tools-right'), 'категория: тулбар того же контракта (лупа + десктопная группа)');
   check(catTpl.includes('data-drawer-open') && catTpl.includes('data-sort-open'), 'каталог: мобильные кнопки «Фильтры»/«Сортировка» в разметке');
   check(catPageTpl.includes('data-drawer-open') && catPageTpl.includes('data-sort-open'), 'категория: мобильные кнопки «Фильтры»/«Сортировка» в разметке');
+  check(catTpl.includes('data-dropdown') && catPageTpl.includes('data-dropdown'), 'дропдаун D3: select сортировки несёт data-dropdown (каталог и категория)');
   check(!/\.sort-label\s*\{/.test(css), 'легаси .sort-label растянутой вёрстки ликвидирован');
   if (fails.length) {
     failed++;
     console.log('FAIL toolbar-compact: ' + fails.join(' | '));
   } else {
-    console.log('OK   toolbar-compact (база: кнопки-листы 44px; ≥48rem: sticky-строка, поиск ≤20rem, селект ≤12.5rem, группа справа)');
+    console.log('OK   toolbar-compact (база: кнопки-листы 44px; ≥48rem: В3 одной строкой — поиск/дропдаун/Найти/hairline-разделитель/чипы/счётчик, высоты 2.5rem, hairline №3, sticky)');
   }
 }
 
-/* ── Проба «чипы в одну строку» (v1.6.1, второй разнос владельца) ─────
-   Контракт: чипы категорий — ОДНА горизонтальная строка на ЛЮБОЙ ширине;
-   multi-line ragged-wrap запрещён. По исходнику CSS (DOM-проверку
-   scrollWidth>clientWidth делает живая вёрстка/скрины 320): у .chip-row
-   в базе flex-wrap: nowrap + overflow-x: auto (переполнение = скролл,
-   вертикальный перенос — нет) + scroll-snap + скрытый скроллбар + фейд
-   справа; сами чипы не сжимаются (flex: 0 0 auto); на ≥48rem фейд
-   выключен. Отступ дерева .chip-child margin-left (дыра между чипами)
-   ликвидирован. Разметка чипов в ОБЕИХ точках рендера (каталог +
-   категория) несёт class="chip-row". В общий паршал не выносилось:
-   счётчики/дерево требуют assign, а паршалы обязаны быть чистыми
-   функциями (проба partial-purity) — контракт одной строки несёт CSS. */
+/* ── Проба «чипы: перенос без обрезки + Ещё N» (B1 D2, разнос владельца) ──
+   МОБАЙЛ: чипы ПЕРЕНОСЯТСЯ строками (flex-wrap), «Ещё N» скрыт; обрезка
+   чипа пополам ЗАПРЕЩЕНА — чип не сжимается (flex: 0 0 auto) и не
+   переносит текст (min-width: max-content). ДЕСКТОП (≥48rem): чипы в
+   строке тулбара (мокап В3), свёрнуто — первые N (лишние .chip-extra
+   спрятаны, кнопка .chip-more видна), раскрыто ([data-chips-open="1"]
+   на форме) — .chip-extra возвращаются, ряд переносится строками;
+   активная категория всегда видима (.chip-extra[data-pinned="1"]).
+   DOM-поведение (клик/Esc) проверяет живая браузерная проба B1;
+   здесь — контракт по исходникам CSS + разметка (data-chips-more,
+   data-pinned, chip-extra в рендере при N < числа категорий). */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '');
@@ -680,26 +690,66 @@ const mediaBlock = (cssSrc, header) => {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
   const rowRule = /\.chip-row\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/flex-wrap:\s*nowrap/.test(rowRule), 'chip-row: вертикальный перенос не запрещён (нет flex-wrap: nowrap)');
-  check(/overflow-x:\s*auto/.test(rowRule), 'chip-row: переполнение не скроллится (нет overflow-x: auto)');
-  check(/scroll-snap-type:\s*x/.test(rowRule), 'chip-row: нет scroll-snap');
-  check(/scrollbar-width:\s*none/.test(rowRule) && /\.chip-row::-webkit-scrollbar\s*\{[^}]*display:\s*none/.test(css), 'chip-row: скроллбар не скрыт');
-  check(/mask-image:\s*linear-gradient/.test(rowRule), 'chip-row: нет fade-подсказки прокрутки справа');
+  check(/flex-wrap:\s*wrap/.test(rowRule), 'chip-row: мобайл не переносит чипы строками (нет flex-wrap: wrap)');
   check(/\.chip\s*\{[^}]*flex:\s*0 0 auto/.test(css), 'чип сжимается внутри строки (должен быть flex: 0 0 auto)');
-  const allRowRules = [...css.matchAll(/\.chip-row\s*\{[^}]*\}/g)].map((m) => m[0]);
-  check(allRowRules.every((r) => !/flex-wrap:\s*wrap/.test(r)), 'найден ragged-wrap: flex-wrap: wrap на .chip-row');
+  check(/\.chip\s*\{[^}]*min-width:\s*max-content/.test(css), 'чип без min-width: max-content — текст может переноситься/обрезаться внутри пилюли');
+  check(!/text-overflow:\s*ellipsis[^}]*\}\s*\.chip|\.chip\s*\{[^}]*text-overflow:\s*ellipsis/.test(css), 'на чипе есть ellipsis — обрезка названий категорий запрещена (D2)');
+  check(/\.chip-more\s*\{[^}]*display:\s*none/.test(css), '«Ещё N» не скрыт на мобиле (решение владельца: на мобиле перенос строками)');
   const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
-  check(/\.chip-row\s*\{[^}]*mask-image:\s*none/.test(block48), '≥48rem: фейд чипов не выключен');
+  check(/\.chip-more\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: кнопка «Ещё N» не показана');
+  check(/\.chip-extra\s*\{[^}]*display:\s*none/.test(block48), '≥48rem: лишние чипы (.chip-extra) не спрятаны в свёрнутом состоянии');
+  check(/\.chip-extra\[data-pinned="1"\]\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: активная категория за пределами первых N не закреплена (data-pinned)');
+  check(/\.cat-tools\[data-chips-open="1"\]\s*\.chip-row\s*\{[^}]*flex-wrap:\s*wrap/.test(block48), '≥48rem: раскрытие «Ещё N» не переносит чипы строками');
+  check(/\.cat-tools\[data-chips-open="1"\]\s*\.chip-extra\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: раскрытие не возвращает спрятанные чипы');
   check(!/\.chip-child\s*\{[^}]*margin-left/.test(css), 'дыра чипов: .chip-child margin-left не ликвидирован');
-  for (const tpl of ['catalog.liquid', 'category.liquid']) {
+  for (const tpl of ['catalog.liquid']) {
     const src = readFileSync(join(rootDir, 'templates', tpl), 'utf8');
-    check(src.includes('class="chip-row"'), `${tpl}: чипы рендерятся без class="chip-row"`);
+    check(src.includes('data-chip-row'), `${tpl}: чипы рендерятся без data-chip-row`);
+    check(src.includes('data-chips-more') && src.includes('aria-expanded'), `${tpl}: кнопка «Ещё N» без data-chips-more/aria-expanded`);
   }
   if (fails.length) {
     failed++;
-    console.log('FAIL chips-single-row: ' + fails.join(' | '));
+    console.log('FAIL chips-more-less: ' + fails.join(' | '));
   } else {
-    console.log('OK   chips-single-row (одна скролл-строка: nowrap+snap+скрытый скроллбар+фейд<48rem; дыра margin-left ликвидирована)');
+    console.log('OK   chips-more-less (мобайл: перенос без обрезки, «Ещё» скрыт; десктоп: первые N + Ещё N + pinned-активная, раскрытие = перенос строк)');
+  }
+}
+
+/* ── Проба B1: чипы «первые N + Ещё N» в РЕНДЕРЕ (моки) ───────────────
+   В моке каталога 8 категорий (5 корней + 1 потомок + 2 корня… ровно:
+   ceramics/textile/stationery/plates(потомок)/decor/podarki/ny-gifts/
+   arhiv) → 8 чипов. filters_visible по умолчанию 5 → первые 5 чипов
+   видимы, 3 уезжают в .chip-extra, кнопка «Ещё 3»; переопределение
+   cfg.filters_visible=2 → «Ещё 6»; активная категория за пределами N
+   несёт data-pinned="1" и НЕ прячется. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  check(catHtml.includes('data-chips-more'), 'рендер: кнопка «Ещё N» не появилась при 8 категориях и N=5');
+  check(/Ещё<\/span> <span class="chip-count">3</.test(catHtml), 'рендер: счётчик «Ещё» не равен 3 при 8 категориях и N=5');
+  const extraCount = (catHtml.match(/chip-extra(?![\w-])/g) || []).length;
+  check(extraCount === 3, `рендер: спрятанных чипов .chip-extra ${extraCount} вместо 3`);
+  check(catHtml.includes('data-pinned="1"') === false, 'рендер: data-pinned появился без активной категории за пределами N');
+  const vis2 = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    g_site: { data: { cfg: [{ name: 'Тест', filters_visible: '2' }] } },
+  });
+  check(/chip-count">6</.test(vis2), 'рендер: cfg.filters_visible=2 не дал «Ещё 6»');
+  const pinned = await renderMockPage(engine, 'catalog', null, { query: { ...q, cat: 'ny-gifts' } });
+  check(pinned.includes('data-pinned="1"'), 'рендер: активная категория за пределами первых N не несёт data-pinned="1"');
+  check(/aria-current="true"[^>]*data-pinned="1"|data-pinned="1"[^>]*aria-current="true"/.test(pinned), 'рендер: pinned-чип не активный (aria-current и data-pinned на одном чипе)');
+  const empty = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    overrides: undefined,
+    g_site: { data: { cfg: [{ name: 'Тест', filters_visible: 'abc' }] } },
+  });
+  check(/chip-count">3</.test(empty), 'рендер: мусор в filters_visible не дал дефолт N=5');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b1-chips-render: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b1-chips-render (N=5: Ещё 3 / .chip-extra ×3; filters_visible=2 → Ещё 6; мусор → дефолт 5; pinned-активная)');
   }
 }
 
@@ -1042,10 +1092,11 @@ await smokeW9Cart();
 }
 
 /* ── Проба W7: канон лендинг-визарда ──────────────────────────────────
-   (1) Политика горизонтальных линий (ЖЁСТКО, разнос владельца): в
-       shop.css ровно ДВЕ hairline — border-bottom шапки и border-top
-       футера; в tokens.css горизонтальных бордеров ноль. Все прочие
-       разделители — воздух и --bg-soft-подложки.
+   (1) Политика горизонтальных линий (ЖЁСТКО; B1 обновление): в shop.css
+       ровно ТРИ hairline — border-bottom шапки, border-top футера и
+       border-bottom тулбара каталога (мокап В3 «Одна строка», решение
+       владельца B1); в tokens.css горизонтальных бордеров ноль. Все
+       прочие разделители — воздух и --bg-soft-подложки.
    (2) Палитра-пикер (механика лендинг-визарда 1:1): tokens.css несёт
        все ШЕСТЬ ${variant.*}-подстановок; при установке визард кладёт
        hex выбранной палитры (по code: substituteArtifacts →
@@ -1062,11 +1113,13 @@ await smokeW9Cart();
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
 
   const hairlines = [...shopCss.matchAll(/border-(?:top|bottom)\s*:/g)].length;
-  check(hairlines === 2, `политика линий W7: в shop.css ${hairlines} горизонтальных hairline вместо 2`);
+  check(hairlines === 3, `политика линий B1: в shop.css ${hairlines} горизонтальных hairline вместо 3`);
   const headerRule = /\.shop-header\s*\{[^}]*\}/.exec(shopCss)?.[0] ?? '';
   const footerRule = /\.shop-footer\s*\{[^}]*\}/.exec(shopCss)?.[0] ?? '';
+  const toolsRuleCss = /\.cat-tools\s*\{[^}]*\}/.exec(shopCss)?.[0] ?? '';
   check(/border-bottom:\s*1px solid var\(--border\)/.test(headerRule), 'hairline 1 обязана быть border-bottom шапки');
   check(/border-top:\s*1px solid var\(--border\)/.test(footerRule), 'hairline 2 обязана быть border-top футера');
+  check(/border-bottom:\s*1px solid var\(--border\)/.test(toolsRuleCss), 'hairline 3 (B1 В3) обязана быть border-bottom тулбара каталога');
   check(!/border-(?:top|bottom)\s*:/.test(tokensCss), 'в tokens.css появились горизонтальные hairline');
   for (const v of ['accent', 'accent_strong', 'on_accent', 'accent_on_dark', 'accent_on_dark_strong', 'on_accent_dark']) {
     check(tokensCss.includes('${variant.' + v + '}'), `палитра: в tokens.css нет подстановки \${variant.${v}}`);
@@ -1084,7 +1137,7 @@ await smokeW9Cart();
     failed++;
     console.log('FAIL w7-canon: ' + fails.join(' | '));
   } else {
-    console.log('OK   w7-canon (ровно 2 hairline шапка/футер, 6 ${variant.*}-подстановок, ноль hex в shop.css, масштаб 100vw/90, тёмная dynamica-dark)');
+    console.log('OK   w7-canon (ровно 3 hairline шапка/футер/тулбар-В3, 6 ${variant.*}-подстановок, ноль hex в shop.css, масштаб 100vw/90, тёмная dynamica-dark)');
   }
 }
 
@@ -1235,8 +1288,82 @@ await smokeW9Cart();
   }
 }
 
+/* ── Проба B1 (D5): доступность — разметка всех страниц ────────────────
+   Скип-линк канона лендинга → #main на КАЖДОЙ странице; живой регион
+   счётчика корзины; статусы через role=status; ошибки чекаута связаны
+   aria-describedby; фото карточек с decoding=async; драверы — диалоги с
+   aria-labelledby; галерейные стрелки подписаны. Письма НЕ трогаем
+   (админские письма вне аудита B1). */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const pages = ['catalog', 'product', 'category', 'checkout', 'order', 'account', 'login', 'register', '404'];
+  for (const name of pages) {
+    const variant = name === 'category' ? 'found' : name === 'product' ? null : null;
+    const html = await renderMockPage(engine, name, variant, { query: { ...q } });
+    check(html.includes('class="skip-link" href="#main"'), `${name}: нет скип-линка → #main`);
+    check(html.includes('<main id="main">'), `${name}: main без id="main"`);
+    check(html.includes('aria-live="polite">{{') === false && /data-cart-count aria-live="polite"/.test(html), `${name}: счётчик корзины не живой регион`);
+  }
+  const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  check(catHtml.includes('decoding="async"'), 'каталог: у фото карточек нет decoding="async" (D4)');
+  check(!/loading="lazy"(?![^>]*decoding)/.test(catHtml.replace(/loading="lazy" decoding="async"/g, '')), 'каталог: есть lazy-фото без decoding="async"');
+  check(catHtml.includes('aria-labelledby="filter-drawer-title"') && catHtml.includes('aria-labelledby="sort-sheet-title"'), 'каталог: драверы без aria-labelledby');
+  const prodHtml = await renderMockPage(engine, 'product', null, { query: { ...q } });
+  check(prodHtml.includes('decoding="async"'), 'товар: галерея без decoding="async"');
+  check(prodHtml.includes('aria-pressed'), 'товар: миниатюры галереи без aria-pressed');
+  const coHtml = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q } });
+  check(coHtml.includes('id="checkout-error"'), 'чекаут: бокс ошибки без id');
+  check((coHtml.match(/aria-describedby="checkout-error"/g) || []).length === 2, 'чекаут: name/email не связаны с боксом ошибки aria-describedby');
+  const ordHtml = await renderMockPage(engine, 'order', 'new', { query: { ...q } });
+  check(ordHtml.includes('<div class="status-screen" role="status">'), 'заказ: статус-экран без role=status');
+  const nfHtml = await renderMockPage(engine, 'product', 'not_found', { query: { ...q } });
+  check(nfHtml.includes('role="status"'), 'товар не найден: статус-экран без role=status');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b1-a11y: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b1-a11y (скип-линк на 9 страницах, живой счётчик корзины, role=status, aria-describedby чекаута, decoding=async, aria-labelledby драверов, aria-pressed галереи)');
+  }
+}
+
+/* ── Проба B1 (D3): дропдаун — контракт по исходникам ──────────────────
+   APG select-only combobox: role=combobox + aria-haspopup=listbox +
+   aria-expanded + aria-activedescendant, варианты role=option +
+   aria-selected, стрелки/Home/End/PageUp/PageDown/typeahead/Esc,
+   клик-вне, фокус не покидает кнопку. Нативный select остаётся
+   источником значения (изменение value диспатчит change на select —
+   сабмит формы сортировки работает без правок). */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'dropdown.js'), 'utf8');
+  for (const token of [
+    "role', 'combobox", "aria-haspopup', 'listbox", "aria-expanded", "aria-activedescendant",
+    "role', 'listbox", "role', 'option", "aria-selected",
+    "case 'ArrowDown'", "case 'ArrowUp'", "case 'Home'", "case 'End'",
+    "case 'PageUp'", "case 'PageDown'", "case 'Escape'", 'typeahead',
+    "dispatchEvent(new Event('change', { bubbles: true }))",
+  ]) {
+    check(src.includes(token), `dropdown.js: нет ${token}`);
+  }
+  check(!/matchMedia/.test(src), 'dropdown.js: reduce-гейт должен жить в CSS (никакого matchMedia в JS)');
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8');
+  check(/@keyframes dd-in/.test(css), 'дропдаун: нет анимации появления dd-in');
+  check(/@media \(prefers-reduced-motion: no-preference\)\s*\{\s*\.dd-list\s*\{ animation: dd-in/.test(css.replace(/\n/g, ' ').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ')) || /animation:\s*dd-in/.test(css), 'дропдаун: анимация не гейтится prefers-reduced-motion');
+  check(/\.dd-list\s*\{[^}]*max-height:\s*20rem/.test(css), 'дропдаун: список без max-height (длинные списки уедут за вьюпорт)');
+  const base = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'base.liquid'), 'utf8');
+  check(base.includes('static/js/dropdown.js'), 'base.liquid: dropdown.js не подключён');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b1-dropdown: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b1-dropdown (APG-контракт в исходнике, change→select для сабмита, анимация под reduce-гейтом, подключён в base)');
+  }
+}
+
 if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-single-row + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

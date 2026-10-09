@@ -128,12 +128,21 @@
 </section>
 
 <div class="shop-container" data-catalog-ui data-base="__SHOP_BASE__/" data-cat="{{ current_cat | escape }}">
-  {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка ПОД шапкой. Мобайл — кнопки
-    «Фильтры» (бейдж применённых) и «Сортировка: <текущая>» (нижние листы);
-    ≥48rem — десктопная форма: поиск + чипы применённых + сортировка+Найти.
+  {%- comment -%} ── Тулбар В3 «Одна строка» (B1 D1 — выбор владельца по мокапу
+    toolbar-variants): поиск (растёт) · дропдаун сортировки · «Найти» ·
+    вертикальный hairline-разделитель · чипы категорий · счётчик справа;
+    под кластером hairline-подчёркивание (ТРЕТЬЯ каноническая линия —
+    политика линий B1: шапка/футер/тулбар). НЕ меню-панель: без тени и
+    скруглений кластера. Sticky под шапкой сохранён.
+    Мобайл (<48rem) — прежний контракт W6: кнопки «Фильтры»/«Сортировка»
+    (нижние листы), чипы переносятся строками (D2, без обрезки).
     query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q= и ?cat=
     кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1). {%- endcomment -%}
-  <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools>
+  {%- comment -%} B1 (D2): сколько чипов видно до «Ещё N» — cfg.filters_visible
+    (владелец правит в «Настройках магазина»), пусто/мусор → 5. {%- endcomment -%}
+  {%- assign vis_n = cfg.filters_visible | plus: 0 -%}
+  {%- if vis_n < 1 -%}{%- assign vis_n = 5 -%}{%- endif -%}
+  <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools data-chips-open="0">
     {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
     <div class="toolbar-mobile">
       <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
@@ -154,43 +163,78 @@
     {% include "partials/applied-filters" %}
     {%- assign ac_mode = "mobile" -%}
     <div class="tools-right">
-      <label class="sr-only" for="cat-sort">Сортировка</label>
+      {%- comment -%} B1 (D3): нативный select остаётся источником значения
+        (no-JS фоллбек), dropdown.js строит поверх него APG-комбобокс.
+        aria-label на select переезжает на кнопку дропдауна. {%- endcomment -%}
       <div class="sort-box">
-        <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select>
+        <select class="field-input sort-select" id="cat-sort" name="sort" data-sort-select data-dropdown aria-label="Сортировка">
           <option value="" {% if sort_suffix == blank %}selected{% endif %}>Сначала новые</option>
           <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
           <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>Сначала дороже</option>
         </select>
-        <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
       </div>
       <button class="btn btn-secondary search-submit" type="submit">Найти</button>
     </div>
-  </form>
-  {%- assign ac_mode = "mobile" -%}
-  {% include "partials/applied-filters" %}
-
-  {%- comment -%} ── Чипы категорий — навигация по дереву (одна скролл-строка) {%- endcomment -%}
-  <nav class="chip-row" aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
-    <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
-    {%- comment -%} дерево: корни (parent пуст), внутри — потомки вторым уровнем.
-      Если в выборке нет parent (запрос не расширён) — все считаются корнями:
-      плоский список, как в v1.5.4 (мягкая деградация). Счётчик чипа —
+    <span class="tools-sep" aria-hidden="true"></span>
+    {%- comment -%} ── Чипы категорий (D2): внутри строки тулбара. Первые
+      vis_n чипов видны всегда, дальнейшие — .chip-extra (прячет CSS
+      десктопа в свёрнутом состоянии); АКТИВНАЯ категория ВСЕГДА видима
+      (data-pinned="1" — даже за пределами первых N). Кнопка «Ещё N»
+      раскрывает чипы в перенос строк под кластером (скрипт ниже).
+      Дерево: корни, внутри — потомки вторым уровнем; счётчик чипа —
       Liquid-подсчёт по all.data.products, кап 100 (D27). {%- endcomment -%}
-    {%- for c in cats.data.categories -%}
-      {%- unless c.parent -%}
-      {%- assign chip_n = 0 -%}
-      {%- for p in all.data.products -%}{%- if p.categories contains c.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
-      <a class="chip" href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
+    <nav class="chip-row" id="chip-row" data-chip-row aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
+      {%- comment -%} «Все» — сброс фильтров, НЕ категория: в лимит vis_n
+        не входит; нумеруются только чипы категорий (N=5 = 5 категорий
+        + «Все», D2). {%- endcomment -%}
+      {%- assign chip_i = 0 -%}
+      {%- assign chip_active_i = 0 -%}
+      <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
+      {%- for c in cats.data.categories -%}
+        {%- unless c.parent -%}
+        {%- assign chip_n = 0 -%}
+        {%- for p in all.data.products -%}{%- if p.categories contains c.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
+        {%- assign chip_i = chip_i | plus: 1 -%}
+        {%- assign chip_cls = "chip" -%}{%- assign chip_pin = "" -%}
+        {%- if chip_i > vis_n -%}{%- assign chip_cls = "chip chip-extra" -%}{%- endif -%}
+        {%- if current_cat == c.slug -%}
+          {%- assign chip_active_i = chip_i -%}
+          {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
+        {%- endif -%}
+      <a class="{{ chip_cls }}"{{ chip_pin }} href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
         {%- for cc in cats.data.categories -%}
           {%- if cc.parent and cc.parent.id == c.id -%}
           {%- assign chip_n = 0 -%}
           {%- for p in all.data.products -%}{%- if p.categories contains cc.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
-          <a class="chip chip-child" href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
+          {%- assign chip_i = chip_i | plus: 1 -%}
+          {%- assign chip_cls = "chip chip-child" -%}{%- assign chip_pin = "" -%}
+          {%- if chip_i > vis_n -%}{%- assign chip_cls = "chip chip-child chip-extra" -%}{%- endif -%}
+          {%- if current_cat == cc.slug -%}
+            {%- assign chip_active_i = chip_i -%}
+            {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
+          {%- endif -%}
+          <a class="{{ chip_cls }}"{{ chip_pin }} href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
           {%- endif -%}
         {%- endfor -%}
       {%- endunless -%}
     {%- endfor -%}
-  </nav>
+      {%- if chip_i > vis_n -%}
+        {%- assign extra_n = chip_i | minus: vis_n -%}
+        {%- if chip_active_i > vis_n -%}{%- assign extra_n = extra_n | minus: 1 -%}{%- endif -%}
+        {%- if extra_n > 0 -%}
+        <button class="chip chip-more" type="button" data-chips-more aria-expanded="false" aria-controls="chip-row">
+          <span data-chips-more-txt>Ещё</span> <span class="chip-count">{{ extra_n }}</span>
+        </button>
+        {%- endif -%}
+      {%- endif -%}
+    </nav>
+    {%- comment -%} B1 (D1): счётчик товаров — справа в строке тулбара (мокап
+      В3); на мобиле он остаётся строкой над гридом (.cat-count ниже —
+      видима только <48rem). {%- endcomment -%}
+    <span class="tools-count" data-cat-count role="status">{{ cnt_txt }}</span>
+  </form>
+  {%- assign ac_mode = "mobile" -%}
+  {% include "partials/applied-filters" %}
 
   {%- comment -%} W9 (F4): счётчик товаров — тихой строкой НАД гридом слева
     (из hero убран; владельческий разнос «одинокой строки под H1»). {%- endcomment -%}
@@ -237,9 +281,9 @@
   <div class="sheet-overlay" data-sheet-overlay></div>
 
   {%- assign fs_tpl = cfg.filters_show | default: "Показать {{n}}" -%}
-  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="Фильтры" aria-hidden="true">
+  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title" aria-hidden="true">
     <div class="sheet-head">
-      <span class="sheet-title">Фильтры</span>
+      <span class="sheet-title" id="filter-drawer-title">Фильтры</span>
       <button class="sheet-reset" type="button" data-drawer-reset>Сбросить</button>
       <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
     </div>
@@ -283,9 +327,9 @@
     </div>
   </aside>
 
-  <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="Сортировка" aria-hidden="true">
+  <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-labelledby="sort-sheet-title" aria-hidden="true">
     <div class="sheet-head">
-      <span class="sheet-title">Сортировка</span>
+      <span class="sheet-title" id="sort-sheet-title">Сортировка</span>
       <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
     </div>
     <div class="sheet-body">
@@ -315,7 +359,11 @@
   /* W6-CATALOG-UI-START
      №4 крошки-автоскролл · №6-9 дравер/чипы/бейдж · №8 «Показать N» по
      черновику · №10 URL-состояние (q/cat/sort в query, page сброс,
-     Back — нативный history) · №11 сортировка-лист · №15 «Ещё». */
+     Back — нативный history) · №11 сортировка-лист · №15 «Ещё».
+     B1 (D5): драверы — dialog-семантика целиком: фокус-трап по Tab,
+     возврат фокуса на открывшую кнопку. B1 (D2): «Ещё N» раскрывает
+     чипы в перенос строк (анимация высоты кластера ~180ms, гейт
+     prefers-reduced-motion), Esc и клик-вне сворачивают. */
   (function () {
     var ui = document.querySelector('[data-catalog-ui]');
     if (!ui) return;
@@ -324,6 +372,7 @@
     var params = new URLSearchParams(location.search);
     var overlay = ui.querySelector('[data-sheet-overlay]');
     var openSheet = null;
+    var sheetOpener = null;
 
     function setOn(el, on) {
       if (!el) return;
@@ -336,10 +385,27 @@
       setOn(overlay, false);
       document.documentElement.setAttribute('data-sheet-open', '0');
       openSheet = null;
+      /* D5: фокус возвращается на контрол, открывший диалог */
+      if (sheetOpener) { sheetOpener.focus(); sheetOpener = null; }
     }
-    function showSheet(el, focusSel) {
+    /* D5: фокус-трап — Tab циклится внутри открытого диалога */
+    function trapTab(e) {
+      if (!openSheet) return;
+      var focusables = openSheet.querySelectorAll('button, input, [href], select, textarea, [tabindex]:not([tabindex="-1"])');
+      var list = [];
+      for (var i = 0; i < focusables.length; i++) {
+        var el = focusables[i];
+        if (!el.disabled && el.offsetParent !== null) list.push(el);
+      }
+      if (!list.length) return;
+      var first = list[0], last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    function showSheet(el, focusSel, opener) {
       closeSheet();
       openSheet = el;
+      sheetOpener = opener || null;
       setOn(el, true);
       setOn(overlay, true);
       document.documentElement.setAttribute('data-sheet-open', '1');
@@ -348,16 +414,66 @@
     }
     var dOpen = ui.querySelector('[data-drawer-open]');
     var dEl = ui.querySelector('[data-filter-drawer]');
-    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]'); });
+    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]', dOpen); });
     var sOpen = ui.querySelector('[data-sort-open]');
     var sEl = ui.querySelector('[data-sort-sheet]');
-    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked'); });
+    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked', sOpen); });
     if (overlay) overlay.addEventListener('click', closeSheet);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
+      if (e.key === 'Tab') trapTab(e);
     });
     var closes = ui.querySelectorAll('[data-sheet-close]');
     for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
+
+    /* ---- B1 (D2): «Ещё N» — раскрытие чипов в перенос строк. Анимация
+       высоты кластера ~180ms (FLIP: высота до → после, transition, сброс);
+       prefers-reduced-motion — мгновенно; Esc/клик-вне сворачивают. ---- */
+    var toolsForm = ui.querySelector('[data-cat-tools]');
+    var chipsMore = ui.querySelector('[data-chips-more]');
+    var chipRow = ui.querySelector('[data-chip-row]');
+    var chipsOpen = function () { return toolsForm && toolsForm.getAttribute('data-chips-open') === '1'; };
+    function setChipsOpen(open, animate) {
+      if (!toolsForm || !chipsMore) return;
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (animate && !reduce) {
+        var before = toolsForm.offsetHeight;
+        toolsForm.setAttribute('data-chips-open', open ? '1' : '0');
+        var after = toolsForm.offsetHeight;
+        if (before !== after) {
+          toolsForm.style.height = before + 'px';
+          void toolsForm.offsetHeight; /* reflow — стартовая высота зафиксирована */
+          toolsForm.style.transition = 'height 180ms cubic-bezier(0.19, 1, 0.22, 1)';
+          toolsForm.style.overflow = 'hidden';
+          toolsForm.style.height = after + 'px';
+          var done = function () {
+            toolsForm.style.height = '';
+            toolsForm.style.transition = '';
+            toolsForm.style.overflow = '';
+            toolsForm.removeEventListener('transitionend', done);
+          };
+          toolsForm.addEventListener('transitionend', done);
+          setTimeout(done, 260); /* страховка: transitionend может не прийти */
+        }
+      } else {
+        toolsForm.setAttribute('data-chips-open', open ? '1' : '0');
+      }
+      chipsMore.setAttribute('aria-expanded', open ? 'true' : 'false');
+      chipsMore.setAttribute('data-open', open ? '1' : '0');
+      var t = chipsMore.querySelector('[data-chips-more-txt]');
+      if (t) t.textContent = open ? 'Свернуть' : 'Ещё';
+    }
+    if (chipsMore && chipRow) {
+      chipsMore.addEventListener('click', function () { setChipsOpen(!chipsOpen(), true); });
+      document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && chipsOpen()) setChipsOpen(false, false);
+      });
+      document.addEventListener('click', function (e) {
+        if (!chipsOpen()) return;
+        if (chipRow.contains(e.target)) return;
+        setChipsOpen(false, false);
+      });
+    }
 
     /* ---- дравер: черновик → «Показать N» (batch-применение, №8) ---- */
     function draft() {

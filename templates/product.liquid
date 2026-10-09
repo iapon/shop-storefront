@@ -101,8 +101,8 @@
     <div class="product-gallery" data-gallery>
       <div class="product-photo">
         {%- if product.photos and product.photos.size > 0 -%}
-        <img data-gallery-main src="{{ product.photos[0].url }}" alt="{{ product.title }}" width="800" height="1000">
-        <img data-gallery-fade class="gallery-img-fade" src="{{ product.photos[0].url }}" alt="" aria-hidden="true" width="800" height="1000">
+        <img data-gallery-main src="{{ product.photos[0].url }}" alt="{{ product.title }}" decoding="async" width="800" height="1000">
+        <img data-gallery-fade class="gallery-img-fade" src="{{ product.photos[0].url }}" alt="" aria-hidden="true" decoding="async" width="800" height="1000">
         {%- else -%}
         <img data-gallery-main src="/static/photos/placeholder.svg" alt="нет фото" width="800" height="1000">
         {%- endif -%}
@@ -113,10 +113,13 @@
       </div>
       {%- if product.photos and product.photos.size > 1 -%}
       <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title }}">
+        {%- comment -%} B1 (D5): стрелки клавиатуры на полосе миниатюр —
+           Left/Right шагают по фото (скрипт галереи ниже). {%- endcomment -%}
         {%- for ph in product.photos -%}
         <button class="gallery-thumb{% if forloop.first %} is-active{% endif %}" type="button"
-                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title }} — {{ forloop.index }}">
-          <img src="{{ ph.url }}" alt="" loading="lazy" width="96" height="120">
+                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title }} — фото {{ forloop.index }} из {{ product.photos.size }}"
+                {% if forloop.first %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>
+          <img src="{{ ph.url }}" alt="" loading="lazy" decoding="async" width="96" height="120">
         </button>
         {%- endfor -%}
       </div>
@@ -164,7 +167,9 @@
      W9 (F10): смена — мягкий кросс-фейд ~200ms двумя слоями img
      (новое фото проявляется верхним слоем, затем нижний получает тот же
      src и верхний гасится мгновенно); при prefers-reduced-motion CSS
-     выключает transition — смена src остаётся мгновенной. */
+     выключает transition — смена src остаётся мгновенной.
+     B1 (D5): Left/Right на полосе миниатюр шагают по фото (клавиатура),
+     активная миниатюра несёт aria-pressed. */
   (function () {
     var main = document.querySelector('[data-gallery-main]');
     var fade = document.querySelector('[data-gallery-fade]');
@@ -176,7 +181,10 @@
       if (idx < 0) idx = urls.length - 1;
       if (idx >= urls.length) idx = 0;
       var url = urls[idx];
-      for (var j = 0; j < thumbs.length; j++) thumbs[j].classList.toggle('is-active', j === idx);
+      for (var j = 0; j < thumbs.length; j++) {
+        thumbs[j].classList.toggle('is-active', j === idx);
+        thumbs[j].setAttribute('aria-pressed', j === idx ? 'true' : 'false');
+      }
       var act = thumbs[idx];
       if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
       if (!fade || main.getAttribute('src') === url) { main.src = url; return; }
@@ -200,6 +208,16 @@
         activate(cur);
       });
     });
+    var strip = document.querySelector('[data-gallery-thumbs]');
+    if (strip) strip.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      var dir = e.key === 'ArrowRight' ? 1 : -1;
+      for (var i = 0; i < thumbs.length; i++) if (thumbs[i].classList.contains('is-active')) cur = i;
+      cur = (cur + dir + urls.length) % urls.length;
+      activate(cur);
+      thumbs[cur].focus();
+    });
   })();
   </script>
 
@@ -211,7 +229,7 @@
     {%- endif -%}
 
   {%- else -%}
-  <div class="status-screen" style="padding-left:0;padding-right:0;">
+  <div class="status-screen" role="status" style="padding-left:0;padding-right:0;">
     <span class="status-badge error" aria-hidden="true">∅</span>
     <h1 class="status-title">Товар не найден</h1>
     <p class="status-text">Возможно, он распродан или снят с продажи.</p>

@@ -65,7 +65,7 @@
 {%- endif -%}
 {%- assign page_noindex = true -%}
 {%- capture content -%}
-<div class="status-screen">
+<div class="status-screen" role="status">
   {%- if ord -%}
     {%- if pay_failed -%}
       <span class="status-badge error" aria-hidden="true">✕</span>

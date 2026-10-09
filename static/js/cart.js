@@ -217,8 +217,20 @@
     ev.preventDefault();
     var errBox = form.querySelector('[data-form-error]');
     var btn = form.querySelector('button[type="submit"]');
+    /* B1 (D5, WCAG 3.3.1/4.1.3): обязательные поля несут aria-describedby
+       на бокс ошибки; при неудаче на пустые поля ставится aria-invalid —
+       скринридер связывает поле с сообщением. */
+    var required = [];
+    if (form.querySelectorAll) required = form.querySelectorAll('input[required]');
+    function clearInvalid() {
+      for (var i = 0; i < required.length; i++) required[i].removeAttribute('aria-invalid');
+    }
     function fail(msgText) {
       if (errBox) { errBox.textContent = msgText; errBox.setAttribute('data-visible', '1'); }
+      for (var i = 0; i < required.length; i++) {
+        if (!String(required[i].value).trim()) required[i].setAttribute('aria-invalid', 'true');
+        else required[i].removeAttribute('aria-invalid');
+      }
       if (btn) btn.disabled = false;
     }
     function val(name) {
@@ -234,6 +246,7 @@
       items: state.items
     };
     if (errBox) errBox.removeAttribute('data-visible');
+    clearInvalid();
     if (btn) btn.disabled = true;
     if (!payload.customer.name || !payload.customer.email) {
       fail(msg('fill', 'Заполните имя и email.'));

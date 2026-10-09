@@ -45,7 +45,8 @@ export const G_SITE_DEFAULT = {
       cta_add_to_cart: '',
       cta_checkout: '',
       cart_empty_title: '',
-      filters_show: ''
+      filters_show: '',
+      filters_visible: ''
     }]
   }
 };

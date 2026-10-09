@@ -6,7 +6,11 @@
         { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
         { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null },
         { "id": "cat-3", "title": "Канцелярия", "slug": "stationery", "parent": null },
-        { "id": "cat-4", "title": "Тарелки", "slug": "plates", "parent": { "id": "cat-1", "title": "Керамика", "slug": "ceramics" } }
+        { "id": "cat-4", "title": "Тарелки", "slug": "plates", "parent": { "id": "cat-1", "title": "Керамика", "slug": "ceramics" } },
+        { "id": "cat-9", "title": "Декор", "slug": "decor", "parent": null },
+        { "id": "cat-10", "title": "Подарки", "slug": "podarki", "parent": null },
+        { "id": "cat-11", "title": "Новогоднее", "slug": "ny-gifts", "parent": null },
+        { "id": "cat-12", "title": "Архив", "slug": "arhiv", "parent": null }
       ]
     }
   },

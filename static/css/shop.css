@@ -6,11 +6,13 @@
    с 1440px — фикс 16px), карточки 12px с hairline-бордером и мягкой
    тенью, кнопки/инпуты 10px, фокус = outline 2px var(--accent).
 
-   ПОЛИТИКА ГОРИЗОНТАЛЬНЫХ ЛИНИЙ (W7, жёстко): в этом файле ровно
-   ДВЕ hairline — border-bottom шапки (.shop-header) и border-top
-   футера (.shop-footer). Все прочие горизонтальные разделители
-   запрещены: вместо них воздух (rem) и --bg-soft-подложки
-   (смоук-проба w7-canon ловит регрессию grep'ом).
+   ПОЛИТИКА ГОРИЗОНТАЛЬНЫХ ЛИНИЙ (W7 → B1, жёстко): в этом файле
+   ровно ТРИ hairline — border-bottom шапки (.shop-header),
+   border-top футера (.shop-footer) и border-bottom тулбара каталога
+   (.cat-tools; выбор владельца — мокап В3 «Одна строка», B1 D1).
+   Все прочие горизонтальные разделители запрещены: вместо них воздух
+   (rem) и --bg-soft-подложки (смоук-проба w7-canon ловит регрессию
+   grep'ом).
 
    МОБИЛЬНЫЙ-ФЁРСТ: база = телефон (320: одна колонка, тап-таргеты
    2.75rem, инпуты 1rem — iOS не зумит). Один ГЛАВНЫЙ брейкпоинт
@@ -26,7 +28,13 @@
 
 /* ── База ───────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* B1 (D5, WCAG 2.4.11 Focus Not Obscured): цель в фокусе не должна
+     прятаться под sticky-шапкой и sticky-тулбаром */
+  scroll-padding-top: calc(var(--header-h) + var(--tools-h) + 0.75rem);
+}
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0;
@@ -61,6 +69,14 @@ img, svg { max-width: 100%; height: auto; display: block; }
 ::selection { background: color-mix(in srgb, var(--accent) 20%, transparent); }
 /* A11y канона лендинга: видимая фокус-обводка акцентом */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Скип-линк канона лендинга (B1 D5): первый таб-стоп страницы, до <main> */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--accent); color: var(--on-accent);
+  padding: .6rem 1rem; border-radius: 0 0 8px 0; font-weight: 600;
+}
+.skip-link:focus { left: 0; }
 
 /* Контейнер: канон .wrap — гаттер 1.25rem на любой ширине */
 .shop-container { max-width: var(--container); margin: 0 auto; padding: 0 var(--gutter); }
@@ -181,8 +197,10 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .footer-link { color: var(--muted); }
 .footer-link:hover { color: var(--accent); }
 .footer-legal { margin: 0; font-size: var(--text-xs); color: var(--muted); white-space: pre-line; }
-/* без hairline: воздух + приглушение (политика линий W7) */
-.footer-powered { margin: 1.5rem 0 0; font-size: var(--text-xs); color: var(--muted); opacity: 0.75; }
+/* без hairline: воздух + приглушение (политика линий W7).
+   B1 (D5): opacity снята — muted на bg и так AA, .75 ронял контраст
+   мелкой строки ниже 4.5:1 */
+.footer-powered { margin: 1.5rem 0 0; font-size: var(--text-xs); color: var(--muted); }
 
 /* ── Hero каталога/категории (канон hero лендинга, W7) ────────
    Центрированный, фон — градиент тинта акцента; kicker-пилюля,
@@ -216,9 +234,11 @@ img, svg { max-width: 100%; height: auto; display: block; }
   overflow: hidden;
 }
 .desc-toggle {
-  display: none; margin: 0.4rem auto 0; padding: 0.5rem 0; border: 0; background: none;
+  display: none; margin: 0.4rem auto 0; padding: 0.75rem 1rem; border: 0; background: none;
   color: var(--accent); font-size: var(--text-sm); font-family: inherit;
   cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+  /* B1 (D5, WCAG 2.5.8): тач-цель ссылки «Ещё» доведена до ~44px */
+  min-height: 2.75rem;
 }
 .desc-toggle[data-visible="1"] { display: inline-block; }
 /* полное SEO-описание — под гридом, перед футером */
@@ -258,20 +278,23 @@ img, svg { max-width: 100%; height: auto; display: block; }
   color: var(--text); font-weight: 500;
 }
 
-/* ── Тулбар каталога (W6 №6, №16 → канон W7) ──────────────────
+/* ── Тулбар каталога — В3 «Одна строка» (B1 D1, выбор владельца) ─
    Мобайл (база): одна sticky-строка под шапкой — «Фильтры» (бейдж)
-   + «Сортировка: <текущая>», обе открывают нижние листы. ≥48rem —
-   десктопная форма одной строкой (поиск ≤20rem, селект ≤12.5rem,
-   группа справа), мобильные кнопки скрыты. Sticky: фон --bg;
-   НИКАКИХ hairline (политика W7) — отделение от контента несёт
-   мягкая тень канона. */
+   + «Сортировка: <текущая>» (нижние листы), чипы ниже переносятся
+   строками (D2, без обрезки). ≥48rem — ОДНА строка мокапа В3:
+   поиск (растёт) · дропдаун сортировки · «Найти» · вертикальный
+   hairline-разделитель · чипы категорий (первые N + «Ещё N») ·
+   счётчик справа. Sticky сохранён: фон --bg; отделение от контента
+   несёт hairline №3 (border-bottom — решение владельца в В3),
+   тени и скруглений кластера НЕТ («не меню-панель»). */
 .cat-tools {
   position: sticky; top: var(--header-h); z-index: 30;
   display: flex; flex-wrap: wrap; align-items: center;
   gap: 0.25rem 0.625rem;
-  margin: 0 calc(var(--gutter) * -1); padding: 0.25rem var(--gutter);
+  margin: 0 calc(var(--gutter) * -1); padding: 0.25rem var(--gutter) 0.625rem;
   background: var(--bg);
-  box-shadow: var(--shadow);
+  /* hairline 3 из 3 разрешённых (политика линий B1 — мокап В3) */
+  border-bottom: 1px solid var(--border);
 }
 .toolbar-mobile {
   display: flex; flex: 1 1 100%; align-items: center; justify-content: space-between; gap: 0.625rem;
@@ -308,7 +331,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
   font-size: var(--text-xs); font-weight: 600;
 }
 /* десктопная форма в базе скрыта (мобайл — кнопки-листы) */
-.search-box, .tools-right { display: none; }
+.search-box, .tools-right, .tools-sep, .tools-count { display: none; }
 .search-box { position: relative; min-width: 0; }
 .search-icon {
   position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
@@ -320,15 +343,50 @@ img, svg { max-width: 100%; height: auto; display: block; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-.sort-box { position: relative; min-width: 0; }
-.field-input.sort-select {
-  width: 100%; min-height: 2.75rem; padding-right: 2.25rem;
-  appearance: none; -webkit-appearance: none; cursor: pointer;
+.sort-box { position: relative; min-width: 0; width: 100%; }
+
+/* ── Кастомный дропдаун (B1 D3) — APG Select-Only Combobox ────
+   Нативный select остаётся в форме источником значения (no-JS
+   фоллбек), dropdown.js строит поверх него кнопку+listbox и прячет
+   селект (.dd-source). Появление списка — fade + 2px сдвиг 160ms,
+   гейт prefers-reduced-motion; шеврон крутится на 180° (канон
+   «rotating chevron»); варианты — тач-цели 2.75rem в базе. */
+.dd { position: relative; min-width: 0; }
+.dd-source { display: none !important; }
+.dd-btn {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  text-align: left; cursor: pointer;
 }
-.sort-chevron {
-  position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
-  width: 0.875rem; height: 0.875rem; color: var(--muted); pointer-events: none;
+.dd-btn .dd-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-chevron {
+  flex: 0 0 auto; width: 0.875rem; height: 0.875rem; color: var(--muted);
+  transition: transform 200ms var(--ease);
 }
+.dd[data-open="1"] .dd-chevron { transform: rotate(180deg); }
+.dd-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 0.25rem); z-index: 60;
+  margin: 0; padding: 0.25rem; list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  box-shadow: var(--shadow);
+  max-height: 20rem; overflow-y: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dd-list { animation: dd-in 160ms var(--ease); }
+  @keyframes dd-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+.dd-opt {
+  display: flex; align-items: center;
+  min-height: 2.75rem; padding: 0.375rem 0.625rem; /* тач-цель 44px, D31 */
+  border-radius: 8px; cursor: pointer; color: var(--text);
+  font-size: var(--text-sm);
+}
+.dd-opt[data-active="1"] { background: var(--bg-soft); }
+.dd-opt[aria-selected="true"] { color: var(--accent); font-weight: 600; background: var(--accent-tint); }
 .search-submit { flex: 0 0 auto; }
 
 /* ── Применённые фильтры — чипы с крестиком (W6 №9) ───────────
@@ -364,26 +422,25 @@ img, svg { max-width: 100%; height: auto; display: block; }
 }
 .applied-reset:hover { color: var(--err); }
 
-/* ── Чипы категорий ───────────────────────────────────────────
-   ОДНА горизонтальная строка на ЛЮБОЙ ширине (v1.6.1: multi-line
-   ragged-wrap запрещён). База: nowrap + overflow-x: auto + scroll-snap
-   (переполнение = скролл), скроллбар скрыт, справа лёгкий фейд —
-   намёк на прокрутку; на ≥48rem фейд выключен. Чип — канон-бордер
-   + пилюля; активный — тинт акцента. */
+/* ── Чипы категорий (B1 D2 — перенос строк + «Ещё N») ─────────
+   МОБАЙЛ (решение владельца B1): чипы ПЕРЕНОСЯТСЯ строками
+   (flex-wrap), «Ещё N» на мобиле не нужен; обрезка чипа пополам
+   ЗАПРЕЩЕНА — чип не сжимается (flex: 0 0 auto) и не переносит
+   текст внутри (min-width: max-content), никаких ellipsis.
+   ДЕСКТОП (≥48rem): чипы живут В строке тулбара (мокап В3);
+   свёрнуто — первые N (лишние .chip-extra спрятаны), развернуто
+   ([data-chips-open="1"]) — чипы переносятся строками под кластером.
+   Активная категория видна всегда (.chip-extra[data-pinned="1"]). */
 .chip-row {
-  display: flex; flex-wrap: nowrap; gap: 0.5rem;
-  margin: 1.25rem 0 1.5rem;
-  overflow-x: auto; overflow-y: hidden;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin: 0.875rem 0 0.25rem;
+  min-width: 0;
+  /* мобайл: чипы — отдельной строкой(ами) под кнопками-листами */
+  flex: 1 1 100%;
 }
-.chip-row::-webkit-scrollbar { display: none; }
 .chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
-  flex: 0 0 auto; scroll-snap-align: start;
+  flex: 0 0 auto; min-width: max-content;
   min-height: 2.75rem; padding: 0.375rem 1rem; border-radius: var(--radius-pill);
   border: 1px solid var(--border); background: var(--card);
   font-size: var(--text-sm); color: var(--muted); cursor: pointer;
@@ -393,6 +450,9 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .chip[aria-current="true"] {
   background: var(--accent-tint); color: var(--accent); border-color: transparent;
 }
+/* кнопка «Ещё N» — раскрытие чипов (десктоп-контрол: на мобиле чипы
+   и так переносятся строками, кнопка не нужна) */
+.chip-more { display: none; }
 /* счётчик товаров в чипе (D27); chip-child — второй уровень дерева (D18):
    иерархию несёт ПОРЯДОК (потомки сразу за родителем), отступ-«дыра»
    margin-left ликвидирована — чипы ровным рядом (v1.6.1) */
@@ -499,12 +559,23 @@ html[data-sheet-open="1"] { overflow: hidden; }
   border: 1px solid var(--border); border-radius: var(--radius-card);
   background: var(--card); box-shadow: var(--shadow);
   overflow: hidden; color: inherit;
-  transition: box-shadow 220ms var(--ease), transform 220ms var(--ease), border-color 220ms var(--ease);
+  /* B1 (D4): contain держит перерисовку карточки внутри её рамки —
+     быстрый скролл грид-страницы не перекрашивает соседей */
+  contain: layout style;
 }
-.product-card:hover {
-  box-shadow: var(--shadow); transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  text-decoration: none;
+/* B1 (D4, гипотеза 3): hover-transform (подъём карточки) и его transition —
+   ТОЛЬКО на устройствах с честным hover. На таче/во время скролла
+   transform не срабатывает вовсе: курсор, пролетающий над карточками
+   при прокрутке, больше не дёргает их переходами. */
+@media (hover: hover) and (pointer: fine) {
+  .product-card {
+    transition: box-shadow 220ms var(--ease), transform 220ms var(--ease), border-color 220ms var(--ease);
+  }
+  .product-card:hover {
+    box-shadow: var(--shadow); transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    text-decoration: none;
+  }
 }
 .product-card-photo {
   position: relative;
@@ -530,7 +601,8 @@ html[data-sheet-open="1"] { overflow: hidden; }
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; justify-content: center;
   min-height: 2.25rem; padding: 0.25rem 0.75rem;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
+  /* 92% карточной подложки: err-текст держит ≥4.5:1 даже над чёрным фото */
+  background: color-mix(in srgb, var(--card) 92%, transparent);
   color: var(--err); font-size: var(--text-sm); font-weight: 600;
 }
 .product-card-body { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem 1.25rem 1.25rem; }
@@ -779,7 +851,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   background: var(--card); color: var(--text);
   font-size: var(--text-md); font-family: inherit;
 }
-.field-input::placeholder, .field-textarea::placeholder { color: var(--muted); opacity: 0.7; }
+.field-input::placeholder, .field-textarea::placeholder { color: var(--muted); /* B1 (D5): без opacity — muted и так AA (5.7:1), .7 ронял до ~3.4:1 */ }
 .field-input:focus, .field-textarea:focus {
   outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent);
 }
@@ -860,6 +932,15 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .account-order-summary { margin: 0.375rem 0 0; color: var(--muted); font-size: var(--text-sm); }
 .account-order-amount { margin: 0.375rem 0 0; font-weight: 600; }
 
+/* ── B1 (D5): prefers-reduced-motion — единый гейт анимаций витрины ──
+   Фейд фото и кросс-фейды гейтятся у себя (F10); здесь — драверы,
+   дропдаун, hover-подъём карточки, чипы-раскрытие: reduce = смена
+   состояния мгновенная. */
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet-overlay, .product-card, .product-card-photo img,
+  .dd-list, .dd-chevron, .chip, .gallery-nav, .qty-btn { transition: none !important; animation: none !important; }
+}
+
 /* ============================================================
    УЛУЧШЕНИЯ — только min-width (мобильный-фёрст).
    30rem — грид 1→2; 48rem (=768px, ЕДИНСТВЕННЫЙ ГЛАВНЫЙ брейкпоинт
@@ -889,18 +970,43 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .applied-row-desktop { display: flex; }
   .applied-row-mobile { display: none; }
   .tools-right { display: flex; flex: 0 0 auto; margin-left: auto; gap: 0.625rem; }
-  .sort-box { flex: 0 1 12.5rem; min-width: 10rem; max-width: 12.5rem; }
-  /* компактные контролы десктопа (крупность несёт корень) */
+  .sort-box { flex: 0 1 12.5rem; min-width: 10rem; max-width: 12.5rem; width: auto; }
+  /* В3: вертикальный hairline-разделитель «Найти | чипы» */
+  .tools-sep {
+    display: block; flex: 0 0 auto; align-self: stretch;
+    width: 1px; background: var(--border); margin: 0.125rem 0.25rem;
+  }
+  /* счётчик справа (мокап В3); строка над гридом на десктопе скрыта */
+  .tools-count { display: inline-block; flex: 0 0 auto; margin-left: auto; color: var(--muted); font-size: var(--text-sm); white-space: nowrap; }
+  .cat-count { display: none; }
+  /* чипы в строке тулбара: свёрнуто — первые N; лишние прячет .chip-extra.
+     min-width: min-content — когда строка тесна, ряд чипов целиком
+     переносится на свою строку (не сжимается и не режется) */
+  .chip-row {
+    flex: 1 1 auto; min-width: min-content;
+    flex-wrap: nowrap; margin: 0 0 0 0.25rem;
+  }
   .chip { min-height: 0; padding: 0.375rem 0.875rem; }
+  .chip-extra { display: none; }
+  /* активная категория ВСЕГДА видна, даже за пределами первых N (D2) */
+  .chip-extra[data-pinned="1"] { display: inline-flex; }
+  /* «Ещё N»: раскрытие → чипы переносятся строками ПОД кластером (D2);
+     count-пилюля на кнопке в раскрытом состоянии не нужна («Свернуть») */
+  .chip-more { display: inline-flex; }
+  .cat-tools[data-chips-open="1"] .chip-row { flex: 1 1 100%; order: 20; flex-wrap: wrap; margin-top: 0.375rem; }
+  .cat-tools[data-chips-open="1"] .chip-extra { display: inline-flex; }
+  .chip-more[data-open="1"] .chip-count { display: none; }
+  /* компактные контролы десктопа (крупность несёт корень).
+     В3 (P3 прошлого критика): поиск, дропдаун и «Найти» — ОДНА высота
+     пиксель-в-пиксель: жёсткая height 2.5rem на всех трёх */
   .icon-btn { width: 2.25rem; height: 2.25rem; } /* канон .theme-toggle */
   .toolbar-btn, .applied-chip, .applied-reset { min-height: 2.25rem; }
   .page-link { min-width: 2.25rem; height: 2.25rem; }
-  .field-input.search-input, .field-input.sort-select { min-height: 2.25rem; }
+  .field-input.search-input, .dd-btn.field-input { height: 2.5rem; min-height: 0; padding-top: 0; padding-bottom: 0; }
+  .dd-opt { min-height: 2.25rem; }
   .btn { min-height: 0; }
-  .btn.search-submit { min-height: 2.25rem; }
+  .btn.search-submit { height: 2.5rem; min-height: 0; padding-top: 0; padding-bottom: 0; }
   .field-input, .field-textarea, .qty-input { font-size: var(--text-sm); }
-  /* фейды скролла не нужны — переполнения обычно нет */
-  .chip-row { -webkit-mask-image: none; mask-image: none; margin: 1.5rem 0 2rem; }
   .crumb-list {
     -webkit-mask-image: none; mask-image: none;
     flex-wrap: wrap; white-space: normal; overflow: visible;

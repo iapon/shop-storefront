@@ -15,9 +15,12 @@
 {%- endcomment -%}
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
+    {%- comment -%} B1 (D4): decoding="async" к loading="lazy" — декодирование
+       снимка не блокирует главный поток при быстром скролле; место под
+       фото зарезервировано контейнером (aspect-ratio 3/4) + width/height. {%- endcomment -%}
     {%- if p.photos and p.photos.size > 0 -%}
-      <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy" width="600" height="800">
-      {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true" loading="lazy" width="600" height="800">{%- endif -%}
+      <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy" decoding="async" width="600" height="800">
+      {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="600" height="800">{%- endif -%}
     {%- else -%}
       <span>нет фото</span>
     {%- endif -%}

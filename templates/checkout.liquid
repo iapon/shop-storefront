@@ -90,7 +90,7 @@
               {%- assign line_photo = line.photos | first -%}
               {%- if line_photo and line_photo.url -%}
               <a class="cart-line-thumb" href="__SHOP_BASE__/product/{{ line.slug }}" tabindex="-1" aria-hidden="true">
-                <img src="{{ line_photo.url }}" alt="" loading="lazy" width="112" height="112">
+                <img src="{{ line_photo.url }}" alt="" loading="lazy" decoding="async" width="112" height="112">
               </a>
               {%- else -%}
               <span class="cart-line-thumb cart-line-thumb-empty" aria-hidden="true"></span>
@@ -126,8 +126,11 @@
       <button class="cart-clear" type="button" data-cart-clear>Очистить корзину</button>
 
       <h2 class="rel-heading">Контакты</h2>
+      {%- comment -%} B1 (D5): ошибки формы — aria-describedby на обязательных
+         полях + aria-invalid (ставит cart.js при неудаче); role=alert на
+         боксе объявляет сообщение сразу. {%- endcomment -%}
       <form class="shop-prose" data-checkout-form novalidate>
-        <div class="form-error" data-form-error role="alert"></div>
+        <div class="form-error" id="checkout-error" data-form-error role="alert"></div>
         {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
            Сервер молча подтверждает пустышку, не создавая заказа. {%- endcomment -%}
         <div class="hp-field" aria-hidden="true">
@@ -135,11 +138,11 @@
         </div>
         <div class="field">
           <label class="field-label" for="co-name">Имя *</label>
-          <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="Иван Петров">
+          <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="Иван Петров" aria-describedby="checkout-error">
         </div>
         <div class="field">
           <label class="field-label" for="co-email">Email *</label>
-          <input class="field-input" id="co-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
+          <input class="field-input" id="co-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru" aria-describedby="checkout-error">
           <p class="field-hint">На этот email придёт подтверждение заказа.</p>
         </div>
         <div class="field">
@@ -175,7 +178,7 @@
   </div>
 
   {%- else -%}
-  <div class="status-screen" style="padding-left:0;padding-right:0;">
+  <div class="status-screen" role="status" style="padding-left:0;padding-right:0;">
     <span class="status-badge brand" aria-hidden="true">🛒</span>
     <h2 class="status-title">{{ cfg.cart_empty_title | default: "Корзина пуста" | escape }}</h2>
     <p class="status-text">Добавьте товары из каталога — они сохранятся, даже если вы ещё не зарегистрированы.</p>

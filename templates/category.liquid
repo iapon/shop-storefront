@@ -105,11 +105,14 @@
 </section>
 <div class="shop-container" data-category-ui data-base="__SHOP_BASE__/category/{{ category.slug | escape }}">
 
-  {%- comment -%} ── Тулбар (W6 №6/№16): sticky-строка ПОД шапкой, контракт каталога.
+  {%- comment -%} ── Тулбар (контракт каталога, В3 «Одна строка» B1 D1):
+      sticky-строка ПОД шапкой с hairline-подчёркиванием (третья канон
+      линия), поиск + дропдаун сортировки (D3) + «Найти». Чипы потомков
+      — ОТДЕЛЬНОЙ строкой ниже (у категории их немного — «Ещё N» не нужен,
+      мобайл переносит строками без обрезки, D2).
       Мобайл — «Фильтры» (нижний лист с поиском; на категории нет полного
       индекса товаров, поэтому кнопка «Найти» без счётчика N) и
-      «Сортировка: <текущая>» (лист-меню); ≥48rem — десктопная форма:
-      поиск + чип применённых + сортировка. {%- endcomment -%}
+      «Сортировка: <текущая>» (лист-меню); ≥48rem — десктопная форма. {%- endcomment -%}
     <form class="cat-tools" method="get" action="__SHOP_BASE__/category/{{ category.slug }}" data-cat-tools>
       <div class="toolbar-mobile">
         <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
@@ -130,14 +133,13 @@
       {% include "partials/applied-filters" %}
       {%- assign ac_mode = "mobile" -%}
       <div class="tools-right">
-        <label class="sr-only" for="category-sort">Сортировка</label>
+        {%- comment -%} B1 (D3): APG-дропдаун поверх нативного select (источник значения). {%- endcomment -%}
         <div class="sort-box">
-          <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select>
+          <select class="field-input sort-select" id="category-sort" name="sort" data-sort-select data-dropdown aria-label="Сортировка">
             <option value="" {% if sort_suffix == blank %}selected{% endif %}>Сначала новые</option>
             <option value="price_asc" {% if sort_suffix == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
             <option value="price_desc" {% if sort_suffix == "price_desc" %}selected{% endif %}>Сначала дороже</option>
           </select>
-          <svg class="sort-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3.5 6 4.5 4.5L12.5 6"/></svg>
         </div>
         <button class="btn btn-secondary search-submit" type="submit">Найти</button>
       </div>
@@ -187,9 +189,9 @@
       (как catalog all.data.products) здесь не видно, честнее кнопка «Найти». ── {%- endcomment -%}
     <div class="sheet-overlay" data-sheet-overlay></div>
 
-  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-label="Фильтры" aria-hidden="true">
+  <aside class="sheet" id="filter-drawer" data-filter-drawer role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title" aria-hidden="true">
       <div class="sheet-head">
-        <span class="sheet-title">Фильтры</span>
+        <span class="sheet-title" id="filter-drawer-title">Фильтры</span>
         <button class="sheet-reset" type="button" data-drawer-reset>Сбросить</button>
         <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
       </div>
@@ -204,9 +206,9 @@
       </div>
     </aside>
 
-    <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-label="Сортировка" aria-hidden="true">
+    <aside class="sheet" id="sort-sheet" data-sort-sheet role="dialog" aria-modal="true" aria-labelledby="sort-sheet-title" aria-hidden="true">
       <div class="sheet-head">
-        <span class="sheet-title">Сортировка</span>
+        <span class="sheet-title" id="sort-sheet-title">Сортировка</span>
         <button class="sheet-close" type="button" data-sheet-close aria-label="Закрыть фильтры">×</button>
       </div>
       <div class="sheet-body">
@@ -223,7 +225,9 @@
   /* W6-CATEGORY-UI-START — контракт каталога (W6-CATALOG-UI) в объёме
      категории: дравер поиска, сортировка-лист (выбор применяет сразу),
      «Ещё» описания, Esc/оверлей. URL-состояние: q/sort в query, page
-     сброс, Back — нативный history. */
+     сброс, Back — нативный history.
+     B1 (D5): dialog-семантика целиком — фокус-трап по Tab, возврат
+     фокуса на открывшую кнопку. */
   (function () {
     var ui = document.querySelector('[data-category-ui]');
     if (!ui) return;
@@ -231,6 +235,7 @@
     var params = new URLSearchParams(location.search);
     var overlay = ui.querySelector('[data-sheet-overlay]');
     var openSheet = null;
+    var sheetOpener = null;
 
     function setOn(el, on) {
       if (!el) return;
@@ -243,10 +248,26 @@
       setOn(overlay, false);
       document.documentElement.setAttribute('data-sheet-open', '0');
       openSheet = null;
+      if (sheetOpener) { sheetOpener.focus(); sheetOpener = null; }
     }
-    function showSheet(el, focusSel) {
+    /* B1 (D5): фокус-трап — Tab циклится внутри открытого диалога */
+    function trapTab(e) {
+      if (!openSheet) return;
+      var focusables = openSheet.querySelectorAll('button, input, [href], select, textarea, [tabindex]:not([tabindex="-1"])');
+      var list = [];
+      for (var i = 0; i < focusables.length; i++) {
+        var el = focusables[i];
+        if (!el.disabled && el.offsetParent !== null) list.push(el);
+      }
+      if (!list.length) return;
+      var first = list[0], last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    function showSheet(el, focusSel, opener) {
       closeSheet();
       openSheet = el;
+      sheetOpener = opener || null;
       setOn(el, true);
       setOn(overlay, true);
       document.documentElement.setAttribute('data-sheet-open', '1');
@@ -255,13 +276,14 @@
     }
     var dOpen = ui.querySelector('[data-drawer-open]');
     var dEl = ui.querySelector('[data-filter-drawer]');
-    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]'); });
+    if (dOpen && dEl) dOpen.addEventListener('click', function () { showSheet(dEl, '[data-drawer-q]', dOpen); });
     var sOpen = ui.querySelector('[data-sort-open]');
     var sEl = ui.querySelector('[data-sort-sheet]');
-    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked'); });
+    if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked', sOpen); });
     if (overlay) overlay.addEventListener('click', closeSheet);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
+      if (e.key === 'Tab') trapTab(e);
     });
     var closes = ui.querySelectorAll('[data-sheet-close]');
     for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
@@ -308,7 +330,7 @@
   /* W6-CATEGORY-UI-END */
   </script>
   {%- else -%}
-  <div class="status-screen">
+  <div class="status-screen" role="status">
     <span class="status-badge error" aria-hidden="true">∅</span>
     <h1 class="status-title">Категория не найдена</h1>
     <p class="status-text">Возможно, категория была переименована или удалена.</p>

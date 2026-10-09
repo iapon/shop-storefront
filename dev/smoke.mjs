@@ -610,14 +610,20 @@ await smokeQtySteppers();
 /* mediaBlock: вырезать сбалансированный по скобкам блок @media-правила
    (наивный [^}] не берёт вложенные правила). */
 const mediaBlock = (cssSrc, header) => {
-  const m = new RegExp(header + '\\s*\\{').exec(cssSrc);
-  if (!m) return '';
-  let depth = 0, i = m.index + m[0].length - 1;
-  for (; i < cssSrc.length; i++) {
-    if (cssSrc[i] === '{') depth++;
-    else if (cssSrc[i] === '}') { depth--; if (depth === 0) break; }
+  // B1: блоков с одним заголовком может быть НЕСКОЛЬКО (отдельный
+  // @media (min-width: 48rem) для теней карточек и т.п.) — склеиваем все.
+  const re = new RegExp(header + '\\s*\\{', 'g');
+  let out = '';
+  let m;
+  while ((m = re.exec(cssSrc))) {
+    let depth = 0, i = m.index + m[0].length - 1;
+    for (; i < cssSrc.length; i++) {
+      if (cssSrc[i] === '{') depth++;
+      else if (cssSrc[i] === '}') { depth--; if (depth === 0) break; }
+    }
+    out += cssSrc.slice(m.index, i + 1) + '\n';
   }
-  return cssSrc.slice(m.index, i + 1);
+  return out;
 };
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
@@ -694,9 +700,16 @@ const mediaBlock = (cssSrc, header) => {
   check(/\.chip\s*\{[^}]*flex:\s*0 0 auto/.test(css), 'чип сжимается внутри строки (должен быть flex: 0 0 auto)');
   check(/\.chip\s*\{[^}]*min-width:\s*max-content/.test(css), 'чип без min-width: max-content — текст может переноситься/обрезаться внутри пилюли');
   check(!/text-overflow:\s*ellipsis[^}]*\}\s*\.chip|\.chip\s*\{[^}]*text-overflow:\s*ellipsis/.test(css), 'на чипе есть ellipsis — обрезка названий категорий запрещена (D2)');
-  check(/\.chip-more\s*\{[^}]*display:\s*none/.test(css), '«Ещё N» не скрыт на мобиле (решение владельца: на мобиле перенос строками)');
+  // B1 дополнение владельца: мобайл = первые 3 слота («Все» + 2 категории)
+  // + «Ещё категории (K)»; чипы — НАВИГАЦИЯ, в дравер «Фильтры» не прячем.
+  check(/\.chip-extra-m\s*\{[^}]*display:\s*none/.test(css), 'мобайл: чипы за 3-м слотом (.chip-extra-m) не спрятаны');
+  check(/\.chip-extra-m\[data-pinned-m="1"\]\s*\{[^}]*display:\s*inline-flex/.test(css), 'мобайл: активная категория за пределами 3 слотов не закреплена (data-pinned-m)');
+  check(/\.chip-more-m\s*\{[^}]*display:\s*inline-flex/.test(css), 'мобайл: кнопка «Ещё категории (K)» не показана');
+  check(/\.chip-more\s*,\s*\.chip-extra-m\s*\{[^}]*display:\s*none/.test(css), 'десктопная кнопка «Ещё N» не скрыта на мобиле');
   const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
   check(/\.chip-more\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: кнопка «Ещё N» не показана');
+  check(/\.chip-more-m\s*\{[^}]*display:\s*none/.test(block48), '≥48rem: мобильная кнопка «Ещё категории (K)» не скрыта');
+  check(/\.chip-extra-m\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: мобильный лимит не снят (chip-extra-m должны быть видны)');
   check(/\.chip-extra\s*\{[^}]*display:\s*none/.test(block48), '≥48rem: лишние чипы (.chip-extra) не спрятаны в свёрнутом состоянии');
   check(/\.chip-extra\[data-pinned="1"\]\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: активная категория за пределами первых N не закреплена (data-pinned)');
   check(/\.cat-tools\[data-chips-open="1"\]\s*\.chip-row\s*\{[^}]*flex-wrap:\s*wrap/.test(block48), '≥48rem: раскрытие «Ещё N» не переносит чипы строками');
@@ -706,12 +719,14 @@ const mediaBlock = (cssSrc, header) => {
     const src = readFileSync(join(rootDir, 'templates', tpl), 'utf8');
     check(src.includes('data-chip-row'), `${tpl}: чипы рендерятся без data-chip-row`);
     check(src.includes('data-chips-more') && src.includes('aria-expanded'), `${tpl}: кнопка «Ещё N» без data-chips-more/aria-expanded`);
+    check(src.includes('chip-more-m') && src.includes('data-pinned-m'), `${tpl}: мобильный лимит (3 слота + «Ещё категории (K)») не в разметке`);
+    check(src.includes('data-more-txt') && src.includes('data-less-txt'), `${tpl}: подписи кнопок «Ещё» не атрибутные (нужны data-more-txt/data-less-txt)`);
   }
   if (fails.length) {
     failed++;
     console.log('FAIL chips-more-less: ' + fails.join(' | '));
   } else {
-    console.log('OK   chips-more-less (мобайл: перенос без обрезки, «Ещё» скрыт; десктоп: первые N + Ещё N + pinned-активная, раскрытие = перенос строк)');
+    console.log('OK   chips-more-less (десктоп: первые N + Ещё N + pinned; мобайл: первые 3 слота + «Ещё категории (K)» + pinned-m; перенос без обрезки)');
   }
 }
 
@@ -731,6 +746,8 @@ const mediaBlock = (cssSrc, header) => {
   const extraCount = (catHtml.match(/chip-extra(?![\w-])/g) || []).length;
   check(extraCount === 3, `рендер: спрятанных чипов .chip-extra ${extraCount} вместо 3`);
   check(catHtml.includes('data-pinned="1"') === false, 'рендер: data-pinned появился без активной категории за пределами N');
+  check(/Ещё категории \(5\)/.test(catHtml), 'рендер: мобильная кнопка «Ещё категории (5)» не посчиталась (8 категорий − 3 слота)');
+  check((catHtml.match(/chip-extra-m(?![\w-])/g) || []).length === 5, 'рендер: мобильных скрытых чипов .chip-extra-m не 5');
   const vis2 = await renderMockPage(engine, 'catalog', null, {
     query: { ...q },
     g_site: { data: { cfg: [{ name: 'Тест', filters_visible: '2' }] } },
@@ -777,15 +794,15 @@ const mediaBlock = (cssSrc, header) => {
   check(/min-width:\s*0/.test(tbRule), 'F2: .toolbar-mobile без min-width: 0 — ряд не сжимается, 320 уходит в h-scroll');
   check(/\.toolbar-btn\s*\{[^}]*min-width:\s*0/.test(css) && /\.toolbar-btn > span\s*\{[^}]*text-overflow:\s*ellipsis/.test(css), 'F2: подпись кнопки тулбара без ellipsis-ужатия');
   const ftRule = /\.shop-footer-inner\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/padding:\s*2rem\s+var\(--gutter\)/.test(ftRule), 'F1: .shop-footer-inner потерял горизонтальный гаттер');
+  check(/padding:\s*(?:var\(--shop-space-7\)|2rem)\s+var\(--gutter\)/.test(ftRule), 'F1: .shop-footer-inner потерял горизонтальный гаттер');
   check(!/<details class="nav-burger"[^>]*\bopen\b/.test(baseSrc), 'F2: у бургера есть open-атрибут в разметке');
   const detailsEnd = baseSrc.indexOf('</details>');
   const guardIdx = baseSrc.indexOf("d.hasAttribute('open')");
   check(detailsEnd > -1 && guardIdx > detailsEnd && guardIdx - detailsEnd < 200, 'F2: гардинный скрипт бургера не стоит сразу после </details>');
   const hiRule = /\.shop-header-inner\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/gap:\s*0\.5rem/.test(hiRule), 'F2: шапка не ужата до одной строки на 320 (нет компактного gap)');
+  check(/gap:\s*(?:var\(--shop-space-2\)|0\.5rem)/.test(hiRule), 'F2: шапка не ужата до одной строки на 320 (нет компактного gap)');
   const ccRule = /\.cart-counter\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/padding:\s*0\.375rem\s+0\.5rem/.test(ccRule), 'F2: пилюля корзины не ужата (inline-паддинг 0.5rem)');
+  check(/padding:\s*(?:var\(--shop-space-\d\)|0\.375rem)\s+(?:var\(--shop-space-2\)|0\.5rem)/.test(ccRule), 'F2: пилюля корзины не ужата (inline-паддинг на шкале)');
   if (fails.length) {
     failed++;
     console.log('FAIL w9-f2-320: ' + fails.join(' | '));

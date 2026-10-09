@@ -176,13 +176,18 @@
       <button class="btn btn-secondary search-submit" type="submit">Найти</button>
     </div>
     <span class="tools-sep" aria-hidden="true"></span>
-    {%- comment -%} ── Чипы категорий (D2): внутри строки тулбара. Первые
-      vis_n чипов видны всегда, дальнейшие — .chip-extra (прячет CSS
-      десктопа в свёрнутом состоянии); АКТИВНАЯ категория ВСЕГДА видима
-      (data-pinned="1" — даже за пределами первых N). Кнопка «Ещё N»
-      раскрывает чипы в перенос строк под кластером (скрипт ниже).
-      Дерево: корни, внутри — потомки вторым уровнем; счётчик чипа —
-      Liquid-подсчёт по all.data.products, кап 100 (D27). {%- endcomment -%}
+    {%- comment -%} ── Чипы категорий (D2 → дополнение владельца B1): внутри
+      строки тулбара. ДВА лимита на ОДНОМ наборе классов:
+      десктоп — первые vis_n (filters_visible, по умолчанию 5) → .chip-extra
+      скрыты, кнопка «Ещё N»; мобайл — первые 3 СЛОТА («Все» + 2 категории;
+      чипы — НАВИГАЦИЯ, в дравер «Фильтры» не прячем: дравер B2 наполнят
+      настоящие фацеты — цена/наличие/варианты) → .chip-extra-m скрыты,
+      кнопка «Ещё категории (K)». АКТИВНАЯ категория всегда видима на обоих
+      (data-pinned / data-pinned-m). Раскрытие — общий тогл data-chips-open
+      на форме (скрипт ниже). Дерево: корни, внутри — потомки вторым
+      уровнем; счётчик чипа — Liquid-подсчёт по all.data.products, кап 100
+      (D27). {%- endcomment -%}
+      {%- assign mobile_vis_n = 3 -%}
     <nav class="chip-row" id="chip-row" data-chip-row aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
       {%- comment -%} «Все» — сброс фильтров, НЕ категория: в лимит vis_n
         не входит; нумеруются только чипы категорий (N=5 = 5 категорий
@@ -195,25 +200,29 @@
         {%- assign chip_n = 0 -%}
         {%- for p in all.data.products -%}{%- if p.categories contains c.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
         {%- assign chip_i = chip_i | plus: 1 -%}
-        {%- assign chip_cls = "chip" -%}{%- assign chip_pin = "" -%}
-        {%- if chip_i > vis_n -%}{%- assign chip_cls = "chip chip-extra" -%}{%- endif -%}
+        {%- assign chip_cls = "chip" -%}{%- assign chip_pin = "" -%}{%- assign chip_pin_m = "" -%}
+        {%- if chip_i > vis_n -%}{%- assign chip_cls = chip_cls | append: " chip-extra" -%}{%- endif -%}
+        {%- if chip_i > mobile_vis_n -%}{%- assign chip_cls = chip_cls | append: " chip-extra-m" -%}{%- endif -%}
         {%- if current_cat == c.slug -%}
           {%- assign chip_active_i = chip_i -%}
           {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
+          {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
         {%- endif -%}
-      <a class="{{ chip_cls }}"{{ chip_pin }} href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
+      <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
         {%- for cc in cats.data.categories -%}
           {%- if cc.parent and cc.parent.id == c.id -%}
           {%- assign chip_n = 0 -%}
           {%- for p in all.data.products -%}{%- if p.categories contains cc.slug -%}{%- assign chip_n = chip_n | plus: 1 -%}{%- endif -%}{%- endfor -%}
           {%- assign chip_i = chip_i | plus: 1 -%}
-          {%- assign chip_cls = "chip chip-child" -%}{%- assign chip_pin = "" -%}
-          {%- if chip_i > vis_n -%}{%- assign chip_cls = "chip chip-child chip-extra" -%}{%- endif -%}
+          {%- assign chip_cls = "chip chip-child" -%}{%- assign chip_pin = "" -%}{%- assign chip_pin_m = "" -%}
+          {%- if chip_i > vis_n -%}{%- assign chip_cls = chip_cls | append: " chip-extra" -%}{%- endif -%}
+          {%- if chip_i > mobile_vis_n -%}{%- assign chip_cls = chip_cls | append: " chip-extra-m" -%}{%- endif -%}
           {%- if current_cat == cc.slug -%}
             {%- assign chip_active_i = chip_i -%}
             {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
+            {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
           {%- endif -%}
-          <a class="{{ chip_cls }}"{{ chip_pin }} href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
+          <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
           {%- endif -%}
         {%- endfor -%}
       {%- endunless -%}
@@ -222,8 +231,22 @@
         {%- assign extra_n = chip_i | minus: vis_n -%}
         {%- if chip_active_i > vis_n -%}{%- assign extra_n = extra_n | minus: 1 -%}{%- endif -%}
         {%- if extra_n > 0 -%}
-        <button class="chip chip-more" type="button" data-chips-more aria-expanded="false" aria-controls="chip-row">
+        <button class="chip chip-more" type="button" data-chips-more aria-expanded="false" aria-controls="chip-row"
+                data-more-txt="Ещё" data-less-txt="Свернуть">
           <span data-chips-more-txt>Ещё</span> <span class="chip-count">{{ extra_n }}</span>
+        </button>
+        {%- endif -%}
+      {%- endif -%}
+      {%- comment -%} мобайл: первые 3 слота («Все» + 2) — чипы-навигация не
+        прячем в дравер; K = скрытые на мобиле (закреплённая активная не
+        считается) {%- endcomment -%}
+      {%- if chip_i > mobile_vis_n -%}
+        {%- assign extra_m = chip_i | minus: mobile_vis_n -%}
+        {%- if chip_active_i > mobile_vis_n -%}{%- assign extra_m = extra_m | minus: 1 -%}{%- endif -%}
+        {%- if extra_m > 0 -%}
+        <button class="chip chip-more-m" type="button" data-chips-more aria-expanded="false" aria-controls="chip-row"
+                data-more-txt="Ещё категории ({{ extra_m }})" data-less-txt="Свернуть">
+          <span data-chips-more-txt>Ещё категории ({{ extra_m }})</span>
         </button>
         {%- endif -%}
       {%- endif -%}
@@ -458,13 +481,19 @@
       } else {
         toolsForm.setAttribute('data-chips-open', open ? '1' : '0');
       }
-      chipsMore.setAttribute('aria-expanded', open ? 'true' : 'false');
-      chipsMore.setAttribute('data-open', open ? '1' : '0');
-      var t = chipsMore.querySelector('[data-chips-more-txt]');
-      if (t) t.textContent = open ? 'Свернуть' : 'Ещё';
+      var mores = ui.querySelectorAll('[data-chips-more]');
+      for (var mi = 0; mi < mores.length; mi++) {
+        mores[mi].setAttribute('aria-expanded', open ? 'true' : 'false');
+        mores[mi].setAttribute('data-open', open ? '1' : '0');
+        var t = mores[mi].querySelector('[data-chips-more-txt]');
+        if (t) t.textContent = mores[mi].getAttribute(open ? 'data-less-txt' : 'data-more-txt') || (open ? 'Свернуть' : 'Ещё');
+      }
     }
     if (chipsMore && chipRow) {
-      chipsMore.addEventListener('click', function () { setChipsOpen(!chipsOpen(), true); });
+      var moresClick = ui.querySelectorAll('[data-chips-more]');
+      for (var mci = 0; mci < moresClick.length; mci++) {
+        moresClick[mci].addEventListener('click', function () { setChipsOpen(!chipsOpen(), true); });
+      }
       document.addEventListener('keydown', function (e) {
         if ((e.key === 'Escape' || e.key === 'Esc') && chipsOpen()) setChipsOpen(false, false);
       });

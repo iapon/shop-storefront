@@ -476,12 +476,16 @@
     }
     /* B1 (D1): если ряд чипов не влез в строку тулбара и ушёл блоком под
        контролы — вертикальный разделитель «Найти | чипы» висеть не должен:
-       data-chips-wrapped прячет его (CSS). Пересчёт — load/resize. */
+       data-chips-wrapped прячет его (CSS). Пересчёт — load/resize.
+       Сравниваются ЦЕНТРЫ строк (align-items:center даёт коротким чипам
+       другой top в той же строке — разница центров одной строки < 12px). */
     var searchBox = ui.querySelector('.search-box');
     function syncChipsWrap() {
       if (!toolsForm || !chipRow || !searchBox) return;
-      var wrapped = chipRow.getBoundingClientRect().top > searchBox.getBoundingClientRect().top + 1;
-      toolsForm.setAttribute('data-chips-wrapped', wrapped ? '1' : '0');
+      var a = chipRow.getBoundingClientRect();
+      var b = searchBox.getBoundingClientRect();
+      var sameLine = Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) < 12;
+      toolsForm.setAttribute('data-chips-wrapped', sameLine ? '0' : '1');
     }
     syncChipsWrap();
     window.addEventListener('resize', syncChipsWrap);

@@ -746,8 +746,8 @@ const mediaBlock = (cssSrc, header) => {
   const extraCount = (catHtml.match(/chip-extra(?![\w-])/g) || []).length;
   check(extraCount === 3, `рендер: спрятанных чипов .chip-extra ${extraCount} вместо 3`);
   check(catHtml.includes('data-pinned="1"') === false, 'рендер: data-pinned появился без активной категории за пределами N');
-  check(/Ещё категории \(5\)/.test(catHtml), 'рендер: мобильная кнопка «Ещё категории (5)» не посчиталась (8 категорий − 3 слота)');
-  check((catHtml.match(/chip-extra-m(?![\w-])/g) || []).length === 5, 'рендер: мобильных скрытых чипов .chip-extra-m не 5');
+  check(/Ещё категории \(6\)/.test(catHtml), 'рендер: мобильная кнопка «Ещё категории (6)» не посчиталась (8 категорий − 2, мандат: 3 чипа включая «Все»)');
+  check((catHtml.match(/chip-extra-m(?![\w-])/g) || []).length === 6, 'рендер: мобильных скрытых чипов .chip-extra-m не 6');
   const vis2 = await renderMockPage(engine, 'catalog', null, {
     query: { ...q },
     g_site: { data: { cfg: [{ name: 'Тест', filters_visible: '2' }] } },

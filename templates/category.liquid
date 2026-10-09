@@ -81,6 +81,11 @@
   {%- assign page_noindex = true -%}
 {%- endif -%}
 {%- capture content -%}
+{%- comment -%} data-shop-main — стабильный контейнер свапа catalog.js
+  (fetch-навигация: поиск/сортировка/чипы потомков/крошки/пагинация;
+  нет JS — обычный SSR). data-cat-base — база магазина (общая с каталогом);
+  tabindex="-1" — фокус на область результатов после свапа. {%- endcomment -%}
+<div data-shop-main data-cat-base="__SHOP_BASE__/" tabindex="-1">
 {%- if category -%}
 {%- comment -%} ── Hero категории (канон лендинга, W7; контракт каталога):
   крошки тихой строкой → H1 clamp → описание 2 строки + «Ещё».
@@ -162,12 +167,12 @@
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
 
-    {%- comment -%} та же формула страниц, что в каталоге (w3-№5); q не теряем {%- endcomment -%}
+    {%- comment -%} та же формула страниц, что в каталоге (w3-№5); q не теряем;
+       page: мусор/0/отрицательное → 1 (plus: 0 | at_least: 1, как в каталоге) {%- endcomment -%}
     {%- assign page_size = 12 -%}
     {%- assign page_size_m1 = page_size | minus: 1 -%}
     {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
-    {%- assign page_no = query.page | plus: 0 -%}
-    {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
+    {%- assign page_no = query.page | plus: 0 | at_least: 1 -%}
     {%- if pages > 1 -%}
       <nav class="pagination" aria-label="Страницы">
         {% for n in (1..pages) %}
@@ -222,13 +227,19 @@
     </aside>
 
   <script>
-  /* W6-CATEGORY-UI-START — контракт каталога (W6-CATALOG-UI) в объёме
-     категории: дравер поиска, сортировка-лист (выбор применяет сразу),
-     «Ещё» описания, Esc/оверлей. URL-состояние: q/sort в query, page
-     сброс, Back — нативный history.
+  /* W6-CATEGORY-UI-START (wave C: re-entrant) — контракт каталога
+     (W6-CATALOG-UI) в объёме категории: дравер поиска, сортировка-лист
+     (выбор применяет сразу), «Ещё» описания, Esc/оверлей. URL-состояние:
+     q/sort в query, page сброс, Back — нативный history (popstate —
+     catalog.js). Переходы (дравер/лист) — через ShopCatalog.navigate
+     (fetch-свап; нет catalog.js — location.assign как раньше).
      B1 (D5): dialog-семантика целиком — фокус-трап по Tab, возврат
-     фокуса на открывшую кнопку. */
+     фокуса на открывшую кнопку. Документные слушатели — одной копией
+     (window.__shopCatUI), элементные — на каждый init (catalog:swap). */
   (function () {
+    var registry = (window.__shopCatUI = window.__shopCatUI || { current: null, wired: false });
+
+    function init() {
     var ui = document.querySelector('[data-category-ui]');
     if (!ui) return;
     var base = ui.getAttribute('data-base') || location.pathname;
@@ -281,10 +292,6 @@
     var sEl = ui.querySelector('[data-sort-sheet]');
     if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked', sOpen); });
     if (overlay) overlay.addEventListener('click', closeSheet);
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
-      if (e.key === 'Tab') trapTab(e);
-    });
     var closes = ui.querySelectorAll('[data-sheet-close]');
     for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
 
@@ -293,7 +300,10 @@
       if (q) sp.set('q', q);
       if (sort) sp.set('sort', sort);
       var qs = sp.toString();
-      window.location.assign(base + (qs ? '?' + qs : ''));
+      var target = base + (qs ? '?' + qs : '');
+      /* волна C: fetch-свап catalog.js; нет его — полная навигация как раньше */
+      if (window.ShopCatalog) window.ShopCatalog.navigate(target);
+      else window.location.assign(target);
     }
     var dq = ui.querySelector('[data-drawer-q]');
     var applyBtn = ui.querySelector('[data-drawer-apply]');
@@ -308,6 +318,13 @@
       (function (r) {
         r.addEventListener('change', function () { applyUrl(params.get('q') || '', r.value); });
       })(sorts[si]);
+    }
+    var sortSel = ui.querySelector('[data-sort-select]');
+    if (sortSel && sortSel.form) {
+      sortSel.addEventListener('change', function () {
+        if (sortSel.form.requestSubmit) sortSel.form.requestSubmit();
+        else sortSel.form.submit(); /* старые браузеры: полная навигация */
+      });
     }
 
     /* hero (W7) живёт вне data-category-ui — ищем по document */
@@ -326,9 +343,27 @@
       });
       syncMore();
     }
+
+    registry.current = { closeSheet: closeSheet, trapTab: trapTab };
+    }
+
+    /* документные слушатели — ровно одна копия, делегируют текущему дереву */
+    if (!registry.wired) {
+      registry.wired = true;
+      document.addEventListener('keydown', function (e) {
+        var c = registry.current;
+        if (!c) return;
+        if (e.key === 'Escape' || e.key === 'Esc') c.closeSheet();
+        else if (e.key === 'Tab') c.trapTab(e);
+      });
+      /* волна C: после fetch-свапа catalog.js — перевесить UI на новое дерево */
+      document.addEventListener('catalog:swap', init);
+    }
+    init();
   })();
   /* W6-CATEGORY-UI-END */
   </script>
+  <script src="/static/js/catalog.js?v={{ site.version }}" defer></script>
   {%- else -%}
   <div class="status-screen" role="status">
     <span class="status-badge error" aria-hidden="true">∅</span>
@@ -337,5 +372,6 @@
     <div class="status-actions"><a class="btn btn-primary btn-lg" href="__SHOP_BASE__/">В каталог</a></div>
   </div>
   {%- endif -%}
+</div>
 {%- endcapture -%}
 {% include "base" %}

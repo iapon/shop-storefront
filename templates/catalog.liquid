@@ -65,6 +65,12 @@
 {%- endif -%}
 {%- assign page_canon = "__SHOP_BASE__/" -%}
 {%- capture content -%}
+{%- comment -%} data-shop-main — стабильный контейнер свапа catalog.js
+  (fetch-навигация по чипам/поиску/сортировке/пагинации без перезагрузок;
+  нет JS — обычный SSR, контейнер ни на что не влияет). data-cat-base —
+  база магазина для определения «свапаемых» ссылок; tabindex="-1" — фокус
+  на область результатов после свапа. {%- endcomment -%}
+<div data-shop-main data-cat-base="__SHOP_BASE__/" tabindex="-1">
 {%- assign q_enc = current_q | default: "" | url_encode -%}
 {%- assign total = count.data.productsCount -%}
 {%- comment -%} W6: подписи тулбара — число применённых фильтров (бейдж кнопки
@@ -276,12 +282,13 @@
      считается ОТ page_size — захардкоженный +11 при page_size=24 занижал
      число страниц и прятал последние товары. | floor обязателен: liquidjs
      делит нацело-неточно (3.0833), а диапазон (1..3.0833) рисует лишнюю
-     страницу; osteele/liquid в проде floor-делит сам — floor идемпотентен. {%- endcomment -%}
+     страницу; osteele/liquid в проде floor-делит сам — floor идемпотентен.
+     page: мусор/0/отрицательное → 1 (plus: 0 гасит нечисла, at_least: 1 —
+     нижняя граница; платформенный фильтр, liquid_filters.go). {%- endcomment -%}
   {%- assign page_size = 12 -%}
   {%- assign page_size_m1 = page_size | minus: 1 -%}
   {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
-  {%- assign page_no = query.page | plus: 0 -%}
-  {%- if page_no < 1 -%}{%- assign page_no = 1 -%}{%- endif -%}
+  {%- assign page_no = query.page | plus: 0 | at_least: 1 -%}
   {%- if pages > 1 -%}
     <nav class="pagination" aria-label="Страницы">
       {% for n in (1..pages) %}
@@ -371,24 +378,30 @@
     уровень доверия, что JSON-LD выше (контент владельца). {%- endcomment -%}
   <script type="application/json" data-products-index>{{ all.data.products | json }}</script>
 
-  {%- comment -%} сортировка применяется сразу — select сам сабмитит GET-форму (D20);
-     статичный query-текст, инъекции не проходят (белый список — во флоу) {%- endcomment -%}
+  {%- comment -%} UI каталога, волна C: скрипт РЕЕНТЕРАБЕЛЕН — инлайновый UI
+    (листы/дравер/чипы/сортировка) перевешивается на новое дерево после
+    fetch-свапа catalog.js (событие catalog:swap). ДОКУМЕНТНЫЕ/ОКОННЫЕ
+    слушатели — ОДНОЙ копией (реестр window.__shopCatUI, диспетчер делегирует
+    текущему экземпляру), элементные — на каждый init. Сортировка-select
+    (бывший отдельный скрипт) сабмитит форму через requestSubmit — submit
+    событие ловит делегирование catalog.js (fetch-свап); form.submit() бы
+    событие обошёл (полная перезагрузка). Драверы/лист сортировки строят URL
+    сами и отдают в ShopCatalog.navigate (fetch-свап; нет catalog.js —
+    location.assign как раньше). Статичный query-текст, инъекции не проходят
+    (белый список — во флоу). {%- endcomment -%}
   <script>
-  (function () {
-    var s = document.querySelector('[data-sort-select]');
-    if (s) s.addEventListener('change', function () { if (s.form) s.form.submit(); });
-  })();
-  </script>
-  <script>
-  /* W6-CATALOG-UI-START
+  /* W6-CATALOG-UI-START (wave C: re-entrant)
      №4 крошки-автоскролл · №6-9 дравер/чипы/бейдж · №8 «Показать N» по
      черновику · №10 URL-состояние (q/cat/sort в query, page сброс,
-     Back — нативный history) · №11 сортировка-лист · №15 «Ещё».
-     B1 (D5): драверы — dialog-семантика целиком: фокус-трап по Tab,
-     возврат фокуса на открывшую кнопку. B1 (D2): «Ещё N» раскрывает
+     Back — нативный history + popstate catalog.js) · №11 сортировка-лист ·
+     №15 «Ещё». B1 (D5): драверы — dialog-семантика целиком: фокус-трап по
+     Tab, возврат фокуса на открывшую кнопку. B1 (D2): «Ещё N» раскрывает
      чипы в перенос строк (анимация высоты кластера ~180ms, гейт
      prefers-reduced-motion), Esc и клик-вне сворачивают. */
   (function () {
+    var registry = (window.__shopCatUI = window.__shopCatUI || { current: null, wired: false });
+
+    function init() {
     var ui = document.querySelector('[data-catalog-ui]');
     if (!ui) return;
     var base = ui.getAttribute('data-base') || '/';
@@ -443,10 +456,6 @@
     var sEl = ui.querySelector('[data-sort-sheet]');
     if (sOpen && sEl) sOpen.addEventListener('click', function () { showSheet(sEl, 'input[name="sort-choice"]:checked', sOpen); });
     if (overlay) overlay.addEventListener('click', closeSheet);
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' || e.key === 'Esc') closeSheet();
-      if (e.key === 'Tab') trapTab(e);
-    });
     var closes = ui.querySelectorAll('[data-sheet-close]');
     for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
 
@@ -495,20 +504,13 @@
       for (var mci = 0; mci < moresClick.length; mci++) {
         moresClick[mci].addEventListener('click', function () { setChipsOpen(!chipsOpen(), true); });
       }
-      document.addEventListener('keydown', function (e) {
-        if ((e.key === 'Escape' || e.key === 'Esc') && chipsOpen()) setChipsOpen(false, false);
-      });
-      document.addEventListener('click', function (e) {
-        if (!chipsOpen()) return;
-        if (chipRow.contains(e.target)) return;
-        setChipsOpen(false, false);
-      });
     }
     /* B1 (D1): если ряд чипов не влез в строку тулбара и ушёл блоком под
        контролы — вертикальный разделитель «Найти | чипы» висеть не должен:
-       data-chips-wrapped прячет его (CSS). Пересчёт — load/resize.
-       Сравниваются ЦЕНТРЫ строк (align-items:center даёт коротким чипам
-       другой top в той же строке — разница центров одной строки < 12px). */
+       data-chips-wrapped прячет его (CSS). Пересчёт — load/resize (окнный
+       слушатель — синглтон внизу реестра). Сравниваются ЦЕНТРЫ строк
+       (align-items:center даёт коротким чипам другой top в той же строке —
+       разница центров одной строки < 12px). */
     var searchBox = ui.querySelector('.search-box');
     function syncChipsWrap() {
       if (!toolsForm || !chipRow || !searchBox) return;
@@ -518,7 +520,6 @@
       toolsForm.setAttribute('data-chips-wrapped', sameLine ? '0' : '1');
     }
     syncChipsWrap();
-    window.addEventListener('resize', syncChipsWrap);
 
     /* ---- дравер: черновик → «Показать N» (batch-применение, №8) ---- */
     function draft() {
@@ -540,7 +541,12 @@
       var qs = sp.toString();
       return st.goto + (qs ? '?' + qs : '');
     }
-    function applyUrl(st) { window.location.assign(buildUrl(st)); } /* №10: Back возвращает */
+    function applyUrl(st) {
+      var target = buildUrl(st);
+      /* волна C: fetch-свап catalog.js; нет его — полная навигация как раньше */
+      if (window.ShopCatalog) window.ShopCatalog.navigate(target);
+      else window.location.assign(target);
+    }
 
     var INDEX = [];
     var idxEl = ui.querySelector('[data-products-index]');
@@ -579,7 +585,15 @@
       syncN();
     });
 
-    /* ---- сортировка-лист: выбор применяет сразу (полная навигация, №11) ---- */
+    /* ---- сортировка: select (D20, requestSubmit → submit событие ловит
+       catalog.js) и лист (выбор применяет сразу, №11) ---- */
+    var sortSel = ui.querySelector('[data-sort-select]');
+    if (sortSel && sortSel.form) {
+      sortSel.addEventListener('change', function () {
+        if (sortSel.form.requestSubmit) sortSel.form.requestSubmit();
+        else sortSel.form.submit(); /* старые браузеры: полная навигация */
+      });
+    }
     var sorts = ui.querySelectorAll('input[name="sort-choice"]');
     for (var si = 0; si < sorts.length; si++) {
       (function (r) {
@@ -607,11 +621,53 @@
       syncMore();
     }
 
+    registry.current = {
+      closeSheet: closeSheet,
+      trapTab: trapTab,
+      chipsOpen: chipsOpen,
+      setChipsOpen: setChipsOpen,
+      chipRow: chipRow,
+      syncChipsWrap: syncChipsWrap
+    };
+    }
+
+    /* документные/оконные слушатели — ровно одна копия на страницу,
+       делегируют текущему экземпляру UI (после свапа — свежему дереву) */
+    if (!registry.wired) {
+      registry.wired = true;
+      document.addEventListener('keydown', function (e) {
+        var c = registry.current;
+        if (!c) return;
+        if (e.key === 'Escape' || e.key === 'Esc') {
+          c.closeSheet();
+          if (c.chipsOpen()) c.setChipsOpen(false, false);
+        } else if (e.key === 'Tab') {
+          c.trapTab(e);
+        }
+      });
+      document.addEventListener('click', function (e) {
+        var c = registry.current;
+        if (!c || !c.chipsOpen()) return;
+        if (c.chipRow.contains(e.target)) return;
+        c.setChipsOpen(false, false);
+      });
+      window.addEventListener('resize', function () {
+        if (registry.current) registry.current.syncChipsWrap();
+      });
+      /* волна C: после fetch-свапа catalog.js — перевесить UI на новое дерево */
+      document.addEventListener('catalog:swap', init);
+    }
+    init();
+
     /* №4 (крошки-автоскролл) живёт в partials/breadcrumbs — там же, где
-       разметка; продукт и категория получают его без каталогного скрипта. */
+       разметка; продукт и категория получают его без каталогного скрипта.
+       После свапа крошки скроллит catalog.js (инлайновый скрипт партиала
+       при innerHTML-свапе не перезапускается). */
   })();
   /* W6-CATALOG-UI-END */
   </script>
+  <script src="/static/js/catalog.js?v={{ site.version }}" defer></script>
+</div>
 </div>
 
 {%- endcapture -%}

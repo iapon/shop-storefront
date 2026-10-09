@@ -1116,9 +1116,11 @@ await smokeW9Cart();
   check(!/filter:\s*brightness/.test(tokens), 'b1-v2: GPU-фильтр яркости остался в tokens.css');
   check(/:where\(\[data-theme="dynamica-dark"\]\)[^{]*\{[^}]*opacity:\s*\.92/.test(tokens), 'b1-v2: затемнение фото тёмной темы не opacity .92');
 
-  // (5) ниже-фолд: content-visibility на «Похожих»
-  check(/\.rel-grid\s*\{[^}]*content-visibility:\s*auto/.test(css), 'b1-v2: rel-grid без content-visibility auto');
-  check(/\.rel-grid\s*\{[^}]*contain-intrinsic-size/.test(css), 'b1-v2: rel-grid без contain-intrinsic-size');
+  // (5) ниже-фолд: content-visibility на «Похожих» СНЯТ (7870f1b, решение
+  //     владельца: paint-containment клипал наружные тени крайних карточек
+  //     к padding-box грида — рваный стиль против каталога; фото и так lazy)
+  check(!/\.rel-grid\s*\{[^}]*content-visibility/.test(css), 'b1-v2: rel-grid вернул content-visibility (клипал тени крайних карточек — 7870f1b)');
+  check(!/\.rel-grid\s*\{[^}]*contain-intrinsic-size/.test(css), 'b1-v2: rel-grid вернул contain-intrinsic-size (7870f1b)');
 
   // (8) глитч-хант: с карточки снята изоляция слоёв (contain/overflow), клип фото — на .product-card-photo; скролл-гард is-scrolling
   check(!/\.product-card\s*\{[^}]*contain:/.test(css), 'b1-v2: у карточки остался contain (изоляция слоёв не снята)');
@@ -1169,7 +1171,7 @@ await smokeW9Cart();
     failed++;
     console.log('FAIL b1-v2-jank: ' + fails.join(' | '));
   } else {
-    console.log('OK   b1-v2-jank (шапка без blur; hover=бордер 80ms; тёмные тени=none в токенах; фото dark=opacity .92; rel-grid content-visibility; каталог eager 8/high 4/lazy дальше; слайд 1 eager+high; «Похожие» lazy)');
+    console.log('OK   b1-v2-jank (шапка без blur; hover=бордер 80ms; тёмные тени=none в токенах; фото dark=opacity .92; rel-grid БЕЗ content-visibility — 7870f1b; каталог eager 8/high 4/lazy дальше; слайд 1 eager+high; «Похожие» lazy)');
   }
 }
 

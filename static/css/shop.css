@@ -554,17 +554,12 @@ html[data-sheet-open="1"] { overflow: hidden; }
   display: grid; gap: 1.1rem;
   grid-template-columns: minmax(0, 1fr);
 }
-/* B1-v2 (джанк-фиск): ниже-фолд секция «Похожие» (страница товара) не
-   рендерится, пока не приблизилась к вьюпорту — скролл страницы не
-   красит её заранее (paint/layаут отложены, lazy-фото внутри грузятся
-   только при приближении). contain-intrinsic-size — оценка высоты,
-   чтобы скроллбар не прыгал до первого рендера (auto запоминает
-   фактическую после). ГЛАВНЫЙ грид каталога не трогаем — он и есть
-   контент первого экрана. */
-.rel-grid {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 30rem;
-}
+/* B2 (владелец 2026-10-09): content-visibility/contain-intrinsic-size на
+   «Похожих» СНЯТЫ. Paint-containment от content-visibility клипает наружные
+   тени крайних карточек к padding-box грида (рваный стиль против каталога;
+   живой замер: полосы слева/справа/снизу были чистым белым 255, после
+   content-visibility:visible тень возвращается). Цена отказа мала — фото в
+   карточках и так loading="lazy". */
 /* ── Карточка товара (W6 №20-22 → канон-карточка W7) ──────────
    Канон: border var(--border), radius 12px, тень --shadow.
    Фото — ЕДИНЫЙ аспект 3:4, object-fit: cover, лениво, width/height

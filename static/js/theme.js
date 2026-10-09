@@ -23,6 +23,28 @@
 (function () {
   'use strict';
 
+  /* ── Скролл-гард hover-перерисовок карточек (B1-v2 глитч-фиск) ──
+     На время прокрутки <html> несёт класс is-scrolling: CSS гасит
+     transition карточек (html.is-scrolling .product-card) — пересечение
+     курсором карточек при скролле не порождает repaint'ов вовсе
+     (находка владельца: артефакт композитинга «карточка двоится» на
+     слабом GPU; этот переход был единственной перерисовкой ВО ВРЕМЯ
+     скролла). Класс снимается через 100ms после последнего события
+     скролла — hover оживает сразу после остановки. Размещено здесь,
+     а не отдельным статиком: файл и так управляет состоянием <html>
+     (theme-transition) и загружен на всех страницах; новый файл =
+     +1 оп визарда. */
+  (function () {
+    var idle = 0;
+    window.addEventListener('scroll', function () {
+      document.documentElement.classList.add('is-scrolling');
+      window.clearTimeout(idle);
+      idle = window.setTimeout(function () {
+        document.documentElement.classList.remove('is-scrolling');
+      }, 100);
+    }, { passive: true });
+  })();
+
   var KEY = 'dynamica-theme';
   var FALLBACK_ARIA = {
     auto: 'Тема: системная. Переключить',

@@ -579,11 +579,26 @@ html[data-sheet-open="1"] { overflow: hidden; }
   /* B1 (находка владельца, 320): на телефоне карточка плоская — hairline
      без blur-тени (нативный мобильный паттерн «карточки вплотную»; сумма
      «гуттер + мягкая тень» читалась толстым полем от края экрана) */
-  overflow: hidden; color: inherit;
-  /* B1 (D4): contain держит перерисовку карточки внутри её рамки —
-     быстрый скролл грид-страницы не перекрашивает соседей */
-  contain: layout style;
+  color: inherit;
+  /* B1-v2 глитч-хант (коррекция диагноза: системное «двоение при скролле» —
+     старые растровые тайлы изолированных слоёв показываются в новой позиции
+     кадра): с карточки СНЯТА изоляция слоёв целиком — ни contain (клауз
+     B1 D4: CLS и так держат width/height фото), ни overflow:hidden
+     (клип-остров). Скругление фото теперь клипует сам .product-card-photo
+     (радиус верхних углов + свой overflow:hidden на маленьком боксе фото);
+     фон/бордер карточки округляются нативно по border-radius. Карточка
+     перестаёт быть дорогим комбайном «box-shadow + radius + overflow + contain»
+     на каждый кадр скролла. */
 }
+/* B1-v2 глитч-фиск: во время прокрутки (JS вешает is-scrolling на <html>
+   на scroll, снятие через 100ms idle — theme.js) hover-переходы карточки
+   и кросс-фейд её фото выключены: пересечение курсором карточек при
+   скролле не порождает repaint вообще. transition:none схлопывает
+   переход к целевому значению мгновенно — застреваний не бывает.
+   Против СИСТЕМНОГО двоения гард бесполезен (курсор не при чём), но
+   снимает вопрос стационарного курсора на других машинах. */
+html.is-scrolling .product-card,
+html.is-scrolling .product-card-photo img { transition: none !important; }
 @media (min-width: 48rem) { .product-card { box-shadow: var(--shop-shadow-card); } }
 /* B1-v2 (находка владельца «дёрганье картинок при скролле»): у карточки
    НЕТ анимированной тени. Hover = ТОЛЬКО border-color с переходом 80ms
@@ -602,6 +617,13 @@ html[data-sheet-open="1"] { overflow: hidden; }
 .product-card-photo {
   position: relative;
   aspect-ratio: 3 / 4; width: 100%;
+  /* B1-v2 глитч-хант: клип фото переехал с карточки сюда — радиус верхних
+     углов = радиус карточки минус её бордер (снизу — ноль: там тело
+     карточки); свой overflow:hidden клипает img на МАЛЕНЬКОМ боксе фото.
+     Фон-подложка тоже округлена — без карточного overflow угол не светит
+     квадратом на фоне страницы. */
+  border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+  overflow: hidden;
   background: var(--bg-soft); color: var(--muted);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--text-sm);

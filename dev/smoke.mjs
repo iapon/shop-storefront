@@ -263,6 +263,7 @@ function makeToggleDom(hostname) {
   });
 
   const domListeners = {};
+  const winListeners = {};
   const document = {
     get cookie() { return cookieString(); },
     set cookie(v) { writeCookie(v); },
@@ -281,8 +282,13 @@ function makeToggleDom(hostname) {
     location: { hostname },
     matchMedia: () => ({ matches: false }),
     setTimeout: () => 0,
+    /* B1-v2 глитч-фиск: theme.js вешает скролл-гард is-scrolling на
+       window (scroll, passive) — стаб собирает слушатели, чтобы проба
+       могла проверить сам факт подписки. */
+    addEventListener(type, fn, opts) { (winListeners[type] ??= []).push({ fn, opts }); },
+    clearTimeout: () => 0,
   };
-  return { document, window, localStorage, toggle, html, jar, domListeners };
+  return { document, window, localStorage, toggle, html, jar, domListeners, winListeners };
 }
 
 function runThemeJs(dom) {
@@ -300,6 +306,11 @@ function smokeThemeToggle() {
   //    кука — на .dynapi.ru, aria-label следует за режимом.
   const dom = makeToggleDom('mag.dynapi.ru');
   runThemeJs(dom);
+  // B1-v2 глитч-фиск: скролл-гард is-scrolling подписан на scroll пассивно
+  const scrollSub = (dom.winListeners.scroll ?? [])[0];
+  check(!!scrollSub && scrollSub.opts && scrollSub.opts.passive === true, 'глитч: скролл-гард не подписан на scroll пассивно');
+  scrollSub.fn(); // событие скролла в песочнице: класс is-scrolling появляется на <html>
+  check(dom.html.classList._s.has('is-scrolling'), 'глитч: событие скролла не поднимает is-scrolling на <html>');
   check(dom.html.attrs['data-theme'] === 'dynamica-light', 'boot (auto, ОС светлая): ожидалась dynamica-light');
   check(dom.toggle.attrs['aria-label'] === 'Тема: системная. Переключить', `boot: aria-label не «системная»: ${dom.toggle.attrs['aria-label']}`);
   check(dom.toggle.attrs.title === 'Тема: системная. Переключить', 'boot: title не проставлен');
@@ -1108,6 +1119,14 @@ await smokeW9Cart();
   // (5) ниже-фолд: content-visibility на «Похожих»
   check(/\.rel-grid\s*\{[^}]*content-visibility:\s*auto/.test(css), 'b1-v2: rel-grid без content-visibility auto');
   check(/\.rel-grid\s*\{[^}]*contain-intrinsic-size/.test(css), 'b1-v2: rel-grid без contain-intrinsic-size');
+
+  // (8) глитч-хант: с карточки снята изоляция слоёв (contain/overflow), клип фото — на .product-card-photo; скролл-гард is-scrolling
+  check(!/\.product-card\s*\{[^}]*contain:/.test(css), 'b1-v2: у карточки остался contain (изоляция слоёв не снята)');
+  check(!/\.product-card\s*\{[^}]*overflow:\s*hidden/.test(css), 'b1-v2: у карточки остался overflow:hidden (клип-остров)');
+  check(/\.product-card-photo\s*\{[^}]*overflow:\s*hidden/.test(css) && /\.product-card-photo\s*\{[^}]*border-radius:\s*calc/.test(css), 'b1-v2: клип фото не переехал на .product-card-photo');
+  check(/html\.is-scrolling \.product-card[,{][^}]*transition:\s*none\s*!important/.test(css), 'b1-v2: нет скролл-гарда is-scrolling для карточки');
+  const themeSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'theme.js'), 'utf8');
+  check(themeSrc.includes("classList.add('is-scrolling')") && themeSrc.includes('100'), 'b1-v2: в theme.js нет скролл-гарда is-scrolling (100ms idle)');
 
   // (6) загрузка фото каталога: eager первые 8, fetchpriority первые 4, lazy дальше
   const many = [];

@@ -58,9 +58,9 @@
       <h1 class="status-title">Вход</h1>
       <p class="status-text">С заказами, сохранённой корзиной и историей покупок.</p>
       {%- if query.failed == "1" -%}
-        <p class="form-error" data-visible role="alert">Неверный email или пароль — попробуйте ещё раз.</p>
+        <p class="form-error" data-visible="1" role="alert">Неверный email или пароль — попробуйте ещё раз.</p>
       {%- endif -%}
-      <form class="auth-form" method="post" action="/login" novalidate>
+      <form class="auth-form" method="post" action="/login">
         <div class="field">
           <label class="field-label" for="lg-email">Email</label>
           <input class="field-input" id="lg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">
@@ -71,6 +71,7 @@
         </div>
         <button class="btn btn-primary btn-lg" type="submit">Войти</button>
       </form>
+      <script src="/static/js/auth.js?v={{ site.version }}" defer></script>
       <p class="field-hint" style="margin-top:1rem;">Нет аккаунта? <a href="/register">Зарегистрируйтесь</a> — корзина гостя переедет в ваш кабинет.</p>
     {%- endif -%}
   </div>

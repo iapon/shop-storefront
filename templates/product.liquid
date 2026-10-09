@@ -99,30 +99,46 @@
     {%- assign bc_parent_title = nil -%}{%- assign bc_parent_slug = nil -%}
     <div class="product-page-cols">
     <div class="product-gallery" data-gallery>
-      <div class="product-photo">
-        {%- if product.photos and product.photos.size > 0 -%}
-        <img data-gallery-main src="{{ product.photos[0].url }}" alt="{{ product.title }}" decoding="async" width="800" height="1000">
-        <img data-gallery-fade class="gallery-img-fade" src="{{ product.photos[0].url }}" alt="" aria-hidden="true" decoding="async" width="800" height="1000">
-        {%- else -%}
-        <img data-gallery-main src="/static/photos/placeholder.svg" alt="нет фото" width="800" height="1000">
-        {%- endif -%}
+      <div class="gallery-viewport">
+        <div class="gallery-track" data-gallery-track tabindex="0" role="group"
+             aria-roledescription="карусель" aria-label="Фотографии: {{ product.title | escape }}">
+          {%- comment -%} B1-v2 (джанк-фиск): первый кадр — eager +
+             fetchpriority="high" (LCP снимка), остальные — lazy +
+             decoding="async"; слайды в фиксированном аспекте 4/5 —
+             прыжков раскладки нет при любых пропорциях снимков. {%- endcomment -%}
+          {%- if product.photos and product.photos.size > 0 -%}
+          {%- for ph in product.photos -%}
+          <div class="gallery-slide" role="group" aria-roledescription="слайд"
+               aria-label="Фото {{ forloop.index }} из {{ product.photos.size }}">
+            <img src="{{ ph.url }}" alt="{{ product.title | escape }} — фото {{ forloop.index }}"
+                 decoding="async" width="800" height="1000"
+                 {%- if forloop.first %} fetchpriority="high"{% else %} loading="lazy"{% endif -%}>
+          </div>
+          {%- endfor -%}
+          {%- else -%}
+          <div class="gallery-slide">
+            <img src="/static/photos/placeholder.svg" alt="нет фото" width="800" height="1000">
+          </div>
+          {%- endif -%}
+        </div>
         {%- if product.photos and product.photos.size > 1 -%}
         <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Предыдущее фото">‹</button>
         <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Следующее фото">›</button>
         {%- endif -%}
       </div>
       {%- if product.photos and product.photos.size > 1 -%}
-      <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title }}">
+      <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title | escape }}">
         {%- comment -%} B1 (D5): стрелки клавиатуры на полосе миниатюр —
            Left/Right шагают по фото (скрипт галереи ниже). {%- endcomment -%}
         {%- for ph in product.photos -%}
         <button class="gallery-thumb{% if forloop.first %} is-active{% endif %}" type="button"
-                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title }} — фото {{ forloop.index }} из {{ product.photos.size }}"
+                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title | escape }} — фото {{ forloop.index }} из {{ product.photos.size }}"
                 {% if forloop.first %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>
           <img src="{{ ph.url }}" alt="" loading="lazy" decoding="async" width="96" height="120">
         </button>
         {%- endfor -%}
       </div>
+      <p class="sr-only" data-gallery-status role="status" aria-live="polite"></p>
       {%- endif -%}
     </div>
     <div class="product-info">
@@ -162,50 +178,60 @@
   </div>
 
   <script>
-  /* галерея: миниатюра/стрелка меняет главное фото (SSR-первое фото —
-     без JS тоже видно); стрелки циклично шагают по photos-массиву.
-     W9 (F10): смена — мягкий кросс-фейд ~200ms двумя слоями img
-     (новое фото проявляется верхним слоем, затем нижний получает тот же
-     src и верхний гасится мгновенно); при prefers-reduced-motion CSS
-     выключает transition — смена src остаётся мгновенной.
-     B1 (D5): Left/Right на полосе миниатюр шагают по фото (клавиатура),
-     активная миниатюра несёт aria-pressed. */
+  /* Галерея v2 (B1-v2): нативная scroll-snap карусель — свайп на таче
+     бесплатный (композитор, ноль JS в кадре), миниатюры/стрелки скроллят
+     track smooth scrollTo, позицию показывает is-active миниатюры.
+     Скролл-событие гейтится rAF (один sync на кадр); prefers-reduced-
+     motion — все прокрутки 'auto' (мгновенные). A11y: track/slide несут
+     role=group + aria-roledescription (APG carousel), смена кадра
+     объявляется sr-only status-строкой. Первый кадр eager +
+     fetchpriority="high" (шаблон), остальные lazy — не противоречит
+     джанк-фиксу карточек. Без JS: track остаётся горизонтальным
+     скроллером (свайп работает и без скрипта), миниатюры — обычные
+     кнопки без синхронизации. */
   (function () {
-    var main = document.querySelector('[data-gallery-main]');
-    var fade = document.querySelector('[data-gallery-fade]');
+    var track = document.querySelector('[data-gallery-track]');
     var thumbs = document.querySelectorAll('[data-gallery-thumb]');
-    if (!main || !thumbs.length) return;
-    var urls = [];
-    for (var i = 0; i < thumbs.length; i++) urls.push(thumbs[i].getAttribute('data-gallery-thumb'));
-    function activate(idx) {
-      if (idx < 0) idx = urls.length - 1;
-      if (idx >= urls.length) idx = 0;
-      var url = urls[idx];
-      for (var j = 0; j < thumbs.length; j++) {
-        thumbs[j].classList.toggle('is-active', j === idx);
-        thumbs[j].setAttribute('aria-pressed', j === idx ? 'true' : 'false');
-      }
-      var act = thumbs[idx];
-      if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-      if (!fade || main.getAttribute('src') === url) { main.src = url; return; }
-      /* кросс-фейд: верхний слой проявляет новое фото */
-      fade.src = url;
-      fade.setAttribute('data-visible', '1');
-      window.setTimeout(function () {
-        main.src = url;
-        fade.removeAttribute('data-visible');
-      }, 220);
+    if (!track || !thumbs.length) return;
+    var n = thumbs.length;
+    var status = document.querySelector('[data-gallery-status]');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function behavior() { return reduce ? 'auto' : 'smooth'; }
+    function active() {
+      var w = track.clientWidth;
+      if (!w) return 0;
+      return Math.min(n - 1, Math.max(0, Math.round(track.scrollLeft / w)));
     }
-    for (var k = 0; k < thumbs.length; k++) {
+    var last = -1;
+    function sync() {
+      var i = active();
+      if (i === last) return;
+      last = i;
+      for (var j = 0; j < n; j++) {
+        thumbs[j].classList.toggle('is-active', j === i);
+        thumbs[j].setAttribute('aria-pressed', j === i ? 'true' : 'false');
+      }
+      if (status) status.textContent = 'Фото ' + (i + 1) + ' из ' + n;
+      var act = thumbs[i];
+      if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: behavior() });
+    }
+    function go(idx) {
+      idx = (idx + n) % n;
+      track.scrollTo({ left: idx * track.clientWidth, behavior: behavior() });
+    }
+    var raf = 0;
+    track.addEventListener('scroll', function () {
+      if (raf) return;
+      raf = window.requestAnimationFrame(function () { raf = 0; sync(); });
+    }, { passive: true });
+    for (var k = 0; k < n; k++) {
       (function (idx) {
-        thumbs[idx].addEventListener('click', function () { activate(idx); });
+        thumbs[idx].addEventListener('click', function () { go(idx); });
       })(k);
     }
-    var cur = 0;
     document.querySelectorAll('[data-gallery-step]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        cur = (cur + Number(btn.getAttribute('data-gallery-step')) + urls.length) % urls.length;
-        activate(cur);
+        go(active() + Number(btn.getAttribute('data-gallery-step')));
       });
     });
     var strip = document.querySelector('[data-gallery-thumbs]');
@@ -213,19 +239,21 @@
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
       var dir = e.key === 'ArrowRight' ? 1 : -1;
-      for (var i = 0; i < thumbs.length; i++) if (thumbs[i].classList.contains('is-active')) cur = i;
-      cur = (cur + dir + urls.length) % urls.length;
-      activate(cur);
-      thumbs[cur].focus();
+      var i = (active() + dir + n) % n;
+      go(i);
+      thumbs[i].focus();
     });
+    sync();
   })();
   </script>
 
     {%- if rel.data.products.size > 0 -%}
+    {%- assign card_lazy_all = true -%}{%- comment -%} B1-v2: «Похожие» ниже фолда — карточки всегда lazy {%- endcomment -%}
     <h2 class="rel-heading">Похожие товары</h2>
     <div class="rel-grid">
       {% for p in rel.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
+    {%- assign card_lazy_all = nil -%}
     {%- endif -%}
 
   {%- else -%}

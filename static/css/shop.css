@@ -87,16 +87,19 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .text-3 { color: var(--muted); }
 .mono { font-family: var(--font-mono); }
 
-/* ── Шапка: sticky + blur канона лендинга ─────────────────────
+/* ── Шапка: sticky, сплошной фон ─────────────────────────────
    Одна строка на любой ширине: лого | nav (≥48rem) | действия
    (корзина, тема, burger). Member-ссылки (Кабинет/Выйти, Войти/
    Регистрация) на мобиле живут в burger-details (нативный паттерн
    лендинга) — в строке остаются только иконки 2.75rem, слипаться
-   нечему (разнос владельца «шапка в кашу», W7). */
+   нечему (разнос владельца «шапка в кашу», W7).
+   B1-v2 (джанк-фиск): blur + полупрозрачный фон УДАЛЕНЫ —
+   backdrop-filter перерисовывает подложку каждый кадр скролла;
+   сплошной var(--bg) стоит ноль и над прокручиваемым контентом
+   читается так же (hairline уже отделяет шапку). */
 .shop-header {
   position: sticky; top: 0; z-index: 50;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--bg);
   /* hairline 1 из 2 разрешённых (политика линий W7) */
   border-bottom: 1px solid var(--border);
 }
@@ -551,6 +554,17 @@ html[data-sheet-open="1"] { overflow: hidden; }
   display: grid; gap: 1.1rem;
   grid-template-columns: minmax(0, 1fr);
 }
+/* B1-v2 (джанк-фиск): ниже-фолд секция «Похожие» (страница товара) не
+   рендерится, пока не приблизилась к вьюпорту — скролл страницы не
+   красит её заранее (paint/layаут отложены, lazy-фото внутри грузятся
+   только при приближении). contain-intrinsic-size — оценка высоты,
+   чтобы скроллбар не прыгал до первого рендера (auto запоминает
+   фактическую после). ГЛАВНЫЙ грид каталога не трогаем — он и есть
+   контент первого экрана. */
+.rel-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 30rem;
+}
 /* ── Карточка товара (W6 №20-22 → канон-карточка W7) ──────────
    Канон: border var(--border), radius 12px, тень --shadow.
    Фото — ЕДИНЫЙ аспект 3:4, object-fit: cover, лениво, width/height
@@ -571,19 +585,18 @@ html[data-sheet-open="1"] { overflow: hidden; }
   contain: layout style;
 }
 @media (min-width: 48rem) { .product-card { box-shadow: var(--shop-shadow-card); } }
-/* B1 (находка владельца «тихий hover», заменяет D4-гейт): движение карточки
-   убрано совсем — наведение = ТОЛЬКО углубление тени (без translateY и
-   цветного кольца: на тёмной теме светлое кольцо читалось ореолом).
-   Переход только box-shadow; высота карточки при hover не меняется;
-   на таче/скролле hover-правила не действуют (media-гейт), кросс-фейд
-   второго фото — отдельно ниже. */
+/* B1-v2 (находка владельца «дёрганье картинок при скролле»): у карточки
+   НЕТ анимированной тени. Hover = ТОЛЬКО border-color с переходом 80ms
+   (ниже порога заметности — пролёт курсора над гридом при прокрутке
+   не пульсирует) + кросс-фейд второго фото (отдельно ниже). Теневой
+   transition удалён: тень покоя постоянна (светлая тема), на тёмной
+   теней нет вовсе (токены). Высота карточки при hover не меняется;
+   на таче/скролле hover-правила не действуют (media-гейт). */
 @media (hover: hover) and (pointer: fine) {
-  @media (min-width: 48rem) {
-    .product-card { transition: box-shadow 200ms var(--ease); }
-    .product-card:hover {
-      box-shadow: var(--shop-shadow-hover);
-      text-decoration: none;
-    }
+  .product-card { transition: border-color 80ms linear; }
+  .product-card:hover {
+    border-color: var(--shop-border-hover);
+    text-decoration: none;
   }
 }
 .product-card-photo {
@@ -646,24 +659,34 @@ html[data-sheet-open="1"] { overflow: hidden; }
    галерея слева, инфо справа (пропорция 2:3 — едет за корнем). */
 .product-page-cols { display: grid; gap: calc(var(--section-y) * 0.67); grid-template-columns: minmax(0, 1fr); }
 .product-gallery { display: grid; gap: 0.75rem; align-content: start; }
-.product-photo {
-  position: relative;
-  aspect-ratio: 4 / 5; width: 100%; border-radius: var(--radius-lg);
-  background: var(--bg-soft); overflow: hidden;
-  display: flex; align-items: center; justify-content: center; color: var(--muted);
+/* ── Галерея v2 (B1-v2): нативная scroll-snap карусель ───────
+   Решение по кандидатам (Splide ~30KB / Glide / scroll-snap) — в отчёте
+   b1-v2.md: свайп = нативный скролл с инерцией (композитор, ноль JS в
+   кадре — «красиво и не тормозно» по замеру CPU×4), переключение
+   стрелками/миниатюрами — smooth scrollTo, клавиатура — нативные
+   стрелки скроллера + полоса миниатюр. Фиксированный аспект 4/5 у
+   слайда + object-fit: cover — пропорции снимков любые, прыжков нет.
+   Скрытый скроллбар: позицию показывают миниатюры (is-active). */
+.gallery-viewport {
+  position: relative; border-radius: var(--radius-lg);
+  background: var(--bg-soft); color: var(--muted);
+  overflow: hidden;
 }
-.product-photo img { width: 100%; height: 100%; object-fit: cover; }
-/* W9 (F10): верхний слой кросс-фейда галереи — абсолютный, гаснет/проявляется
-   transition'ом; JS проматривает src нижнего слоя после 220ms */
-.gallery-img-fade {
-  position: absolute; inset: 0;
-  opacity: 0; pointer-events: none;
-  transition: opacity 200ms var(--ease);
+.gallery-track {
+  display: flex; overflow-x: auto;
+  scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* позицию показывает is-active миниатюры */
 }
-.gallery-img-fade[data-visible="1"] { opacity: 1; }
-@media (prefers-reduced-motion: reduce) {
-  .gallery-img-fade { transition: none; }
+.gallery-track::-webkit-scrollbar { display: none; }
+.gallery-slide {
+  flex: 0 0 100%; width: 100%;
+  scroll-snap-align: start; scroll-snap-stop: always;
+  aspect-ratio: 4 / 5;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--text-sm);
 }
+.gallery-slide img { width: 100%; height: 100%; object-fit: cover; }
 /* стрелки галереи — поверх фото, тап-таргет 2.75rem; подложка карточная */
 .gallery-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
@@ -687,7 +710,10 @@ html[data-sheet-open="1"] { overflow: hidden; }
   flex: 0 0 auto; width: 4rem; height: 5rem; padding: 0;
   border: 1px solid var(--border); border-radius: var(--radius-btn);
   background: var(--bg-soft); overflow: hidden; cursor: pointer;
-  scroll-snap-align: start; transition: border-color var(--theme-fade), box-shadow var(--theme-fade);
+  scroll-snap-align: start;
+  /* B1-v2: только бордер, 80ms (кольцо is-active появляется мгновенно —
+     это клик-состояние, не hover-пульс; box-shadow из transition убран) */
+  transition: border-color 80ms linear;
 }
 .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .gallery-thumb:hover { border-color: var(--accent); }

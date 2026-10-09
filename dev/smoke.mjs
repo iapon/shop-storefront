@@ -1056,23 +1056,101 @@ async function smokeW9Cart() {
 }
 await smokeW9Cart();
 
-/* ── Проба W9 (F10): кросс-фейды гейтятся prefers-reduced-motion ────── */
+/* ── Проба W9 (F10) / B1-v2: галерея v2 (scroll-snap карусель) + reduce ── */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
-  check(/\.gallery-img-fade\s*\{[^}]*transition:\s*opacity\s+200ms/.test(css), 'F10: у слоя кросс-фейда галереи нет opacity-перехода');
+  check(/\.gallery-track\s*\{[^}]*scroll-snap-type:\s*x\s*mandatory/.test(css), 'F10/B1-v2: track не scroll-snap карусель');
+  check(/\.gallery-slide\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*5/.test(css), 'F10/B1-v2: слайд без фиксированного аспекта (CLS-риск)');
+  check(/\.gallery-slide img\s*\{[^}]*object-fit:\s*cover/.test(css), 'F10/B1-v2: слайд без object-fit cover');
+  check(!css.includes('gallery-img-fade'), 'F10/B1-v2: остался мёртвый слой кросс-фейда галереи');
   const reduceBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\}\s*\}/g)].map((m) => m[0]);
   const reduceAll = reduceBlocks.join('\n');
-  check(/\.gallery-img-fade\s*\{[^}]*transition:\s*none/.test(reduceAll), 'F10: галерейный кросс-фейд не гейтится reduce');
   check(/\.product-card-photo img\s*\{[^}]*transition:\s*none/.test(reduceAll), 'F10: hover-кросс-фейд карточки не гейтится reduce');
   const prodSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'product.liquid'), 'utf8');
-  check(prodSrc.includes('data-gallery-fade') && prodSrc.includes("fade.setAttribute('data-visible', '1')"), 'F10: галерея товара не переключается двумя слоями');
+  check(prodSrc.includes('data-gallery-track') && prodSrc.includes('behavior: behavior()'), 'F10/B1-v2: галерея не скроллит track через scrollTo');
+  check(prodSrc.includes("matchMedia('(prefers-reduced-motion: reduce)')"), 'F10/B1-v2: галерея не уважает prefers-reduced-motion');
+  check(prodSrc.includes('aria-roledescription="карусель"'), 'F10/B1-v2: track без APG-роли карусели');
   if (fails.length) {
     failed++;
     console.log('FAIL w9-f10-fade: ' + fails.join(' | '));
   } else {
-    console.log('OK   w9-f10-fade (кросс-фейд галереи двумя слоями; оба кросс-фейда выключаются при reduce)');
+    console.log('OK   w9-f10-fade (галерея v2: scroll-snap track, аспект 4/5+cover, scrollTo с reduce-гейтом, APG-роли; hover-кросс-фейд карточки гейтится reduce)');
+  }
+}
+
+/* ── Проба B1-v2: джанк-фиски (загрузка фото, тени, blur, hover, CV) ── */
+{
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const tokens = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+
+  // (1) шапка: сплошной фон, backdrop-filter нет нигде
+  check(!/backdrop-filter/.test(css), 'b1-v2: backdrop-filter остался в shop.css');
+  check(/\.shop-header\s*\{[^}]*background:\s*var\(--bg\)/.test(css), 'b1-v2: шапка не на сплошном var(--bg)');
+
+  // (2) карточка: hover без тени, transition только border-color 80ms
+  check(/\.product-card\s*\{[^}]*transition:\s*border-color\s+80ms/.test(css), 'b1-v2: hover карточки не border-color 80ms');
+  check(!css.includes('shop-shadow-hover'), 'b1-v2: hover-тень карточки не убрана');
+  check(!/\.product-card\s*\{[^}]*transition:\s*box-shadow/.test(css), 'b1-v2: у карточки остался box-shadow transition');
+
+  // (3) тени: тёмная тема — карточки none (токены, не компоненты)
+  const darkBlock = tokens.match(/\[data-theme="dynamica-dark"\]\s*\{[\s\S]*?\n\}/);
+  check(!!darkBlock && /--shop-shadow-card:\s*none/.test(darkBlock[0]), 'b1-v2: в dark-блоке токенов --shop-shadow-card не none');
+  check(!!darkBlock && /--shop-shadow-pop:\s*0\s+0\.125rem\s+0\.5rem/.test(darkBlock[0]), 'b1-v2: в dark-блоке pop-тень не минимальная');
+
+  // (4) тёмная тема: фото приглушаются opacity, не GPU-фильтром
+  check(!/filter:\s*brightness/.test(tokens), 'b1-v2: GPU-фильтр яркости остался в tokens.css');
+  check(/:where\(\[data-theme="dynamica-dark"\]\)[^{]*\{[^}]*opacity:\s*\.92/.test(tokens), 'b1-v2: затемнение фото тёмной темы не opacity .92');
+
+  // (5) ниже-фолд: content-visibility на «Похожих»
+  check(/\.rel-grid\s*\{[^}]*content-visibility:\s*auto/.test(css), 'b1-v2: rel-grid без content-visibility auto');
+  check(/\.rel-grid\s*\{[^}]*contain-intrinsic-size/.test(css), 'b1-v2: rel-grid без contain-intrinsic-size');
+
+  // (6) загрузка фото каталога: eager первые 8, fetchpriority первые 4, lazy дальше
+  const many = [];
+  for (let i = 1; i <= 12; i++) {
+    many.push({ id: 'p' + i, title: 'Товар ' + i, slug: 'p-' + i, price_kopecks: 10000, stock: 5, photos: [{ url: '/static/photos/placeholder.svg' }, { url: '/static/photos/placeholder.svg#2' }] });
+  }
+  const html = await renderMockPage(engine, 'catalog', null, {
+    query: { ...q },
+    prods: { data: { products: many } },
+  });
+  const cards = html.split('<a class="product-card"').length - 1;
+  check(cards === 12, 'b1-v2: в оверрайде не 12 карточек: ' + cards);
+  const perCard = html.split('<a class="product-card"').slice(1).map((chunk) => chunk.split('</a>')[0]);
+  perCard.forEach((chunk, i) => {
+    const main = chunk.match(/<img class="card-img" [^>]+>/)?.[0] ?? '';
+    const eager = !main.includes('loading="lazy"');
+    const high = main.includes('fetchpriority="high"');
+    if (i < 4) {
+      if (!eager || !high) fails.push(`b1-v2: карточка ${i + 1} должна быть eager+fetchpriority`);
+    } else if (i < 8) {
+      if (!eager || high) fails.push(`b1-v2: карточка ${i + 1} должна быть eager без fetchpriority`);
+    } else if (eager || high) {
+      fails.push(`b1-v2: карточка ${i + 1} должна быть lazy без fetchpriority`);
+    }
+  });
+
+  // (7) страница товара: слайд 1 eager+high, слайд 2 lazy; «Похожие» все lazy
+  const rel = many.slice(0, 3);
+  const prodHtml = await renderMockPage(engine, 'product', null, { query: { ...q }, rel: { data: { products: rel } } });
+  const slides = prodHtml.match(/<div class="gallery-slide"/g)?.length ?? 0;
+  check(slides === 2, 'b1-v2: в галерее не 2 слайда: ' + slides);
+  const galleryChunk = prodHtml.slice(prodHtml.indexOf('data-gallery-track'), prodHtml.indexOf('data-gallery-thumbs'));
+  check((galleryChunk.match(/fetchpriority="high"/g) ?? []).length === 1, 'b1-v2: в галерее fetchpriority=high не ровно у первого слайда');
+  check((galleryChunk.match(/loading="lazy"/g) ?? []).length === 1, 'b1-v2: в галерее не ровно один lazy-слайд (второй)');
+  const relChunk = prodHtml.slice(prodHtml.indexOf('rel-grid'));
+  const relImgs = relChunk.match(/<img class="card-img" [^>]+>/g) ?? [];
+  check(relImgs.length === 3 && relImgs.every((t) => t.includes('loading="lazy"')), 'b1-v2: карточки «Похожих» не все lazy');
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b1-v2-jank: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b1-v2-jank (шапка без blur; hover=бордер 80ms; тёмные тени=none в токенах; фото dark=opacity .92; rel-grid content-visibility; каталог eager 8/high 4/lazy дальше; слайд 1 eager+high; «Похожие» lazy)');
   }
 }
 
@@ -1226,7 +1304,7 @@ await smokeW9Cart();
   check(baseSrc.includes('data-theme-aria-auto') && baseSrc.includes('data-theme-aria-light') && baseSrc.includes('data-theme-aria-dark'), 'тумблер: слоты динамического aria-label не на body');
   const tokensSrc = read('static/css/tokens.css');
   check(tokensSrc.includes('color-scheme: light') && tokensSrc.includes('color-scheme: dark'), 'тема: color-scheme не выставлен (нативные контролы не подстраиваются)');
-  check(tokensSrc.includes('[data-theme="dynamica-dark"] .product-card-photo img'), 'тёмная тема (№25): контентные фото не приглушаются');
+  check(tokensSrc.includes(':where([data-theme="dynamica-dark"]) .product-card-photo img') && tokensSrc.includes('opacity: .92'), 'тёмная тема (№25/B1-v2): контентные фото приглушаются opacity .92 (не GPU-фильтром)');
   check(/prefers-reduced-motion:\s*no-preference/.test(tokensSrc), 'тема: переход не сгейчен prefers-reduced-motion');
 
   // F. Карточка (№20-22) и грид (№19).

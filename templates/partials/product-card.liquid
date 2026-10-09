@@ -13,14 +13,24 @@
   скидки «−N%» отложен: поля old_price в схеме товара нет — выдумывать не
   станем (заметка в отчёте W6).
 {%- endcomment -%}
+{%- comment -%}
+  B1-v2 (джанк-фиск «фото появляются влёт»): политика загрузки карточных
+  фото — БЕЗ assign (паршал — чистая функция). В грид-циклах каталога/
+  категории: карточки 1–8 (два первых ряда по 4 на десктопе) — БЕЗ
+  loading="lazy" (eager), из них 1–4 (первый ряд) — fetchpriority="high"
+  (LCP-кандидаты); ниже — lazy. «Похожие» на странице товара — ВСЕГДА
+  lazy (секция ниже фолда; product.liquid ставит card_lazy_all перед
+  своим циклом). Появление снимка — мгновенное: fade при появлении НЕТ
+  ни в CSS, ни в JS (проверено пробой b1-v2).
+{%- endcomment -%}
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
-    {%- comment -%} B1 (D4): decoding="async" к loading="lazy" — декодирование
-       снимка не блокирует главный поток при быстром скролле; место под
-       фото зарезервировано контейнером (aspect-ratio 3/4) + width/height. {%- endcomment -%}
+    {%- comment -%} B1 (D4): decoding="async" — декодирование снимка не
+       блокирует главный поток при быстром скролле; место под фото
+       зарезервировано контейнером (aspect-ratio 3/4) + width/height. {%- endcomment -%}
     {%- if p.photos and p.photos.size > 0 -%}
-      <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}" loading="lazy" decoding="async" width="600" height="800">
-      {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true" loading="lazy" decoding="async" width="600" height="800">{%- endif -%}
+      <img class="card-img" src="{{ p.photos[0].url }}" alt="{{ p.title }}"{% if card_lazy_all or forloop == nil or forloop.index > 8 %} loading="lazy"{% endif %}{% if card_lazy_all != true and forloop and forloop.index <= 4 %} fetchpriority="high"{% endif %} decoding="async" width="600" height="800">
+      {%- if p.photos[1] -%}<img class="card-img card-img-alt" src="{{ p.photos[1].url }}" alt="" aria-hidden="true"{% if card_lazy_all or forloop == nil or forloop.index > 8 %} loading="lazy"{% endif %}{% if card_lazy_all != true and forloop and forloop.index <= 4 %} fetchpriority="high"{% endif %} decoding="async" width="600" height="800">{%- endif -%}
     {%- else -%}
       <span>нет фото</span>
     {%- endif -%}

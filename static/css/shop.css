@@ -966,10 +966,10 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .shop-header-inner { flex-wrap: nowrap; }
   /* тулбар: десктопная форма, мобильные кнопки скрыты */
   .toolbar-mobile { display: none; }
-  .search-box { display: block; flex: 1 1 14rem; min-width: 9rem; max-width: 16rem; }
+  .search-box { display: block; flex: 1 1 13rem; min-width: 9rem; max-width: 15rem; }
   .applied-row-desktop { display: flex; }
   .applied-row-mobile { display: none; }
-  .tools-right { display: flex; flex: 0 0 auto; margin-left: auto; gap: 0.625rem; }
+  .tools-right { display: flex; flex: 0 0 auto; margin-left: auto; gap: 0.5rem; }
   .sort-box { flex: 0 1 11.5rem; min-width: 9rem; max-width: 11.5rem; width: auto; }
   /* В3: вертикальный hairline-разделитель «Найти | чипы»; когда ряд чипов
      не влез и ушёл блоком под контролы (data-chips-wrapped вешает скрипт)

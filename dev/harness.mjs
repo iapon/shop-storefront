@@ -294,8 +294,15 @@ function serveStatic(req, res, url) {
   if (!abs.startsWith(staticDir + sep) || rel.includes('..')) return false;
   if (!existsSync(abs)) return false;
   res.setHeader('Content-Type', MIME[extname(abs)] || 'application/octet-stream');
-  const data = readFileSync(abs, 'utf8');
-  res.end(MIME[extname(abs)]?.startsWith('text/') ? withShopBase(data) : data);
+  /* B1-v2: бинарные файлы (PNG-демо-фото) читаются БЕЗ utf8 — раньше
+     readFileSync(abs,'utf8') молча заменял невалидные байты на U+FFFD
+     и отдавал битые снимки. Текстовые (liquid/шим подстановок) — как были. */
+  const isText = MIME[extname(abs)]?.startsWith('text/');
+  if (isText) {
+    res.end(withShopBase(readFileSync(abs, 'utf8')));
+  } else {
+    res.end(readFileSync(abs));
+  }
   return true;
 }
 

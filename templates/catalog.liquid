@@ -474,6 +474,17 @@
         setChipsOpen(false, false);
       });
     }
+    /* B1 (D1): если ряд чипов не влез в строку тулбара и ушёл блоком под
+       контролы — вертикальный разделитель «Найти | чипы» висеть не должен:
+       data-chips-wrapped прячет его (CSS). Пересчёт — load/resize. */
+    var searchBox = ui.querySelector('.search-box');
+    function syncChipsWrap() {
+      if (!toolsForm || !chipRow || !searchBox) return;
+      var wrapped = chipRow.getBoundingClientRect().top > searchBox.getBoundingClientRect().top + 1;
+      toolsForm.setAttribute('data-chips-wrapped', wrapped ? '1' : '0');
+    }
+    syncChipsWrap();
+    window.addEventListener('resize', syncChipsWrap);
 
     /* ---- дравер: черновик → «Показать N» (batch-применение, №8) ---- */
     function draft() {

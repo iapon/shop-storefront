@@ -127,7 +127,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .nav-burger summary {
   list-style: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.5rem; height: 2.5rem; /* W9 F2.3: база 40px — одна строка шапки на 320 */
+  width: var(--shop-touch); height: var(--shop-touch); /* W9 F2.3 + P2: 44px-пол на любой ширине */
   border: 1px solid var(--border); border-radius: var(--radius-btn); color: var(--muted);
 }
 .nav-burger summary::-webkit-details-marker { display: none; }
@@ -150,7 +150,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 /* Корзина-счётчик: пилюля в тинте акцента; пустая — тихая */
 .cart-counter {
   position: relative; display: inline-flex; align-items: center; gap: 0.375rem;
-  min-height: 2.5rem; padding: 0.375rem var(--shop-space-2); border-radius: var(--radius-pill); /* W9 (F2.3): 40px ряд + компактный inline-паддинг — одна строка шапки на 320 */
+  min-height: var(--shop-touch); padding: 0.375rem var(--shop-space-2); border-radius: var(--radius-pill); /* W9 (F2.3)+P2: 44px-пол */
   font-size: var(--text-sm); font-weight: 600;
   background: var(--accent-tint); color: var(--accent);
 }
@@ -165,7 +165,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
    — осознанный компромисс D31 для самой узкой базы. */
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.5rem; height: 2.5rem;
+  width: var(--shop-touch); height: var(--shop-touch);
   border: 1px solid var(--border); border-radius: var(--radius-btn);
   background: transparent; color: var(--muted); cursor: pointer;
 }
@@ -233,8 +233,8 @@ img, svg { max-width: 100%; height: auto; display: block; }
   display: none; margin: 0.4rem auto 0; padding: var(--shop-space-3) var(--shop-space-4); border: 0; background: none;
   color: var(--accent); font-size: var(--text-sm); font-family: inherit;
   cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
-  /* B1 (D5, WCAG 2.5.8): тач-цель ссылки «Ещё» доведена до ~44px */
-  min-height: 2.75rem;
+  /* B1 (D5, WCAG 2.5.8 + P2): тач-цель «Ещё» = 44px-пол на любой ширине */
+  min-height: var(--shop-touch);
 }
 .desc-toggle[data-visible="1"] { display: inline-block; }
 /* полное SEO-описание — под гридом, перед футером */
@@ -265,12 +265,12 @@ img, svg { max-width: 100%; height: auto; display: block; }
   content: "/"; margin: 0 0.375rem; color: var(--muted); opacity: 0.6;
 }
 .crumb {
-  display: inline-flex; align-items: center; min-height: 2.75rem;
+  display: inline-flex; align-items: center; min-height: var(--shop-touch);
   padding: 0 var(--shop-space-1); color: var(--muted); text-decoration: none;
 }
 .crumb:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .crumb-current {
-  display: inline-flex; align-items: center; min-height: 2.75rem;
+  display: inline-flex; align-items: center; min-height: var(--shop-touch);
   color: var(--text); font-weight: 500;
 }
 
@@ -309,7 +309,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .toolbar-mobile .toolbar-btn + .toolbar-btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
 .toolbar-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  min-height: 2.75rem; padding: 0.375rem 0.875rem; /* 44px, D31 (компакт на ≥48rem) */
+  min-height: var(--shop-touch); padding: 0.375rem 0.875rem; /* 44px-пол на любой ширине, D31+P2 */
   border: 1px solid var(--border); border-radius: var(--radius-btn);
   background: var(--card); color: var(--text);
   font-size: var(--text-sm); font-family: inherit; cursor: pointer;
@@ -335,7 +335,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
   position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
   width: 1rem; height: 1rem; color: var(--muted); opacity: 0.7; pointer-events: none;
 }
-.field-input.search-input { padding-left: 2.375rem; min-height: 2.75rem; }
+.field-input.search-input { padding-left: 2.375rem; min-height: var(--shop-touch); }
 /* лейбл сортировки — только скринридерам (видимый лейбл раздувал тулбар) */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; /* px-допустимо: канонический sr-only паттерн */
@@ -379,7 +379,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 }
 .dd-opt {
   display: flex; align-items: center;
-  min-height: 2.75rem; padding: 0.375rem 0.625rem; /* тач-цель 44px, D31 */
+  min-height: var(--shop-touch); padding: 0.375rem 0.625rem; /* тач-цель 44px-пол, D31+P2 */
   border-radius: 8px; cursor: pointer; color: var(--text);
   font-size: var(--text-sm);
 }
@@ -406,7 +406,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .applied-chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
   flex: 0 0 auto; scroll-snap-align: start;
-  min-height: 2.75rem; padding: var(--shop-space-1) var(--shop-space-3); border-radius: var(--radius-pill); /* 44px, D31 */
+  min-height: var(--shop-touch); padding: var(--shop-space-1) var(--shop-space-3); border-radius: var(--radius-pill); /* 44px-пол, D31+P2 */
   background: var(--accent-tint); color: var(--accent);
   font-size: var(--text-sm); font-weight: 500; text-decoration: none;
   transition: background-color 200ms var(--ease), color 200ms var(--ease);
@@ -414,7 +414,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .applied-chip:hover { background: var(--accent-tint-strong); color: var(--accent-strong); text-decoration: none; }
 .applied-chip .applied-x { font-size: var(--text-md); line-height: 1; }
 .applied-reset {
-  flex: 0 0 auto; min-height: 2.75rem; padding: var(--shop-space-1) var(--shop-space-2); border: 0; background: none; /* 44px, D31 */
+  flex: 0 0 auto; min-height: var(--shop-touch); padding: var(--shop-space-1) var(--shop-space-2); border: 0; background: none; /* 44px-пол, D31+P2 */
   color: var(--muted); font-size: var(--text-sm); font-family: inherit;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
@@ -439,7 +439,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
   flex: 0 0 auto; min-width: max-content;
-  min-height: 2.75rem; padding: 0.375rem var(--shop-space-4); border-radius: var(--radius-pill);
+  min-height: var(--shop-touch); padding: 0.375rem var(--shop-space-4); border-radius: var(--radius-pill);
   border: 1px solid var(--border); background: var(--card);
   font-size: var(--text-sm); color: var(--muted); cursor: pointer;
   transition: border-color 200ms var(--ease), color 200ms var(--ease);
@@ -514,7 +514,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 .sheet-reset:hover { color: var(--accent); }
 .sheet-close {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem; margin-right: -0.5rem;
+  width: var(--shop-touch); height: var(--shop-touch); margin-right: -0.5rem;
   border: 0; border-radius: var(--radius-pill);
   background: none; color: var(--muted); cursor: pointer;
   font-size: var(--text-lg); line-height: 1;
@@ -528,7 +528,7 @@ img, svg { max-width: 100%; height: auto; display: block; }
 }
 .sheet-option {
   display: flex; align-items: center; gap: 0.625rem;
-  min-height: 2.75rem; cursor: pointer; color: var(--text);
+  min-height: var(--shop-touch); cursor: pointer; color: var(--text);
 }
 .sheet-option input { width: 1.125rem; height: 1.125rem; accent-color: var(--accent); flex: 0 0 auto; }
 .sheet-count { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }
@@ -668,7 +668,7 @@ html[data-sheet-open="1"] { overflow: hidden; }
 .gallery-nav {
   position: absolute; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem; border-radius: var(--radius-pill);
+  width: var(--shop-touch); height: var(--shop-touch); border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--card) 85%, transparent);
   color: var(--text); font-size: var(--text-lg); line-height: 1;
@@ -715,7 +715,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .qty-stepper { display: inline-flex; align-items: stretch; }
 .qty-stepper .qty-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 2.75rem; height: 2.75rem; padding: 0;
+  width: var(--shop-touch); height: var(--shop-touch); padding: 0;
   border: 1px solid var(--border); background: var(--card); color: var(--muted);
   font-size: var(--text-lg); line-height: 1; cursor: pointer;
   transition: color var(--theme-fade), border-color var(--theme-fade), background-color var(--theme-fade);
@@ -727,7 +727,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 /* инпут между кнопками: ширина 3ch, центр, высота группы; границы кнопок
    накрывают двойную линию стыка (margin −1px), фокус виден (outline) */
 .qty-stepper .qty-input {
-  width: 3rem; min-width: 3ch; height: 2.75rem; text-align: center;
+  width: 3rem; min-width: 3ch; height: var(--shop-touch); text-align: center;
   border: 1px solid var(--border); border-radius: 0;
   background: var(--card); color: var(--text);
   font-size: var(--text-md); font-family: inherit;
@@ -745,7 +745,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
    акцент, secondary — ghost с бордером (hover — акцент). */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.65rem var(--shop-space-5); min-height: 2.75rem; border-radius: var(--radius-btn);
+  padding: 0.65rem var(--shop-space-5); min-height: var(--shop-touch); border-radius: var(--radius-btn);
   border: 1px solid transparent; cursor: pointer;
   font: inherit; font-size: 0.95rem; font-weight: 600;
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
@@ -765,7 +765,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .pagination { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: var(--section-y); }
 .page-link {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 2.75rem; height: 2.75rem; padding: 0 var(--shop-space-2);
+  min-width: var(--shop-touch); height: var(--shop-touch); padding: 0 var(--shop-space-2);
   border-radius: var(--radius-btn); font-size: var(--text-sm);
   color: var(--muted);
 }
@@ -822,7 +822,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   background: var(--card); overflow: hidden;
 }
 .cart-line-stepper .qty-btn {
-  width: 2.75rem; height: 2.75rem;
+  width: var(--shop-touch); height: var(--shop-touch);
   border: 0; border-radius: 0; background: transparent;
 }
 .cart-line-stepper .qty-btn:active { background: var(--bg-soft); }
@@ -831,7 +831,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 /* «×» у позиции и «Очистить корзину»: тихие действия, не конкурирующие с CTA */
 .cart-line-remove {
   grid-area: remove; justify-self: end;
-  width: 2.75rem; height: 2.75rem; line-height: 1;
+  width: var(--shop-touch); height: var(--shop-touch); line-height: 1;
   border: 1px solid var(--border); border-radius: var(--radius-btn);
   background: var(--card); color: var(--muted);
   font-size: var(--text-md); cursor: pointer;
@@ -1004,7 +1004,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
     flex-wrap: nowrap; margin: 0 0 0 var(--shop-space-1);
     gap: 0.375rem;
   }
-  .chip { min-height: 0; padding: var(--shop-space-1) var(--shop-space-3); }
+  .chip { min-height: max(1.5rem, 24px); padding: var(--shop-space-1) var(--shop-space-3); } /* P2: пол 24px */
   .chip-extra { display: none; }
   /* активная категория ВСЕГДА видна, даже за пределами первых N (D2) */
   .chip-extra[data-pinned="1"] { display: inline-flex; }
@@ -1019,13 +1019,13 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   /* компактные контролы десктопа (крупность несёт корень).
      В3 (P3 прошлого критика): поиск, дропдаун и «Найти» — ОДНА высота
      пиксель-в-пиксель: жёсткая height 2.5rem на всех трёх */
-  .icon-btn { width: 2.25rem; height: 2.25rem; } /* канон .theme-toggle */
-  .toolbar-btn, .applied-chip, .applied-reset { min-height: 2.25rem; }
-  .page-link { min-width: 2.25rem; height: 2.25rem; }
-  .field-input.search-input, .dd-btn.field-input { height: 2.5rem; min-height: 0; padding-top: 0; padding-bottom: 0; }
-  .dd-opt { min-height: 2.25rem; }
+  .icon-btn { width: max(2.25rem, 24px); height: max(2.25rem, 24px); } /* канон .theme-toggle + P2 пол */
+  .toolbar-btn, .applied-chip, .applied-reset { min-height: max(2.25rem, 24px); } /* P2: пол 24px на бэнде 768–863 */
+  .page-link { min-width: max(2.25rem, 24px); height: max(2.25rem, 24px); } /* P2 */
+  .field-input.search-input, .dd-btn.field-input { height: var(--shop-control-h); min-height: 0; padding-top: 0; padding-bottom: 0; }
+  .dd-opt { min-height: max(2.25rem, 24px); } /* P2 */
   .btn { min-height: 0; }
-  .btn.search-submit { height: 2.5rem; min-height: 0; padding-top: 0; padding-bottom: 0; }
+  .btn.search-submit { height: var(--shop-control-h); min-height: 0; padding-top: 0; padding-bottom: 0; }
   .field-input, .field-textarea, .qty-input { font-size: var(--text-sm); }
   .crumb-list {
     -webkit-mask-image: none; mask-image: none;

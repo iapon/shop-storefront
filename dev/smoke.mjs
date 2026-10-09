@@ -575,10 +575,10 @@ await smokeQtySteppers();
   check(/\.shop-header-inner\s*\{[^}]*flex-wrap:\s*wrap/.test(css), 'шапка в базе не переносится (flex-wrap: wrap)');
   check(/\.product-grid,\s*\.rel-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(css),
         'грид каталога в базе не одна текучая колонка minmax(0, 1fr)');
-  check(/\.icon-btn\s*\{[^}]*width:\s*2\.5rem/.test(css), 'иконки шапки в базе 2.5rem (40px — W9 F2.3: одна строка шапки на 320)');
-  check(/\.cart-line-remove\s*\{[^}]*width:\s*2\.75rem/.test(css), 'крестик корзины в базе уже 2.75rem (44px, D31)');
-  check(/\.chip\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'чип категорий в базе ниже 2.75rem (44px, D31)');
-  check(/\.qty-stepper \.qty-btn\s*\{[^}]*width:\s*2\.75rem/.test(css), 'кнопка степпера в базе ниже 2.75rem (44px, D31)');
+  check(/\.icon-btn\s*\{[^}]*width:\s*var\(--shop-touch\)/.test(css), 'иконки шапки в базе на --shop-touch (44px-пол, P2)');
+  check(/\.cart-line-remove\s*\{[^}]*width:\s*var\(--shop-touch\)/.test(css), 'крестик корзины в базе на --shop-touch (44px-пол, D31+P2)');
+  check(/\.chip\s*\{[^}]*min-height:\s*var\(--shop-touch\)/.test(css), 'чип категорий в базе на --shop-touch (44px-пол, D31+P2)');
+  check(/\.qty-stepper \.qty-btn\s*\{[^}]*width:\s*var\(--shop-touch\)/.test(css), 'кнопка степпера в базе на --shop-touch (44px-пол, D31+P2)');
   // W7 (разнос владельца): нативные спиннеры number-инпута скрыты — они
   // дублировали кастомные «−/+»; степпер = одна визуальная группа
   check(/input\[type="number"\]\s*\{[^}]*appearance:\s*texfield|input\[type="number"\]\s*\{[^}]*appearance:\s*textfield/.test(css)
@@ -593,7 +593,7 @@ await smokeQtySteppers();
     failed++;
     console.log('FAIL layout-mobile: ' + fails.join(' | '));
   } else {
-    console.log('OK   layout-mobile (min-width-only, база 1 колонка, шапка переносится, тап-таргеты 2.75rem/44px, инпуты 16px)');
+    console.log('OK   layout-mobile (min-width-only, база 1 колонка, шапка переносится, тап-таргеты --shop-touch 44px-пол, инпуты 16px)');
   }
 }
 
@@ -636,7 +636,7 @@ const mediaBlock = (cssSrc, header) => {
   const baseSearch = /\.search-box,\s*\.tools-right,\s*\.tools-sep,\s*\.tools-count\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
   check(/display:\s*none/.test(baseSearch), 'база 320: десктопная форма (поиск/сортировка/разделитель/счётчик) не скрыта — должны жить кнопки-листы');
   check(/\.toolbar-mobile\s*\{[^}]*display:\s*flex/.test(css), 'база 320: мобильные кнопки тулбара не показаны');
-  check(/\.toolbar-btn\s*\{[^}]*min-height:\s*2\.75rem/.test(css), 'кнопки тулбара в базе ниже 2.75rem (44px, D31)');
+  check(/\.toolbar-btn\s*\{[^}]*min-height:\s*var\(--shop-touch\)/.test(css), 'кнопки тулбара в базе ниже 44px-пола (--shop-touch, D31+P2)');
   // Sticky-тулбар (W6 №16 → B1 В3): прилипает ПОД шапку, фон непрозрачный;
   // hairline №3 (border-bottom — решение владельца в мокапе В3); тени НЕТ.
   const toolsRule = /\.cat-tools\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
@@ -657,8 +657,8 @@ const mediaBlock = (cssSrc, header) => {
   check(/display:\s*(block|inline-block)/.test(sepRule) && /width:\s*1px/.test(sepRule) && /var\(--border\)/.test(sepRule), 'desktop ≥48rem: нет вертикального hairline-разделителя .tools-sep');
   check(/\.tools-count\s*\{[^}]*margin-left:\s*auto/.test(block48), 'desktop ≥48rem: счётчик .tools-count не прижат вправо (мокап В3)');
   // В3 (P3 прошлого критика): поиск/дропдаун/«Найти» — одна высота 2.5rem
-  check(/\.field-input\.search-input,\s*\.dd-btn\.field-input\s*\{[^}]*height:\s*2\.5rem/.test(block48), '≥48rem: поиск и дропдаун не приведены к height 2.5rem');
-  check(/\.btn\.search-submit\s*\{[^}]*height:\s*2\.5rem/.test(block48), '≥48rem: «Найти» не приведена к height 2.5rem (равенство высот P3)');
+  check(/\.field-input\.search-input,\s*\.dd-btn\.field-input\s*\{[^}]*height:\s*var\(--shop-control-h\)/.test(block48), '≥48rem: поиск и дропдаун не приведены к --shop-control-h (равные высоты, пол 24px — P2)');
+  check(/\.btn\.search-submit\s*\{[^}]*height:\s*var\(--shop-control-h\)/.test(block48), '≥48rem: «Найти» не приведена к --shop-control-h (равенство высот P3+P2)');
   // Дропдаун (D3): селект скрыт улучшателем, стили кнопки/списка/опций есть
   check(/\.dd-source\s*\{[^}]*display:\s*none/.test(css), 'дропдаун D3: скрытый select (.dd-source) не оформлен');
   check(/\.dd-btn\s*\{/.test(css) && /\.dd-list\s*\{/.test(css) && /\.dd-opt\s*\{/.test(css), 'дропдаун D3: нет стилей .dd-btn/.dd-list/.dd-opt');
@@ -1319,7 +1319,7 @@ await smokeW9Cart();
     const variant = name === 'category' ? 'found' : name === 'product' ? null : null;
     const html = await renderMockPage(engine, name, variant, { query: { ...q } });
     check(html.includes('class="skip-link" href="#main"'), `${name}: нет скип-линка → #main`);
-    check(html.includes('<main id="main">'), `${name}: main без id="main"`);
+    check(html.includes('<main id="main" tabindex="-1">'), `${name}: main без id="main" (tabindex=-1 — таргет скип-линка)`);
     check(html.includes('aria-live="polite">{{') === false && /data-cart-count aria-live="polite"/.test(html), `${name}: счётчик корзины не живой регион`);
   }
   const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });

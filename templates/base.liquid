@@ -97,7 +97,7 @@
   data-theme-aria-light="Тема: светлая. Переключить"
   data-theme-aria-dark="Тема: тёмная. Переключить">
 {%- comment -%} B1 (D5): скип-линк канона лендинга — первый таб-стоп страницы,
-   ведёт к <main id="main"> (паттерн и CSS — landing.css .skip-link). {%- endcomment -%}
+   ведёт к <main id="main" tabindex="-1"> (паттерн и CSS — landing.css .skip-link). {%- endcomment -%}
 <a class="skip-link" href="#main">Перейти к содержимому</a>
 {%- comment -%} SSR-счётчик корзины: заполненным его отдаёт только страница
   /checkout (позиции парсит флоу в results.ci — Liquid не читает JSON-строки);
@@ -181,7 +181,7 @@
     </div>
   </div>
 </header>
-<main id="main">
+<main id="main" tabindex="-1">
 {{ content }}
 </main>
 <footer class="shop-footer">

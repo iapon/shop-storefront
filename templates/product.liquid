@@ -20,6 +20,11 @@
   эскейп полей анонима — B-1), форма отзыва — нативный POST (honeypot,
   пишет status=new — модерация владельцем статусом в админке), подтверждение
   ?review=ok; aggregateRating в JSON-LD только при ≥1 published.
+  Отзывы-вход (v1.7.1): форма отзыва — ТОЛЬКО вошедшему (первая-класс
+  переменная member; анонимная отрисовка кэшируется TTL 300 без формы,
+  member-запросы всегда живут — рендер не кэшируется); анониму — тихий CTA
+  «Войдите, чтобы оставить отзыв» с возвратом на товар (?next=…, гард —
+  в js/auth.js). Список/средняя видны всем.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -292,7 +297,9 @@
        написанный отзыв появляется на витрине после проверки). Форма —
        НАТИВНЫЙ POST (no-JS контракт; редирект 303 делает флоу
        shop_review): honeypot «сайт» — как на чекауте, ?review=ok —
-       подтверждение. Поля отзыва эскейпятся — B-1 (данные анонима). {%- endcomment -%}
+       подтверждение. Поля отзыва эскейпятся — B-1 (данные анонима).
+       v1.7.1: сама форма — только вошедшему (гейт ниже), плюс серверный
+       гард во флоу shop_review (cookies.member — код auth_required). {%- endcomment -%}
     <section class="reviews" aria-labelledby="reviews-title">
       <div class="reviews-head">
         <h2 class="rel-heading" id="reviews-title">Отзывы</h2>
@@ -319,6 +326,14 @@
       {%- if query.review == "ok" -%}
       <p class="form-ok" role="status">Спасибо! Отзыв отправлен — он появится на странице после проверки.</p>
       {%- endif -%}
+      {%- comment -%} Отзывы-вход (v1.7.1): форма — только вошедшему
+         (member — первая-класс переменная сессии, прецедент login.liquid;
+         страница анонима кэшируется TTL 300 — гейт обязан быть SSR-ным,
+         член-запросы рендерятся всегда живьём). Анониму — тихий CTA
+         с возвратом на товар (?next=…, локальный путь; гард open-redirect
+         и переход — в js/auth.js, no-JS фоллбек — дефолт-редирект сервера).
+         Список отзывов/средняя/?review=ok — видны всем. {%- endcomment -%}
+      {%- if member and member.id -%}
       <form class="review-form" method="post" action="__SHOP_BASE__/review">
         <h3 class="review-form-title">Оставить отзыв</h3>
         {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
@@ -341,6 +356,12 @@
         <textarea class="field-input" id="review-body" name="body" rows="4" placeholder="Поделитесь впечатлениями"></textarea>
         <button class="btn btn-primary" type="submit">Отправить отзыв</button>
       </form>
+      {%- else -%}
+      <p class="review-login">
+        <a href="/login?next=__SHOP_BASE__/product/{{ product.slug | escape }}">Войдите</a>, чтобы оставить отзыв, или
+        <a href="/register?next=__SHOP_BASE__/product/{{ product.slug | escape }}">зарегистрируйтесь</a>.
+      </p>
+      {%- endif -%}
     </section>
   </div>
 

@@ -716,6 +716,10 @@ html.is-scrolling .product-card-photo img { transition: none !important; }
 .review-form-title { margin: var(--shop-space-4) 0 0; font-size: var(--text-md); font-weight: 600; }
 .review-label { font-weight: 600; font-size: 0.92rem; margin-top: var(--shop-space-1); }
 .review-form .btn { justify-self: start; margin-top: var(--shop-space-2); }
+/* Отзывы-вход (v1.7.1): тихий CTA вместо формы для гостя — строка-подсказка
+   в тон мета-текста отзывов, ссылки акцентом, но не кнопка (не кричит). */
+.review-login { margin: var(--shop-space-4) 0 0; color: var(--muted); font-size: var(--text-sm); }
+.review-login a { color: var(--accent); font-weight: 600; }
 .account-links { margin: var(--shop-space-2) 0 0; }
 .account-fav-link { color: var(--accent); font-weight: 600; }
 

@@ -64,7 +64,10 @@
       {%- elsif query.failed == "1" or query.submitted == "1" -%}
         <p class="form-error" data-visible="1" role="alert">Не получилось создать аккаунт — попробуйте ещё раз.</p>
       {%- endif -%}
-      <form class="auth-form" method="post" action="/register">
+      {%- comment -%} data-next (v1.7.1): путь возврата после успешной
+         регистрации (читает js/auth.js с гардом open-redirect; no-JS
+         фоллбек — серверный редирект сценария register, 303 → /account). {%- endcomment -%}
+      <form class="auth-form" method="post" action="/register" data-next="{{ query.next | escape }}">
         <div class="field">
           <label class="field-label" for="rg-email">Email</label>
           <input class="field-input" id="rg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">

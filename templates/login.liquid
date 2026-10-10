@@ -60,7 +60,12 @@
       {%- if query.failed == "1" -%}
         <p class="form-error" data-visible="1" role="alert">Неверный email или пароль — попробуйте ещё раз.</p>
       {%- endif -%}
-      <form class="auth-form" method="post" action="/login">
+      {%- comment -%} data-next (v1.7.1): путь возврата (например карточка
+         товара, откуда кликнули «Войдите»). Читает ТОЛЬКО js/auth.js и
+         ТОЛЬКО после успешного входа, с гардом open-redirect (локальный
+         путь: один «/» в начале, не «//», без схемы; иначе — дефолт).
+         No-JS фоллбек: серверный редирект сценария login (303 → /). {%- endcomment -%}
+      <form class="auth-form" method="post" action="/login" data-next="{{ query.next | escape }}">
         <div class="field">
           <label class="field-label" for="lg-email">Email</label>
           <input class="field-input" id="lg-email" name="email" type="email" required autocomplete="email" placeholder="ivan@example.ru">

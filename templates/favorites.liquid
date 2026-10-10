@@ -1,0 +1,77 @@
+{%- comment -%}
+  favorites.liquid — страница «Избранное» (B2c, маршрут __SHOP_BASE__/favorites,
+  TTL 0 — персональные данные в кэш не уходят). Биндинги: prods.data.products —
+  товары из набора (узел g_prods флоу переиспользует shop_checkout_products:
+  slug in $slugs + published + photos), fav — строка избранного (g_fav —
+  library shop_favorites_get по owner_id: member.id или shop_cart.anon).
+  Здесь сердечки рендерятся С SSR-ФАКТОМ (card_fav = true — весь грид и есть
+  избранное; TTL 0 делает факт честным, F1); на каталогах сердечки
+  SSR-нейтральны — факт докатывает js/favorites.js. Гость без набора и
+  пустой набор — вежливое пустое состояние (одинаковое: гость, отметивший
+  товар, получит куку от API-флоу — отдельной ветки «войдите» не нужно).
+  noindex: персональный список — в выдачу поисковиков не отдаём.
+{%- endcomment -%}
+{%- comment -%}
+  БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
+  Принцип витрины: данные текут только ВНИЗ; partial = чистая функция
+  входов (движок include не поднимает присваивания включателю —
+  osteele/liquid). Каноническая копия блока —
+  dev/site-config-bootstrap.liquid; смок проверяет байт-равенство во всех
+  entry-шаблонах. НЕ включать через {% include %} — присваивания не
+  доедут до включателя.
+
+  Две ветки адресации:
+    render-страницы: g_site.data.cfg (hoist result_key g_site)
+    письма/API:      results.g_site.cfg (сырой tplCtx flow)
+  Владельцу: поля правятся в админке (Контент → «Настройки магазина» —
+  одна запись с именованными полями; словарь строк-подстановок витрины
+  ликвидирован в W8).
+  Пустое поле = вшитый фоллбек шаблона: cfg-поля читаются на месте с
+  default-фоллбеком (cfg.cta_add_to_cart → «В корзину»), интерфейсные
+  подписи без cfg-поля — константы шаблона; умеющие правят в шаблонах.
+{%- endcomment -%}
+{%- assign cfg = g_site.data.cfg | first -%}
+{%- if cfg == blank -%}{%- assign cfg = results.g_site.cfg | first -%}{%- endif -%}
+{%- assign shop_name = cfg.name | default: "Магазин" -%}
+{%- assign ph_n = "{{n}}" -%}{%- assign ph_amount = "{{amount}}" -%}{%- assign ph_email = "{{email}}" -%}
+{%- comment -%} canon_base — канонический базовый URL (D26): site_url из
+  настроек (нормализация домена, scheme константой — витрина за TLS),
+  фоллбек — живой host запроса (first-class переменная страничных шаблонов;
+  в письмах host нет — там site_url из results.g_site.cfg напрямую). {%- endcomment -%}
+{%- assign canon_base = cfg.site_url | strip -%}
+{%- if canon_base == blank -%}
+  {%- assign canon_base = "https://" | append: host -%}
+{%- elsif canon_base contains "://" -%}
+  {%- assign cb_segs = canon_base | split: "//" -%}
+  {%- assign cb_host = cb_segs[1] | split: "/" | first -%}
+  {%- assign canon_base = cb_segs[0] | append: "//" | append: cb_host -%}
+{%- else -%}
+  {%- assign canon_base = "https://" | append: canon_base -%}
+{%- endif -%}
+
+
+{%- assign page_title = "Избранное" -%}
+{%- assign page_canon = "__SHOP_BASE__/favorites" -%}
+{%- assign page_noindex = true -%}
+{%- assign fav_products = prods.data.products -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  <h1 class="product-title">Избранное</h1>
+  {%- if fav_products and fav_products.size > 0 -%}
+  <div class="product-grid">
+    {%- comment -%} B2c (F1): на этой странице SSR-факт честен (TTL 0) —
+       card_fav включает залитые сердечки прямо в разметке. {%- endcomment -%}
+    {%- assign card_fav = true -%}
+    {%- for p in fav_products -%}{% include "partials/product-card" %}{%- endfor -%}
+    {%- assign card_fav = nil -%}
+  </div>
+  {%- else -%}
+  <div class="fav-empty">
+    <p class="fav-empty-title">Здесь пока ничего нет</p>
+    <p class="fav-empty-text">Отмечайте товары сердечком в каталоге или на карточке — они появятся в этом списке на всех ваших устройствах этого браузера.</p>
+    <div class="status-actions"><a class="btn btn-primary" href="__SHOP_BASE__/">В каталог</a></div>
+  </div>
+  {%- endif -%}
+</div>
+{%- endcapture -%}
+{% include "base" %}

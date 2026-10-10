@@ -77,6 +77,10 @@
 <link rel="stylesheet" href="/static/css/shop.css?v={{ site.version }}">
 <script src="/static/js/theme.js?v={{ site.version }}" defer></script>
 <script src="/static/js/cart.js?v={{ site.version }}" defer></script>
+{%- comment -%} B2c (F1): избранное — сердечки гидратирует js/favorites.js
+   одним GET (только на страницах с сердечками — скрипт сам гардится);
+   делегирование на document переживает fetch-свап каталога. {%- endcomment -%}
+<script src="/static/js/favorites.js?v={{ site.version }}" defer></script>
 {%- comment -%} B1 (D3): кастомные дропдауны (APG select-only combobox) —
    один общий компонент, улучшает ВСЕ select[data-dropdown] витрины
    (сейчас — сортировка каталога/категории; следующим — checkout-select). {%- endcomment -%}

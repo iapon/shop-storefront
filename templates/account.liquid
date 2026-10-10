@@ -51,6 +51,9 @@
 {%- capture content -%}
 <div class="shop-container section-y">
   <h1 class="product-title">Мои заказы</h1>
+  {%- comment -%} B2c: персональные списки покупателя. Избранное живёт под
+     базой магазина (там же его витринный контур — сердечки на карточках). {%- endcomment -%}
+  <p class="account-links"><a class="account-fav-link" href="__SHOP_BASE__/favorites">Избранное</a></p>
 
   {%- if my_orders and my_orders.size > 0 -%}
     <ul class="account-orders">

@@ -1,9 +1,18 @@
 {%- comment -%}
   partials/product-card.liquid — карточка товара (используется каталогом,
-  категорией и «Похожими»). ЧИСТАЯ ФУНКЦИЯ: ожидает товар в переменной p
-  (переменные текут вниз — читает, не назначает). Бейдж наличия —
-  partial stock-badge (тоже чистый: читает p.stock); волна B добавит сюда
-  сердечко избранного.
+  категорией, «Похожими» и гридом /favorites). ЧИСТАЯ ФУНКЦИЯ: ожидает
+  товар в переменной p (переменные текут вниз — читает, не назначает);
+  card_fav — ОПЦИОНАЛЬНЫЙ вход «SSR-факт избранного» (ставит в true только
+  /favorites, где TTL 0 делает факт честным; на каталогах не задан —
+  сердечко рендерится нейтральным, факт докатывает js/favorites.js — F1).
+  Бейдж наличия — partial stock-badge (тоже чистый: читает p.stock).
+  B2c: сердечко избранного — КНОПКА-СОСЕД корневой ссылки (вложенный
+  интерактив внутри <a> невалиден): обёртка .product-card-wrap +
+  абсолютное позиционирование поверх фото; data-fav-toggle несёт слаг,
+  aria-pressed — состояние, aria-label — название товара; тоггл и
+  гидратация живут в js/favorites.js (делегирование на document —
+  переживает fetch-свап каталога). Без JS сердечко декоративно:
+  кнопка вне ссылки, клик по ней никуда не ведёт и ничего не ломает.
 
   W6 №20-22: фото — ЕДИНЫЙ аспект 3/4 (CSS), loading="lazy" + width/height
   против CLS; hover — свап на ВТОРОЕ фото (оба <img> в разметке, второй
@@ -23,6 +32,7 @@
   своим циклом). Появление снимка — мгновенное: fade при появлении НЕТ
   ни в CSS, ни в JS (проверено пробой b1-v2).
 {%- endcomment -%}
+<div class="product-card-wrap">
 <a class="product-card" href="__SHOP_BASE__/product/{{ p.slug }}">
   <div class="product-card-photo">
     {%- comment -%} B1 (D4): decoding="async" — декодирование снимка не
@@ -45,3 +55,9 @@
     {%- if p.stock > 0 -%}<div class="product-card-stock">{% include "partials/stock-badge" %}</div>{%- endif -%}
   </div>
 </a>
+<button class="fav-btn" type="button" data-fav-toggle="{{ p.slug }}"
+        aria-pressed="{% if card_fav %}true{% else %}false{% endif %}"
+        aria-label="Добавить «{{ p.title | escape }}» в избранное">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path class="fav-heart" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+</button>
+</div>

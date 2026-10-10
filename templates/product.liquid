@@ -2,7 +2,8 @@
   product.liquid — карточка товара (биндинги: p.data.products — текущий,
   rel.data.products — похожие ≤4, vars.data.variants — варианты товара
   (B2a, узел g_vars флоу: library shop_product_variants по params.slug),
-  site.params.slug; g_site — словарь).
+  revs.data.reviews — published-отзывы (B2c, узел g_revs: library
+  shop_product_reviews), site.params.slug; g_site — словарь).
   Волна A: галерея photos-массива (главное + миниатюры, свайп/стрелки),
   степпер количества ±, бейджи наличия из partial, features string[],
   хлебные крошки, meta_title/meta_description с фоллбеком, JSON-LD
@@ -14,6 +15,11 @@
   цена/бейдж/карман остатка кнопки обновляются инлайн-скриптом (нативный
   переход — вне data-shop-main-свапа); JSON-LD: offers.sku первого варианта,
   availability — по вариантам.
+  B2c: сердечко избранного на фото (SSR-нейтральное — факт докатывает
+  js/favorites.js, F1); блок отзывов (только published, средняя + количество,
+  эскейп полей анонима — B-1), форма отзыва — нативный POST (honeypot,
+  пишет status=new — модерация владельцем статусом в админке), подтверждение
+  ?review=ok; aggregateRating в JSON-LD только при ≥1 published.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -74,6 +80,16 @@
 {%- endfor -%}
 {%- assign pv_has = false -%}
 {%- if pv_vars and pv_vars.size > 0 -%}{%- assign pv_has = true -%}{%- endif -%}
+{%- comment -%} B2c: отзывы товара (revs.data.reviews — узел g_revs флоу:
+   library shop_product_reviews — только published, новые сверху). Средняя —
+   вручную (фильтров sum/where в проде нет — это шимы дев-среды): один знак —
+   (sum·10 / count) / 10.0; count — size выборки. {%- endcomment -%}
+{%- assign revs_list = revs.data.reviews -%}
+{%- assign revs_count = revs_list.size | default: 0 -%}
+{%- assign revs_sum = 0 -%}
+{%- for r in revs_list -%}{%- assign revs_sum = revs_sum | plus: r.rating -%}{%- endfor -%}
+{%- assign revs_avg = 0 -%}
+{%- if revs_count > 0 -%}{%- assign revs_avg = revs_sum | times: 10 | divided_by: revs_count | divided_by: 10.0 -%}{%- endif -%}
 {%- if product -%}
   {%- assign page_title = product.meta_title | default: product.title -%}
   {%- assign pd_suffix = "купить в интернет-магазине" -%}
@@ -99,8 +115,12 @@
       базовая цена (F4: грид и offers.price показывают базовую цену,
       платит k_calc); B2a: offers.sku — из ПЕРВОГО варианта (sku может
       быть пустым — тогда ключа нет), availability — по вариантам
-      (product.stock у вариантного товара игнорируется). {%- endcomment -%}
-    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB"{% if pv_first and pv_first.sku %},"sku":{{ pv_first.sku | json }}{% endif %},"availability":"{% if pv_has %}{% if pv_in_stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}{% elsif product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}}</script>{%- endcapture -%}
+      (product.stock у вариантного товара игнорируется). B2c: при ≥1
+      published-отзыве дописывается aggregateRating (ratingValue —
+      средняя с одним знаком, reviewCount — число published); без
+      published-отзывов ключа НЕТ (пустой AggregateRating — мимо схем
+      поисковиков). {%- endcomment -%}
+    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB"{% if pv_first and pv_first.sku %},"sku":{{ pv_first.sku | json }}{% endif %},"availability":"{% if pv_has %}{% if pv_in_stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}{% elsif product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
     {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
       Тайтл приезжает биндингом cats (узел g_cat флоу переиспользует
@@ -156,6 +176,14 @@
         <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Предыдущее фото">‹</button>
         <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Следующее фото">›</button>
         {%- endif -%}
+        {%- comment -%} B2c (F1): сердечко карточки товара — SSR-нейтральное
+           (факт докатывает js/favorites.js одним GET; каталог кэшируется
+           TTL 300 — SSR-факт одного гостя закэшировался бы другому).
+           Gallery-viewport не ссылка — вложенного интерактива нет. {%- endcomment -%}
+        <button class="fav-btn fav-btn-page" type="button" data-fav-toggle="{{ product.slug }}"
+                aria-pressed="false" aria-label="Добавить «{{ product.title | escape }}» в избранное">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path class="fav-heart" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
       </div>
       {%- if product.photos and product.photos.size > 1 -%}
       <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title | escape }}">
@@ -258,6 +286,62 @@
       {%- endif -%}
     </div>
     </div>
+
+    {%- comment -%} B2c: отзывы — только published (модерация статусом в
+       админке: форма пишет status=new, владелец переводит в published —
+       написанный отзыв появляется на витрине после проверки). Форма —
+       НАТИВНЫЙ POST (no-JS контракт; редирект 303 делает флоу
+       shop_review): honeypot «сайт» — как на чекауте, ?review=ok —
+       подтверждение. Поля отзыва эскейпятся — B-1 (данные анонима). {%- endcomment -%}
+    <section class="reviews" aria-labelledby="reviews-title">
+      <div class="reviews-head">
+        <h2 class="rel-heading" id="reviews-title">Отзывы</h2>
+        {%- if revs_count > 0 -%}
+        <p class="reviews-meta"><span class="reviews-avg">{{ revs_avg }}</span> из 5 · {{ revs_count }}</p>
+        {%- else -%}
+        <p class="reviews-meta">Пока нет отзывов — станьте первым.</p>
+        {%- endif -%}
+      </div>
+      {%- if revs_count > 0 -%}
+      <ul class="review-list">
+        {%- for r in revs_list -%}
+        <li class="review">
+          <div class="review-head">
+            <span class="review-author">{{ r.author_name | escape }}</span>
+            <span class="review-rating" aria-label="Оценка {{ r.rating }} из 5">{{ r.rating }}<span class="review-star" aria-hidden="true">★</span></span>
+            <span class="review-date">{{ r.created_at | date: "%d.%m.%Y" }}</span>
+          </div>
+          {%- if r.body -%}<p class="review-body">{{ r.body | escape }}</p>{%- endif -%}
+        </li>
+        {%- endfor -%}
+      </ul>
+      {%- endif -%}
+      {%- if query.review == "ok" -%}
+      <p class="form-ok" role="status">Спасибо! Отзыв отправлен — он появится на странице после проверки.</p>
+      {%- endif -%}
+      <form class="review-form" method="post" action="__SHOP_BASE__/review">
+        <h3 class="review-form-title">Оставить отзыв</h3>
+        {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
+           Сервер молча отдаёт 303 без записи (паттерн чекаута). {%- endcomment -%}
+        <div class="hp-field" aria-hidden="true">
+          <label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+        <input type="hidden" name="slug" value="{{ product.slug | escape }}">
+        <label class="review-label" for="review-name">Имя</label>
+        <input class="field-input" id="review-name" name="author_name" type="text" required maxlength="100" placeholder="Как вас зовут">
+        <label class="review-label" for="review-rating">Оценка</label>
+        <select class="field-input" id="review-rating" name="rating">
+          <option value="5">5 — отлично</option>
+          <option value="4">4 — хорошо</option>
+          <option value="3">3 — нормально</option>
+          <option value="2">2 — так себе</option>
+          <option value="1">1 — плохо</option>
+        </select>
+        <label class="review-label" for="review-body">Отзыв</label>
+        <textarea class="field-input" id="review-body" name="body" rows="4" placeholder="Поделитесь впечатлениями"></textarea>
+        <button class="btn btn-primary" type="submit">Отправить отзыв</button>
+      </form>
+    </section>
   </div>
 
   <script>

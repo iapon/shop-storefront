@@ -747,6 +747,33 @@ html.is-scrolling .product-card-photo img { transition: none !important; }
 .product-desc { color: var(--muted); white-space: pre-line; }
 .buy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: var(--shop-space-5) 0; }
 .buy-row > .btn { flex: 1 1 100%; }
+/* ── Пикер вариантов (B2a): radio-строки «имя — [нет] — цена» ──────
+   Полная ширина внутри .buy-row; строка = тап ≥ 44px (--shop-touch);
+   выбранное состояние — акцент-бордер + подложка (токены, без теней);
+   недоступный вариант (stock 0) — input disabled + строка приглушена.
+   Без :has() выбор показывает нативный radio (прогрессивное улучшение). */
+.variant-picker {
+  flex: 1 1 100%; display: flex; flex-direction: column;
+  gap: var(--shop-space-2); margin: 0; padding: 0; border: 0;
+}
+.variant-row {
+  display: flex; align-items: center; gap: var(--shop-space-3);
+  min-height: var(--shop-touch);
+  padding: var(--shop-space-2) var(--shop-space-3);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); cursor: pointer;
+  transition: border-color var(--theme-fade), background-color var(--theme-fade);
+}
+.variant-row:hover { border-color: var(--accent); }
+.variant-row:has(input:checked) { border-color: var(--accent); background: var(--bg-soft); }
+.variant-row:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.variant-row input { accent-color: var(--accent); width: var(--shop-touch); height: var(--shop-touch); margin: 0; flex: 0 0 auto; }
+.variant-name { font-weight: 600; font-size: var(--text-md); min-width: 0; overflow-wrap: break-word; }
+.variant-row .badge { flex: 0 0 auto; }
+.variant-price { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.variant-row-off { opacity: 0.55; }
+.variant-row-off:hover { border-color: var(--border); background: var(--card); }
+.variant-row-off input { cursor: not-allowed; }
 /* ── Степпер количества (W7, разнос владельца): ОДНА визуальная группа ──
    Нативные спиннеры number-инпута скрыты по всей витрине (дублировали
    кнопки «−/+»); контрол сцеплен: кнопка − | инпут | кнопка + с общими
@@ -857,6 +884,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 }
 .cart-line-name:hover { color: var(--accent); text-decoration: none; }
 .cart-line-price { color: var(--muted); font-size: var(--text-sm); }
+/* B2a: label варианта в строке чекаута (под названием товара) */
+.cart-line-variant { color: var(--muted); font-size: var(--text-xs); }
 .cart-line-controls { grid-area: ctrl; display: flex; align-items: center; gap: 0.75rem; width: 100%; }
 /* степпер строки чекаута (D23): − qty + одной рамкой; тап-таргеты 2.75rem */
 .cart-line-stepper {

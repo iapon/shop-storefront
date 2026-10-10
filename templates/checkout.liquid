@@ -1,6 +1,7 @@
 {%- comment -%}
   checkout.liquid — оформление заказа. Биндинги: prods.data.products (товары
-  корзины, с фото для миниатюр строк — W9 F3), results.ci.items (позиции
+  корзины, с фото для миниатюр строк — W9 F3), vars.data.variants (варианты
+  товаров корзины — B2a, узел g_vars флоу), results.ci.items (позиции
   серверной корзины: флоу парсит json-строку items узлом k_ci — Liquid не
   читает JSON-строки), site.params, g_site.
   Позиции и суммы приходят с сервера; пусто/нет идентификатора → «Корзина
@@ -10,11 +11,16 @@
   для человека).
   Количество крутяt степперы data-cart-qty-inc/dec (D23: replace-семантика —
   cart.js шлёт ПОЛНЫЙ массив на POST __SHOP_BASE__/api/cart и перезагружает
-  страницу — SSR-состояние канонично), убирает кнопка data-cart-remove="slug",
-  корзину целиком — data-cart-clear. Перебор остатка (W9 F6): строка
-  подсвечивается (cart-line-over) с бейджем «В наличии: N», «+» гасится
-  data-stock'ом с сообщением, серверный чекаут отвечает stock_exceeded —
-  cart.js показывает то же сообщение в data-form-error.
+  страницу — SSR-состояние канонично), убирает кнопка data-cart-remove,
+  корзину целиком — data-cart-clear.
+  B2a (D23): identity строки — ПАРА slug+variant. Ключи степперов/«×» —
+  СОСТАВНЫЕ «slug|variant» (у безвариантных строк — голый slug, разметка
+  обратно совместима); строка с вариантом показывает label варианта и его
+  цену/остаток (матч v.id == i.variant среди vars.data.variants); цена без
+  пары — базовая. Перебор остатка (W9 F6) считается по фактическому
+  остатку строки (варианта или товара). Серверный чекаут отвечает
+  stock_exceeded по варианту — cart.js показывает то же сообщение
+  в data-form-error.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -74,14 +80,33 @@
           {%- for pr in prods.data.products -%}
             {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
           {%- endfor -%}
+          {%- comment -%} B2a (D23): пара slug+variant — цена/остаток/label
+             из варианта; пары нет (строка без варианта или id не найден —
+             чужой/устаревший) — товар как раньше. {%- endcomment -%}
+          {%- assign line_var = nil -%}
+          {%- if i.variant -%}
+            {%- for v in vars.data.variants -%}
+              {%- if v.id == i.variant -%}{%- assign line_var = v -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
           {%- if line -%}
-            {%- assign line_sum = line.price_kopecks | times: i.qty -%}
+            {%- if line_var -%}
+              {%- assign line_price = line_var.price_kopecks -%}
+              {%- assign line_stock = line_var.stock -%}
+            {%- else -%}
+              {%- assign line_price = line.price_kopecks -%}
+              {%- assign line_stock = line.stock -%}
+            {%- endif -%}
+            {%- assign line_key = i.slug -%}
+            {%- if i.variant %}{% assign line_key = i.slug | append: "|" | append: i.variant %}{% endif -%}
+            {%- assign line_sum = line_price | times: i.qty -%}
             {%- assign total_k = total_k | plus: line_sum -%}
             {%- comment -%} W9 (F6б): строка с перебором остатка — warning-тинт
                и явное «В наличии: N» (перебор блокирует чекаут на сервере —
-               сообщение о блокировке выдаёт cart.js из ответа flow). {%- endcomment -%}
+               сообщение о блокировке выдаёт cart.js из ответа flow);
+               B2a: N — фактический остаток строки (варианта или товара). {%- endcomment -%}
             {%- assign line_over = false -%}
-            {%- if line.stock > 0 and i.qty > line.stock -%}{%- assign line_over = true -%}{%- endif -%}
+            {%- if line_stock > 0 and i.qty > line_stock -%}{%- assign line_over = true -%}{%- endif -%}
             <li class="cart-line{% if line_over %} cart-line-over{% endif %}">
               {%- comment -%} W9 (F3): миниатюра товара (квадрат 3.5rem, радиус
                  карточки); пустая photos → плейсхолдер surface-2. Миниатюра и
@@ -97,25 +122,26 @@
               {%- endif -%}
               <div class="cart-line-info">
                 <a class="cart-line-name" href="__SHOP_BASE__/product/{{ line.slug }}">{{ line.title }}</a>
-                <span class="cart-line-price">{{ line.price_kopecks | times: 0.01 | money }} ₽ × {{ i.qty }}</span>
-                {%- if line.stock <= 0 -%}
+                {%- if line_var -%}<span class="cart-line-variant">{{ line_var.label }}</span>{%- endif -%}
+                <span class="cart-line-price">{{ line_price | times: 0.01 | money }} ₽ × {{ i.qty }}</span>
+                {%- if line_stock <= 0 -%}
                   <span class="badge badge-error">Нет в наличии</span>
                 {%- elsif line_over -%}
-                  <span class="badge badge-warning">{{ "В наличии: " | append: line.stock }}</span>
+                  <span class="badge badge-warning">{{ "В наличии: " | append: line_stock }}</span>
                 {%- endif -%}
               </div>
               <div class="cart-line-controls">
                 <span class="cart-line-stepper qty-stepper">
-                  <button class="qty-btn" type="button" data-cart-qty-dec="{{ i.slug }}"
+                  <button class="qty-btn" type="button" data-cart-qty-dec="{{ line_key }}"
                           aria-label="Уменьшить количество">−</button>
                   <span class="cart-line-qty">{{ i.qty }}</span>
-                  <button class="qty-btn" type="button" data-cart-qty-inc="{{ i.slug }}" data-stock="{{ line.stock }}"
+                  <button class="qty-btn" type="button" data-cart-qty-inc="{{ line_key }}" data-stock="{{ line_stock }}"
                           aria-label="Увеличить количество">+</button>
                 </span>
                 <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
               </div>
-              <button class="cart-line-remove" type="button" data-cart-remove="{{ i.slug }}"
-                      aria-label="Убрать из корзины: {{ line.title }}" title="Убрать из корзины">×</button>
+              <button class="cart-line-remove" type="button" data-cart-remove="{{ line_key }}"
+                      aria-label="Убрать из корзины: {{ line.title }}{% if line_var %} ({{ line_var.label }}){% endif %}" title="Убрать из корзины">×</button>
             </li>
           {%- endif -%}
         {%- endfor -%}
@@ -165,9 +191,16 @@
         {%- for pr in prods.data.products -%}
           {%- if pr.slug == i.slug -%}{%- assign line = pr -%}{%- endif -%}
         {%- endfor -%}
+        {%- assign sum_var = nil -%}
+        {%- if i.variant -%}
+          {%- for v in vars.data.variants -%}
+            {%- if v.id == i.variant -%}{%- assign sum_var = v -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
         {%- if line -%}
-          {%- assign line_sum = line.price_kopecks | times: i.qty -%}
-          <div class="summary-row"><span>{{ line.title }} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
+          {%- if sum_var -%}{%- assign line_price = sum_var.price_kopecks -%}{%- else -%}{%- assign line_price = line.price_kopecks -%}{%- endif -%}
+          {%- assign line_sum = line_price | times: i.qty -%}
+          <div class="summary-row"><span>{{ line.title }}{% if sum_var %} ({{ sum_var.label }}){% endif %} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
         {%- endif -%}
       {%- endfor -%}
       <div class="summary-total"><span>К оплате</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>

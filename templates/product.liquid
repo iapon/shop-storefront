@@ -1,10 +1,19 @@
 {%- comment -%}
   product.liquid — карточка товара (биндинги: p.data.products — текущий,
-  rel.data.products — похожие ≤4, site.params.slug; g_site — словарь).
+  rel.data.products — похожие ≤4, vars.data.variants — варианты товара
+  (B2a, узел g_vars флоу: library shop_product_variants по params.slug),
+  site.params.slug; g_site — словарь).
   Волна A: галерея photos-массива (главное + миниатюры, свайп/стрелки),
   степпер количества ±, бейджи наличия из partial, features string[],
   хлебные крошки, meta_title/meta_description с фоллбеком, JSON-LD
   Product+Offer. Не найден → состояние в шаблоне.
+  B2a: radio-пикер вариантов в .buy-row (каждая строка несёт
+  data-variant-id/data-price/data-stock); по умолчанию выбран первый
+  вариант со stock > 0 (все нулевые → disabled + «Нет в наличии»);
+  у товар с вариантами product.stock игнорируется (наличие — по вариантам);
+  цена/бейдж/карман остатка кнопки обновляются инлайн-скриптом (нативный
+  переход — вне data-shop-main-свапа); JSON-LD: offers.sku первого варианта,
+  availability — по вариантам.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -46,6 +55,25 @@
 
 
 {%- assign product = p.data.products | first -%}
+{%- comment -%} B2a: варианты товара (vars.data.variants). pv_def — первый
+  вариант со stock > 0 (дефолт пикера), pv_in_stock — сколько вариантов
+  в наличии (бейдж: любой > 0 = «В наличии», все нули = «Нет»);
+  pv_first — ПЕРВЫЙ по sort (offers.sku в JSON-LD — из него).
+  product.stock у вариантного товара игнорируется (F4: грид показывает
+  базовую цену, платит k_calc — расхождение display-only). {%- endcomment -%}
+{%- assign pv_vars = vars.data.variants -%}
+{%- assign pv_def = nil -%}
+{%- assign pv_first = nil -%}
+{%- assign pv_in_stock = 0 -%}
+{%- for v in pv_vars -%}
+  {%- if pv_first == nil -%}{%- assign pv_first = v -%}{%- endif -%}
+  {%- if v.stock > 0 -%}
+    {%- assign pv_in_stock = pv_in_stock | plus: 1 -%}
+    {%- if pv_def == nil -%}{%- assign pv_def = v -%}{%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign pv_has = false -%}
+{%- if pv_vars and pv_vars.size > 0 -%}{%- assign pv_has = true -%}{%- endif -%}
 {%- if product -%}
   {%- assign page_title = product.meta_title | default: product.title -%}
   {%- assign pd_suffix = "купить в интернет-магазине" -%}
@@ -68,8 +96,11 @@
       эмитит partial breadcrumbs ИНЛАЙНОМ в месте вызова (partial — чистая
       функция, capture вверх не доезжает). Строки вычищаются от
       кавычек/бэкслешей — ld-блок обязан парситься всегда; offers.price —
-      базовая цена (вариантные цены — волна B, платит k_calc). {%- endcomment -%}
-    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}}</script>{%- endcapture -%}
+      базовая цена (F4: грид и offers.price показывают базовую цену,
+      платит k_calc); B2a: offers.sku — из ПЕРВОГО варианта (sku может
+      быть пустым — тогда ключа нет), availability — по вариантам
+      (product.stock у вариантного товара игнорируется). {%- endcomment -%}
+    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB"{% if pv_first and pv_first.sku %},"sku":{{ pv_first.sku | json }}{% endif %},"availability":"{% if pv_has %}{% if pv_in_stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}{% elsif product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
     {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
       Тайтл приезжает биндингом cats (узел g_cat флоу переиспользует
@@ -143,9 +174,61 @@
     </div>
     <div class="product-info">
       <h1 class="product-title">{{ product.title }}</h1>
-      <div class="product-price">{{ product.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
+      {%- comment -%} B2a: цена карточки = дефолтный вариант (первый со
+         stock > 0), у безвариантного товара — базовая; span[data-pv-price]
+         обновляет пикер. {%- endcomment -%}
+      {%- if pv_has and pv_def -%}
+        {%- assign pv_shown_price = pv_def.price_kopecks -%}
+      {%- else -%}
+        {%- assign pv_shown_price = product.price_kopecks -%}
+      {%- endif -%}
+      <div class="product-price"><span data-pv-price>{{ pv_shown_price | times: 0.01 | money }}</span><span class="rub">₽</span></div>
       <div class="buy-row">
-        {%- if product.stock > 0 -%}
+        {%- if pv_has -%}
+          {%- comment -%} B2a: вариантный товар — бейдж БИНАРНЫЙ по вариантам
+             (badge_has_variants/badge_stock — вход partial stock-badge),
+             product.stock игнорируется. Все нули → pv_def нет: пикер
+             disabled, бейдж «Нет в наличии», кнопки/степпера нет. {%- endcomment -%}
+          {%- assign badge_has_variants = true -%}
+          {%- assign badge_stock = pv_in_stock -%}
+          {%- assign badge_attrs = ' data-pv-badge' -%}
+          {%- assign p = product -%}
+          {% include "partials/stock-badge" %}
+          {%- assign badge_has_variants = nil -%}
+          {%- assign badge_stock = nil -%}
+          {%- assign badge_attrs = nil -%}
+          {%- comment -%} пикер рендерится для ЛЮБОГО вариантного товара:
+             все нули → строки disabled (видно, что за варианты были),
+             бейдж «Нет в наличии», кнопки/степпера/скрипта нет. {%- endcomment -%}
+          <fieldset class="variant-picker" data-variant-picker>
+            <legend class="sr-only">Вариант</legend>
+            {%- for v in pv_vars -%}
+            <label class="variant-row{% if v.stock <= 0 %} variant-row-off{% endif %}">
+              <input type="radio" name="variant" value="{{ v.id }}"
+                     data-variant-id="{{ v.id }}" data-price="{{ v.price_kopecks }}" data-stock="{{ v.stock }}"
+                     {% if v.stock <= 0 %}disabled{% endif %}
+                     {% if pv_def and pv_def.id == v.id %}checked{% endif %}>
+              <span class="variant-name">{{ v.label }}</span>
+              {%- if v.stock <= 0 -%}<span class="badge badge-error">Нет в наличии</span>{%- endif -%}
+              <span class="variant-price">{{ v.price_kopecks | times: 0.01 | money }} ₽</span>
+            </label>
+            {%- endfor -%}
+          </fieldset>
+          {%- if pv_def -%}
+          <div class="qty-stepper" data-cart-stepper>
+            <button class="qty-btn" type="button" data-qty-step="-1" aria-label="Уменьшить количество">−</button>
+            <input class="qty-input" type="number" min="1" value="1" inputmode="numeric"
+                   aria-label="Количество" data-cart-qty>
+            <button class="qty-btn" type="button" data-qty-step="1" aria-label="Увеличить количество">+</button>
+          </div>
+          {%- comment -%} W9 (F6a): data-stock — карман остатка для cart.js:
+            попытка добавить больше гасится до остатка С сообщением
+            (регион data-cart-note под строкой покупки), не молча.
+            B2a: data-variant — текущий вариант (обновляет пикер), cart.js
+            кладёт строку-пару (slug+variant, D23). {%- endcomment -%}
+          <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}" data-variant="{{ pv_def.id }}" data-stock="{{ pv_def.stock }}">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
+          {%- endif -%}
+        {%- elsif product.stock > 0 -%}
           {%- assign p = product -%}
           {% include "partials/stock-badge" %}
           <div class="qty-stepper" data-cart-stepper>
@@ -246,6 +329,44 @@
     sync();
   })();
   </script>
+
+  {%- if pv_def -%}
+  <script>
+  /* b2a-picker-start */
+  /* B2a: пикер вариантов — change обновляет цену, бейдж наличия и карман
+     остатка кнопки покупки (data-variant/data-stock, контракт cart.js).
+     Бейдж бинарный по варианту (как SSR: > 0 = «В наличии», 0 = «Нет»).
+     Страница товара — нативный переход (вне data-shop-main-свапа):
+     элементные слушатели, ре-инициализация не нужна. Без JS пикер —
+     обычные radio, чекнут по умолчанию SSR-дефолт, кнопка несёт его же. */
+  (function () {
+    var picker = document.querySelector('[data-variant-picker]');
+    if (!picker) return;
+    var radios = picker.querySelectorAll('input[data-variant-id]');
+    var priceEl = document.querySelector('[data-pv-price]');
+    var badgeEl = document.querySelector('[data-pv-badge]');
+    var addBtn = document.querySelector('[data-cart-add]');
+    function apply(v) {
+      var price = Number(v.getAttribute('data-price'));
+      var stock = Number(v.getAttribute('data-stock')) || 0;
+      if (priceEl && isFinite(price)) priceEl.textContent = (price / 100).toFixed(2);
+      if (badgeEl) {
+        badgeEl.className = stock > 0 ? 'badge badge-success' : 'badge badge-error';
+        badgeEl.textContent = stock > 0 ? 'В наличии' : 'Нет в наличии';
+      }
+      if (addBtn) {
+        addBtn.setAttribute('data-variant', v.getAttribute('data-variant-id') || '');
+        addBtn.setAttribute('data-stock', String(stock));
+        addBtn.disabled = stock <= 0;
+      }
+    }
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].addEventListener('change', function (ev) { apply(ev.target); });
+    }
+  })();
+  /* b2a-picker-end */
+  </script>
+  {%- endif -%}
 
     {%- if rel.data.products.size > 0 -%}
     {%- assign card_lazy_all = true -%}{%- comment -%} B1-v2: «Похожие» ниже фолда — карточки всегда lazy {%- endcomment -%}

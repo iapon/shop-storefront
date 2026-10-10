@@ -773,7 +773,7 @@ html.is-scrolling .product-card-photo img { transition: none !important; }
    prefers-reduced-motion — подмена мгновенная (перехода нет; общий
    гейт анимаций витрины ниже трек не берёт — свой). Правило [hidden] —
    явкой: класс с display перебил бы UA-стиль скрытия. */
-.gallery-track { transition: opacity var(--theme-fade) ease; }
+.gallery-track { transition: opacity var(--theme-fade); }
 .gallery-track[data-swap="1"] { opacity: 0; }
 .gallery-nav[hidden], .gallery-thumbs[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {

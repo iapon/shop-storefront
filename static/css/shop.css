@@ -767,6 +767,19 @@ html.is-scrolling .product-card-photo img { transition: none !important; }
   font-size: var(--text-sm);
 }
 .gallery-slide img { width: 100%; height: 100%; object-fit: cover; }
+/* ── Вариантные фото (v1.7.2): кросс-фейд подмены слайдов ────
+   Выбор варианта → трек гасится (data-swap → opacity 0), контент
+   заменяется, трек проявляется обратно (скрипт галереи v3).
+   prefers-reduced-motion — подмена мгновенная (перехода нет; общий
+   гейт анимаций витрины ниже трек не берёт — свой). Правило [hidden] —
+   явкой: класс с display перебил бы UA-стиль скрытия. */
+.gallery-track { transition: opacity var(--theme-fade) ease; }
+.gallery-track[data-swap="1"] { opacity: 0; }
+.gallery-nav[hidden], .gallery-thumbs[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .gallery-track { transition: none !important; }
+  .gallery-track[data-swap="1"] { opacity: 1; }
+}
 /* стрелки галереи — поверх фото, тап-таргет 2.75rem; подложка карточная */
 .gallery-nav {
   position: absolute; top: 50%; transform: translateY(-50%);

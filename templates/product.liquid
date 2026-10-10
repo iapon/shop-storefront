@@ -25,6 +25,17 @@
   member-запросы всегда живут — рендер не кэшируется); анониму — тихий CTA
   «Войдите, чтобы оставить отзыв» с возвратом на товар (?next=…, гард —
   в js/auth.js). Список/средняя видны всем.
+  Вариантные фото (v1.7.2): у варианта своя галерея photos (entity[]+
+  entity_ref:media, пустая = общей галереи нет). Слайды — фото ВЫБРАННОГО
+  варианта (SSR — дефолт пикера; у варианта нет фото → общая галерея
+  товара); выбор варианта — инлайн-скриптом пикера (событие gallery:replace
+  → трек кроссфейдит подмену: data-swap opacity, prefers-reduced-motion —
+  мгновенно), миниатюры/стрелки синхронны. SEO (og:image, JSON-LD image[])
+  ОСТАЁТСЯ продуктовым: SSR не знает выбор варианта — это клиентская
+  интеракция (оговорка M6: расхождение display-only, canonical-картинка —
+  товарная). no-JS: карточка показывает галерею SSR-дефолта (первый
+  вариант со stock > 0; у него нет фото — общую товара), переключение
+  вариантов без JS невозможно (radio без автосабмита) — задокументировано.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -85,6 +96,18 @@
 {%- endfor -%}
 {%- assign pv_has = false -%}
 {%- if pv_vars and pv_vars.size > 0 -%}{%- assign pv_has = true -%}{%- endif -%}
+{%- comment -%} v1.7.2 (вариантные фото): слайды галереи — фото ВЫБРАННОГО
+  варианта (SSR — дефолт пикера, pv_def); у варианта фото нет/пусты —
+  общая галерея товара. SEO-поля ниже (og:image, JSON-LD image[]) сознательно
+  остаются на product.photos: SSR не знает выбор варианта (M6-оговорка).
+  gallery_shell — рендерить ли каркас миниатюр/стрелок: вариантному товару
+  каркас нужен ВСЕГДА (JS перестраивает его при смене варианта — у варианта
+  может быть ≠1 кадр против SSR-дефолта), прячется атрибутом hidden. {%- endcomment -%}
+{%- assign gallery = product.photos -%}
+{%- if pv_def and pv_def.photos and pv_def.photos.size > 0 -%}{%- assign gallery = pv_def.photos -%}{%- endif -%}
+{%- assign gallery_shell = false -%}
+{%- if gallery and gallery.size > 1 -%}{%- assign gallery_shell = true -%}{%- endif -%}
+{%- if pv_has -%}{%- assign gallery_shell = true -%}{%- endif -%}
 {%- comment -%} B2c: отзывы товара (revs.data.reviews — узел g_revs флоу:
    library shop_product_reviews — только published, новые сверху). Средняя —
    вручную (фильтров sum/where в проде нет — это шимы дев-среды): один знак —
@@ -162,10 +185,10 @@
              fetchpriority="high" (LCP снимка), остальные — lazy +
              decoding="async"; слайды в фиксированном аспекте 4/5 —
              прыжков раскладки нет при любых пропорциях снимков. {%- endcomment -%}
-          {%- if product.photos and product.photos.size > 0 -%}
-          {%- for ph in product.photos -%}
+          {%- if gallery and gallery.size > 0 -%}
+          {%- for ph in gallery -%}
           <div class="gallery-slide" role="group" aria-roledescription="слайд"
-               aria-label="Фото {{ forloop.index }} из {{ product.photos.size }}">
+               aria-label="Фото {{ forloop.index }} из {{ gallery.size }}">
             <img src="{{ ph.url }}" alt="{{ product.title | escape }} — фото {{ forloop.index }}"
                  decoding="async" width="800" height="1000"
                  {%- if forloop.first %} fetchpriority="high"{% else %} loading="lazy"{% endif -%}>
@@ -177,9 +200,11 @@
           </div>
           {%- endif -%}
         </div>
-        {%- if product.photos and product.photos.size > 1 -%}
-        <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Предыдущее фото">‹</button>
-        <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Следующее фото">›</button>
+        {%- if gallery_shell -%}
+        <button class="gallery-nav gallery-prev" type="button" data-gallery-step="-1" aria-label="Предыдущее фото"
+                {% unless gallery.size > 1 %}hidden{% endunless %}>‹</button>
+        <button class="gallery-nav gallery-next" type="button" data-gallery-step="1" aria-label="Следующее фото"
+                {% unless gallery.size > 1 %}hidden{% endunless %}>›</button>
         {%- endif -%}
         {%- comment -%} B2c (F1): сердечко карточки товара — SSR-нейтральное
            (факт докатывает js/favorites.js одним GET; каталог кэшируется
@@ -190,13 +215,14 @@
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path class="fav-heart" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
       </div>
-      {%- if product.photos and product.photos.size > 1 -%}
-      <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title | escape }}">
+      {%- if gallery_shell -%}
+      <div class="gallery-thumbs" data-gallery-thumbs aria-label="{{ product.title | escape }}"
+           {% unless gallery.size > 1 %}hidden{% endunless %}>
         {%- comment -%} B1 (D5): стрелки клавиатуры на полосе миниатюр —
            Left/Right шагают по фото (скрипт галереи ниже). {%- endcomment -%}
-        {%- for ph in product.photos -%}
+        {%- for ph in gallery -%}
         <button class="gallery-thumb{% if forloop.first %} is-active{% endif %}" type="button"
-                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title | escape }} — фото {{ forloop.index }} из {{ product.photos.size }}"
+                data-gallery-thumb="{{ ph.url }}" aria-label="{{ product.title | escape }} — фото {{ forloop.index }} из {{ gallery.size }}"
                 {% if forloop.first %}aria-pressed="true"{% else %}aria-pressed="false"{% endif %}>
           <img src="{{ ph.url }}" alt="" loading="lazy" decoding="async" width="96" height="120">
         </button>
@@ -205,6 +231,13 @@
       <p class="sr-only" data-gallery-status role="status" aria-live="polite"></p>
       {%- endif -%}
     </div>
+    {%- if pv_has -%}
+    {%- comment -%} v1.7.2: карта «id варианта → фото» + общая галерея под
+       ключом "product" — пикер читает её при смене варианта (у варианта нет
+       фото/ключа → общие слайды). URL эскейпятся фильтром json (B-1). {%- endcomment -%}
+    {%- capture gallery_map -%}{"product":[{%- for ph in product.photos -%}{{ ph.url | json }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%}]{%- for v in pv_vars -%},"{{ v.id }}":[{%- for ph in v.photos -%}{{ ph.url | json }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%}]{%- endfor -%}}{%- endcapture -%}
+    <script type="application/json" data-gallery-map>{{ gallery_map }}</script>
+    {%- endif -%}
     <div class="product-info">
       <h1 class="product-title">{{ product.title }}</h1>
       {%- comment -%} B2a: цена карточки = дефолтный вариант (первый со
@@ -366,9 +399,9 @@
   </div>
 
   <script>
-  /* Галерея v2 (B1-v2): нативная scroll-snap карусель — свайп на таче
-     бесплатный (композитор, ноль JS в кадре), миниатюры/стрелки скроллят
-     track smooth scrollTo, позицию показывает is-active миниатюры.
+  /* Галерея v3 (B1-v2 + v1.7.2): нативная scroll-snap карусель — свайп на
+     таче бесплатный (композитор, ноль JS в кадре), миниатюры/стрелки скроллят
+     track smooth scrollTo, позицию показывает is-active миниатюр.
      Скролл-событие гейтится rAF (один sync на кадр); prefers-reduced-
      motion — все прокрутки 'auto' (мгновенные). A11y: track/slide несут
      role=group + aria-roledescription (APG carousel), смена кадра
@@ -376,34 +409,47 @@
      fetchpriority="high" (шаблон), остальные lazy — не противоречит
      джанк-фиксу карточек. Без JS: track остаётся горизонтальным
      скроллером (свайп работает и без скрипта), миниатюры — обычные
-     кнопки без синхронизации. */
+     кнопки без синхронизации.
+     v1.7.2 (вариантные фото): слушатель gallery:replace — пикер меняет
+     вариант, трек кроссфейдит подмену слайдов (data-swap → opacity 0,
+     замена, проявление; reduce — мгновенно); миниатюры перестраиваются
+     (клики — делегированием, переживают перестройку), прячутся при ≤1
+     кадре — как SSR-каркас. Миниатюр нет при SSR (1 кадр) — replace
+     всё равно работает (полоса спрятана атрибутом hidden). */
   (function () {
     var track = document.querySelector('[data-gallery-track]');
-    var thumbs = document.querySelectorAll('[data-gallery-thumb]');
-    if (!track || !thumbs.length) return;
-    var n = thumbs.length;
+    if (!track) return;
+    var strip = document.querySelector('[data-gallery-thumbs]');
     var status = document.querySelector('[data-gallery-status]');
+    var navs = document.querySelectorAll('[data-gallery-step]');
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function behavior() { return reduce ? 'auto' : 'smooth'; }
+    function thumbs() { return strip ? strip.querySelectorAll('[data-gallery-thumb]') : []; }
+    function count() { return track.querySelectorAll('.gallery-slide').length; }
     function active() {
       var w = track.clientWidth;
       if (!w) return 0;
-      return Math.min(n - 1, Math.max(0, Math.round(track.scrollLeft / w)));
+      return Math.min(count() - 1, Math.max(0, Math.round(track.scrollLeft / w)));
     }
     var last = -1;
     function sync() {
+      var th = thumbs();
+      var n = th.length;
+      if (!n) return;
       var i = active();
       if (i === last) return;
       last = i;
       for (var j = 0; j < n; j++) {
-        thumbs[j].classList.toggle('is-active', j === i);
-        thumbs[j].setAttribute('aria-pressed', j === i ? 'true' : 'false');
+        th[j].classList.toggle('is-active', j === i);
+        th[j].setAttribute('aria-pressed', j === i ? 'true' : 'false');
       }
       if (status) status.textContent = 'Фото ' + (i + 1) + ' из ' + n;
-      var act = thumbs[i];
+      var act = th[i];
       if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: behavior() });
     }
     function go(idx) {
+      var n = count();
+      if (!n) return;
       idx = (idx + n) % n;
       track.scrollTo({ left: idx * track.clientWidth, behavior: behavior() });
     }
@@ -412,24 +458,84 @@
       if (raf) return;
       raf = window.requestAnimationFrame(function () { raf = 0; sync(); });
     }, { passive: true });
-    for (var k = 0; k < n; k++) {
-      (function (idx) {
-        thumbs[idx].addEventListener('click', function () { go(idx); });
-      })(k);
-    }
-    document.querySelectorAll('[data-gallery-step]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        go(active() + Number(btn.getAttribute('data-gallery-step')));
-      });
+    if (strip) strip.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-gallery-thumb]') : null;
+      if (!btn) return;
+      var th = thumbs();
+      for (var i = 0; i < th.length; i++) if (th[i] === btn) { go(i); return; }
     });
-    var strip = document.querySelector('[data-gallery-thumbs]');
     if (strip) strip.addEventListener('keydown', function (e) {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
       var dir = e.key === 'ArrowRight' ? 1 : -1;
-      var i = (active() + dir + n) % n;
+      var th = thumbs();
+      var i = (active() + dir + th.length) % th.length;
       go(i);
-      thumbs[i].focus();
+      if (th[i]) th[i].focus();
+    });
+    navs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        go(active() + Number(btn.getAttribute('data-gallery-step')));
+      });
+    });
+    function makeSlide(url, i, n) {
+      var slide = document.createElement('div');
+      slide.className = 'gallery-slide';
+      slide.setAttribute('role', 'group');
+      slide.setAttribute('aria-roledescription', 'слайд');
+      slide.setAttribute('aria-label', 'Фото ' + (i + 1) + ' из ' + n);
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.decoding = 'async';
+      img.width = 800;
+      img.height = 1000;
+      if (i === 0) img.setAttribute('fetchpriority', 'high'); else img.loading = 'lazy';
+      slide.appendChild(img);
+      return slide;
+    }
+    function makeThumb(url, i, n) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gallery-thumb' + (i === 0 ? ' is-active' : '');
+      b.setAttribute('data-gallery-thumb', url);
+      b.setAttribute('aria-label', 'Фото ' + (i + 1) + ' из ' + n);
+      b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 96;
+      img.height = 120;
+      b.appendChild(img);
+      return b;
+    }
+    function replace(urls) {
+      var n = urls.length;
+      if (!n) return;
+      var doSwap = function () {
+        track.innerHTML = '';
+        for (var i = 0; i < n; i++) track.appendChild(makeSlide(urls[i], i, n));
+        track.scrollLeft = 0;
+        last = -1;
+        var many = n > 1;
+        if (strip) {
+          strip.innerHTML = '';
+          for (var k = 0; k < n; k++) strip.appendChild(makeThumb(urls[k], k, n));
+          strip.hidden = !many;
+        }
+        navs.forEach(function (btn) { btn.hidden = !many; });
+        if (status) status.textContent = many ? 'Фото 1 из ' + n : '';
+        sync();
+      };
+      if (reduce) { doSwap(); return; }
+      track.setAttribute('data-swap', '1');
+      window.setTimeout(function () { doSwap(); track.removeAttribute('data-swap'); }, 170);
+    }
+    document.addEventListener('gallery:replace', function (e) {
+      var urls = e && e.detail && e.detail.urls;
+      if (urls && urls.length) replace(urls);
     });
     sync();
   })();
@@ -443,7 +549,12 @@
      Бейдж бинарный по варианту (как SSR: > 0 = «В наличии», 0 = «Нет»).
      Страница товара — нативный переход (вне data-shop-main-свапа):
      элементные слушатели, ре-инициализация не нужна. Без JS пикер —
-     обычные radio, чекнут по умолчанию SSR-дефолт, кнопка несёт его же. */
+     обычные radio, чекнут по умолчанию SSR-дефолт, кнопка несёт его же.
+     v1.7.2 (вариантные фото): change также переставляет слайды галереи —
+     событие gallery:replace с url'ами ВЫБРАННОГО варианта (карта
+     data-gallery-map); у варианта фото нет/ключ пуст → urls = общая
+     галерея товара (ключ "product"). Галерея не критична: провал события
+     не влияет на цену/сток. */
   (function () {
     var picker = document.querySelector('[data-variant-picker]');
     if (!picker) return;
@@ -451,6 +562,9 @@
     var priceEl = document.querySelector('[data-pv-price]');
     var badgeEl = document.querySelector('[data-pv-badge]');
     var addBtn = document.querySelector('[data-cart-add]');
+    var gmapEl = document.querySelector('[data-gallery-map]');
+    var gmap = null;
+    try { gmap = gmapEl ? JSON.parse(gmapEl.textContent || '{}') : null; } catch (e) { gmap = null; }
     function apply(v) {
       var price = Number(v.getAttribute('data-price'));
       var stock = Number(v.getAttribute('data-stock')) || 0;
@@ -463,6 +577,15 @@
         addBtn.setAttribute('data-variant', v.getAttribute('data-variant-id') || '');
         addBtn.setAttribute('data-stock', String(stock));
         addBtn.disabled = stock <= 0;
+      }
+      if (gmap && typeof document.dispatchEvent === 'function') {
+        var urls = gmap[v.getAttribute('data-variant-id') || ''];
+        if (!urls || !urls.length) urls = gmap.product || [];
+        if (urls.length) {
+          try {
+            document.dispatchEvent(new CustomEvent('gallery:replace', { detail: { urls: urls } }));
+          } catch (e) { /* галерея не критична — цена/сток уже обновлены */ }
+        }
       }
     }
     for (var i = 0; i < radios.length; i++) {

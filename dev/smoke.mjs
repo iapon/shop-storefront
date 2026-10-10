@@ -1339,8 +1339,11 @@ await smokeB2aCart();
         if (sel === '[data-form-error]') return err;
         if (sel === 'button[type="submit"]') return btn;
         if (sel === '[name="promo_code"]') return promoEl;
+        // B2b: radio читается ПО :checked — шим даёт РАЗНЫЕ значения голому
+        // селектору (d-0, не должен попасть в payload) и :checked (d-9)
+        if (sel === '[name="delivery_id"]:checked') return { value: 'd-9' };
         const m = /\[name="(.+)"\]/.exec(sel);
-        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '', delivery_id: 'd-1' }[m[1]] ?? '' };
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '', delivery_id: 'd-0' }[m[1]] ?? '' };
         return null;
       },
     });
@@ -1356,7 +1359,7 @@ await smokeB2aCart();
     d.submit(d.mkForm());
     await d.tick();
     const post = d.calls.find((c) => c.url.endsWith('/api/checkout'));
-    check(post && post.body.delivery_id === 'd-1', `B2b: сабмит не несёт delivery_id: ${post && JSON.stringify(post.body)}`);
+    check(post && post.body.delivery_id === 'd-9', `B2b: сабмит не несёт CHECKED delivery_id (d-9): ${post && JSON.stringify(post.body)}`);
     check(post && post.body.promo_code === 'demo10', 'B2b: promo_code не обрезан');
   }
 
@@ -1390,7 +1393,7 @@ await smokeB2aCart();
     failed++;
     console.log('FAIL b2b-checkout: ' + fails.join(' | '));
   } else {
-    console.log('OK   b2b-checkout (radio доставки SSR: первый выбран/бесплатно/сводка/placeholder скидки/итог=товары+доставка; пустой список — пометка; cart.js несёт delivery_id+promo_code; promo_invalid — единый отказ + aria-invalid; delivery_invalid — «Выберите способ доставки.»)');
+    console.log('OK   b2b-checkout (radio доставки SSR: первый выбран/бесплатно/сводка/placeholder скидки/итог=товары+доставка; пустой список — пометка; cart.js несёт CHECKED delivery_id+promo_code; promo_invalid — единый отказ + aria-invalid; delivery_invalid — «Выберите способ доставки.»)');
   }
 }
 

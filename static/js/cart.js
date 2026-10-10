@@ -276,12 +276,18 @@
       var el = form.querySelector('[name="' + name + '"]');
       return el ? String(el.value).trim() : '';
     }
+    /* B2b: radio-группы читаются ПО CHECKED (querySelector без :checked вернул бы
+       первое radio группы — выбор пользователя молча игнорировался бы). */
+    function valChecked(name) {
+      var el = form.querySelector('[name="' + name + '"]:checked');
+      return el ? String(el.value).trim() : '';
+    }
     var payload = {
       customer: { name: val('name'), email: val('email'), phone: val('phone') },
       comment: val('comment'),
       /* B2b: способ доставки (radio, первый активный выбран SSR-ом) и промокод.
          Деньги считает СЕРВЕР (k_calc): код/способ — только намерение. */
-      delivery_id: val('delivery_id'),
+      delivery_id: valChecked('delivery_id'),
       promo_code: val('promo_code'),
       website: val('website'), // honeypot: человек оставляет пустым
       // Страховка: слоты корзины (slug+qty) дублируются в теле — сервер всё

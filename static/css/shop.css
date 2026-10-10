@@ -957,6 +957,35 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   font-weight: 600; color: var(--text);
 }
 .summary-note { margin-top: var(--shop-space-4); }
+/* строка скидки (B2b): placeholder «применится при оформлении» — без цифры,
+   финальную сумму со скидкой даёт только сервер (k_calc) */
+.summary-discount span:last-child { color: var(--muted); font-size: var(--text-xs); }
+
+/* ── Доставка на чекауте (B2b): radio-строки способов ──────────────
+   Тот же паттерн, что пикер вариантов B2a: строка = тап ≥ 44px
+   (--shop-touch), выбранное состояние — акцент-бордер + подложка
+   (токены, без теней); описание способа — вторая строка muted. */
+.delivery-list {
+  display: flex; flex-direction: column;
+  gap: var(--shop-space-2); margin: 0 0 var(--shop-space-4);
+  padding: 0; border: 0;
+}
+.delivery-option {
+  display: flex; align-items: center; gap: var(--shop-space-3);
+  min-height: var(--shop-touch);
+  padding: var(--shop-space-2) var(--shop-space-3);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  background: var(--card); cursor: pointer;
+  transition: border-color var(--theme-fade), background-color var(--theme-fade);
+}
+.delivery-option:hover { border-color: var(--accent); }
+.delivery-option:has(input:checked) { border-color: var(--accent); background: var(--bg-soft); }
+.delivery-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.delivery-option input { accent-color: var(--accent); width: var(--shop-touch); height: var(--shop-touch); margin: 0; flex: 0 0 auto; }
+.delivery-option-main { display: flex; flex-direction: column; gap: var(--shop-space-1); min-width: 0; }
+.delivery-option-title { font-weight: 600; font-size: var(--text-md); overflow-wrap: break-word; }
+.delivery-option-desc { color: var(--muted); font-size: var(--text-xs); overflow-wrap: break-word; }
+.delivery-option-price { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ── Status-screen (заказ, 404) — чистая типографика, 36rem ── */
 .status-screen {

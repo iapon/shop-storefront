@@ -21,6 +21,13 @@
   остатку строки (варианта или товара). Серверный чекаут отвечает
   stock_exceeded по варианту — cart.js показывает то же сообщение
   в data-form-error.
+  B2b: доставка (radio из dlist.data.deliveryMethods — активные по sort,
+  первый выбран; поля name="delivery_id" внутри формы) и промокод
+  (name="promo_code"). Итог в сводке = товары + выбранный способ;
+  финальную цифру со скидкой даёт ТОЛЬКО сервер — строка «Скидка» честный
+  placeholder «применится при оформлении». Невалидный промокод/способ
+  БЛОКИРУЮТ чекаут (единый отказ, причина не раскрывается — анти-перебор);
+  cart.js показывает сообщение в data-form-error.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -65,6 +72,12 @@
 {%- assign page_canon = "__SHOP_BASE__/checkout" -%}
 {%- assign page_noindex = true -%}
 {%- assign ci_items = results.ci.items -%}
+{%- comment -%} B2b: способы доставки — активные (g_dlist), первый по sort
+   выбран SSR-ом (radio checked); сводка показывает его цену. Пустой список
+   (владелец деактивировал всё) — честная пометка: чекаут сервером
+   блокируется (delivery_invalid). {%- endcomment -%}
+{%- assign dmethods = dlist.data.deliveryMethods -%}
+{%- assign sel_delivery = dmethods | first -%}
 {%- capture content -%}
 <div class="shop-container section-y">
   <h1 class="product-title">Оформление заказа</h1>
@@ -151,10 +164,10 @@
       <p class="cart-note" data-cart-note role="status" aria-live="polite"></p>
       <button class="cart-clear" type="button" data-cart-clear>Очистить корзину</button>
 
-      <h2 class="rel-heading">Контакты</h2>
-      {%- comment -%} B1 (D5): ошибки формы — aria-describedby на обязательных
-         полях + aria-invalid (ставит cart.js при неудаче); role=alert на
-         боксе объявляет сообщение сразу. {%- endcomment -%}
+      {%- comment -%} B2b: доставка и контакты — ОДНА форма (cart.js читает
+         name="delivery_id"/name="promo_code" внутри data-checkout-form).
+         Ошибки формы — aria-describedby на обязательных полях + aria-invalid
+         (ставит cart.js при неудаче); role=alert на боксе объявляет сообщение. {%- endcomment -%}
       <form class="shop-prose" data-checkout-form novalidate>
         <div class="form-error" id="checkout-error" data-form-error role="alert"></div>
         {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
@@ -162,6 +175,24 @@
         <div class="hp-field" aria-hidden="true">
           <label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         </div>
+        <h2 class="rel-heading">Доставка</h2>
+        {%- if dmethods.size > 0 -%}
+        <div class="delivery-list" role="radiogroup" aria-label="Способ доставки">
+          {%- for m in dmethods -%}
+          <label class="delivery-option">
+            <input type="radio" name="delivery_id" value="{{ m.id }}"{% if forloop.first %} checked{% endif %}>
+            <span class="delivery-option-main">
+              <span class="delivery-option-title">{{ m.title }}</span>
+              {%- if m.description -%}<span class="delivery-option-desc">{{ m.description }}</span>{%- endif -%}
+            </span>
+            <span class="delivery-option-price">{% if m.price_kopecks > 0 %}{{ m.price_kopecks | times: 0.01 | money }} ₽{% else %}бесплатно{% endif %}</span>
+          </label>
+          {%- endfor -%}
+        </div>
+        {%- else -%}
+        <p class="field-hint">Способы доставки не настроены — уточните доставку у владельца магазина.</p>
+        {%- endif -%}
+        <h2 class="rel-heading">Контакты</h2>
         <div class="field">
           <label class="field-label" for="co-name">Имя *</label>
           <input class="field-input" id="co-name" name="name" type="text" required autocomplete="name" placeholder="Иван Петров" aria-describedby="checkout-error">
@@ -178,6 +209,11 @@
         <div class="field">
           <label class="field-label" for="co-comment">Комментарий к заказу</label>
           <textarea class="field-textarea" id="co-comment" name="comment" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label" for="co-promo">Промокод</label>
+          <input class="field-input" id="co-promo" name="promo_code" type="text" autocomplete="off" placeholder="Например, DEMO10" aria-describedby="checkout-error">
+          <p class="field-hint">Есть код? Скидка применится при оформлении заказа.</p>
         </div>
         <button class="btn btn-primary btn-lg" type="submit">{{ cfg.cta_checkout | default: "Перейти к оплате" | escape }}</button>
         <p class="field-hint">Оплата через ЮKassa: после нажатия вы перейдёте на платёжную страницу.</p>
@@ -203,7 +239,16 @@
           <div class="summary-row"><span>{{ line.title }}{% if sum_var %} ({{ sum_var.label }}){% endif %} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
         {%- endif -%}
       {%- endfor -%}
-      <div class="summary-total"><span>К оплате</span><span>{{ total_k | times: 0.01 | money }} ₽</span></div>
+      {%- comment -%} B2b: доставка (SSR-выбор — первый активный) и честный
+         placeholder скидки: финальную цифру со скидкой даёт только сервер
+         (k_calc), поэтому «К оплате» = товары + выбранный способ доставки. {%- endcomment -%}
+      {%- if sel_delivery -%}
+      <div class="summary-row"><span>Доставка — {{ sel_delivery.title }}</span><span>{{ sel_delivery.price_kopecks | times: 0.01 | money }} ₽</span></div>
+      {%- endif -%}
+      <div class="summary-row summary-discount"><span>Скидка</span><span>применится при оформлении</span></div>
+      {%- assign grand_k = total_k -%}
+      {%- if sel_delivery -%}{%- assign grand_k = total_k | plus: sel_delivery.price_kopecks -%}{%- endif -%}
+      <div class="summary-total"><span>К оплате</span><span>{{ grand_k | times: 0.01 | money }} ₽</span></div>
       {%- comment -%} W9 (F8): упоминание условий — ссылкой, когда тоС загружен
          (cfg.has_tos), иначе обычный текст (мёртвых ссылок нет). {%- endcomment -%}
       <p class="field-hint summary-note">{%- if cfg.has_tos -%}Нажимая «Перейти к оплате», вы соглашаетесь с <a href="__SHOP_BASE__/tos">условиями продажи</a>.{%- else -%}Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.{%- endif -%}</p>

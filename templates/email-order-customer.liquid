@@ -72,6 +72,17 @@
   </tr>
   {%- endfor -%}
 </table>
+{%- comment -%} B2b: строки скидки и доставки — снапшот заказа из results.calc
+   (адресация M1). Нулевые/пустые значения (старые заказы, без промокода,
+   самовывоз) молча скрывают строку. {%- endcomment -%}
+{%- assign edisc = results.calc.discount_kopecks | plus: 0 -%}
+{%- if edisc > 0 -%}
+<p class="email-meta">Скидка{% if results.calc.promo_code %} «{{ results.calc.promo_code | escape }}»{% endif %}: −{{ edisc | times: 0.01 | money }} ₽</p>
+{%- endif -%}
+{%- assign edeliv = results.calc.delivery_price_kopecks | plus: 0 -%}
+{%- if edeliv > 0 -%}
+<p class="email-meta">Доставка{% if results.calc.delivery_title %} ({{ results.calc.delivery_title | escape }}){% endif %}: {{ edeliv | times: 0.01 | money }} ₽</p>
+{%- endif -%}
 <p class="email-total">К оплате: {{ eamount }} ₽</p>
 
 {%- comment -%} ссылка на статус — только когда владелец заполнил site_url:

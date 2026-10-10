@@ -1549,33 +1549,38 @@ await smokeB2aCart();
 
 /* ── Проба B2c: отзывы на карточке товара ────────────────────────────
    SSR: блок отзывов (средняя 4.5 · 2), список published (новые сверху),
-   форма (имя/оценка/текст + honeypot + скрытый slug), подтверждение
-   ?review=ok; AggregateRating в JSON-LD ТОЛЬКО при ≥1 published;
-   поля анонима (author_name/body) эскейпятся — B-1. */
+   форма (имя/оценка/текст + honeypot + скрытый slug — v1.7.1: только
+   member'у), подтверждение ?review=ok; AggregateRating в JSON-LD
+   ТОЛЬКО при ≥1 published; поля анонима (author_name/body) эскейпятся —
+   B-1. */
 {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const MEMBER = { id: '8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d' };
   const html = await renderMockPage(engine, 'product', 'found', { query: { ...q } });
   check(html.includes('id="reviews-title"'), 'B2c: секция отзывов без заголовка');
   check(html.includes('<span class="reviews-avg">4.5</span> из 5 · 2'), 'B2c: средняя/количество не 4.5 · 2');
   check(html.includes('review-author">Дмитрий</span>') && html.includes('review-author">Мария</span>'), 'B2c: список published неполный');
   check(html.indexOf('Дмитрий') < html.indexOf('Мария'), 'B2c: порядок отзывов не created_at DESC');
-  check(html.includes('name="author_name"') && html.includes('name="rating"') && html.includes('name="body"'), 'B2c: в форме отзыва нет полей имя/оценка/текст');
-  check(/<option value="5"[^>]*>/.test(html), 'B2c: шкала оценки без вариантов');
-  check(html.includes('name="website"') && html.includes('type="hidden" name="slug" value="mug-linen"'), 'B2c: форма без honeypot/скрытого слага');
-  check(html.includes('action="/shop/review"'), 'B2c: форма отзыва постит не на /shop/review');
+  // v1.7.1: форма — вошедшему; form-проверки — на member-рендере
+  const mem = await renderMockPage(engine, 'product', 'found', { query: { ...q }, member: MEMBER });
+  check(mem.includes('name="author_name"') && mem.includes('name="rating"') && mem.includes('name="body"'), 'B2c: в форме отзыва нет полей имя/оценка/текст');
+  check(/<option value="5"[^>]*>/.test(mem), 'B2c: шкала оценки без вариантов');
+  check(mem.includes('name="website"') && mem.includes('type="hidden" name="slug" value="mug-linen"'), 'B2c: форма без honeypot/скрытого слага');
+  check(mem.includes('action="/shop/review"'), 'B2c: форма отзыва постит не на /shop/review');
   let ld = extractJsonLd(html).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2c: JSON-LD с отзывами не парсится: ' + e.message); return null; } }).filter(Boolean);
   let prodLd = ld.find((o) => o['@type'] === 'Product');
   check(prodLd && prodLd.aggregateRating && prodLd.aggregateRating.ratingValue === '4.5' && prodLd.aggregateRating.reviewCount === '2',
     `B2c: aggregateRating не 4.5/2: ${prodLd && JSON.stringify(prodLd.aggregateRating)}`);
-  // без published-отзывов: ключа aggregateRating НЕТ, «Пока нет отзывов», форма на месте
+  // без published-отзывов: ключа aggregateRating НЕТ, «Пока нет отзывов», форма на месте (у member)
   const noRevs = await renderMockPage(engine, 'product', 'vars', { query: { ...q } });
+  const noRevsMem = await renderMockPage(engine, 'product', 'vars', { query: { ...q }, member: MEMBER });
   check(noRevs.includes('Пока нет отзывов'), 'B2c: без отзывов нет вежливой подписи');
-  check(noRevs.includes('review-form'), 'B2c: без отзывов пропала форма');
+  check(noRevsMem.includes('review-form'), 'B2c: без отзывов пропала форма (member)');
   ld = extractJsonLd(noRevs).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2c: JSON-LD без отзывов не парсится: ' + e.message); return null; } }).filter(Boolean);
   prodLd = ld.find((o) => o['@type'] === 'Product');
   check(prodLd && !prodLd.aggregateRating, 'B2c: aggregateRating отрисовался без published-отзывов');
-  // подтверждение ?review=ok
+  // подтверждение ?review=ok (видна всем — вне гейта формы)
   const okPage = await renderMockPage(engine, 'product', 'found', { query: { ...q, review: 'ok' } });
   check(okPage.includes('появится на странице после проверки'), 'B2c: ?review=ok без подтверждения модерации');
   // B-1: поля анонима эскейпятся
@@ -1601,7 +1606,132 @@ await smokeB2aCart();
     failed++;
     console.log('FAIL b2c-reviews: ' + fails.join(' | '));
   } else {
-    console.log('OK   b2c-reviews (средняя 4.5·2, published DESC, форма+honeypot+slug, ?review=ok, aggregateRating только при published, эскейп author_name/body — B-1, сердечко: 44px/мгновенно/accent, кнопка-сосед ссылки)');
+    console.log('OK   b2c-reviews (средняя 4.5·2, published DESC, форма+honeypot+slug — у member, ?review=ok, aggregateRating только при published, эскейп author_name/body — B-1, сердечко: 44px/мгновенно/accent, кнопка-сосед ссылки)');
+  }
+}
+
+/* ── Проба v1.7.1 (отзывы-вход): форма отзыва — только member'у ──────────
+   Аноним на карточке: формы НЕТ, тихий CTA «Войдите…» с ?next= НА ЭТОТ
+   товар (login + register), список/средняя на месте. Member: форма есть,
+   CTA нет. auth.js: после успешного входа — переход по data-next с гардом
+   open-redirect (не «/»-путь, «//», «\», пусто → серверный дефолт);
+   неуспешный вход — навигации нет. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const MEMBER = { id: '8f2c1a90-4d3e-4b6a-9a55-1e2f3a4b5c6d' };
+  // Аноним: гейт формы + CTA
+  const anon = await renderMockPage(engine, 'product', 'found', { query: { ...q } });
+  check(!anon.includes('review-form') && !anon.includes('name="author_name"'), 'v1.7.1: гость видит форму отзыва');
+  check(anon.includes('<a href="/login?next=/shop/product/mug-linen">Войдите</a>, чтобы оставить отзыв'), 'v1.7.1: CTA без «Войдите, чтобы оставить отзыв» с next на товар');
+  check(anon.includes('href="/register?next=/shop/product/mug-linen"'), 'v1.7.1: CTA без ссылки регистрации с next');
+  check(anon.includes('<span class="reviews-avg">4.5</span> из 5 · 2'), 'v1.7.1: у гостя пропал блок отзывов (список/средняя — всем)');
+  // Member: форма, CTA скрыт
+  const mem = await renderMockPage(engine, 'product', 'found', { query: { ...q }, member: MEMBER });
+  check(mem.includes('review-form') && mem.includes('action="/shop/review"'), 'v1.7.1: у member нет формы отзыва');
+  check(!mem.includes('review-login'), 'v1.7.1: member видит CTA входа');
+  // login/register: data-next из query.next (эскейп-атрибут)
+  const loginNext = await renderMockPage(engine, 'login', null, { query: { next: '/shop/product/mug-linen' } });
+  check(loginNext.includes('data-next="/shop/product/mug-linen"'), 'v1.7.1: login не_embedит data-next из query.next');
+  const regNext = await renderMockPage(engine, 'register', null, { query: { next: '/shop/product/mug-linen' } });
+  check(regNext.includes('data-next="/shop/product/mug-linen"'), 'v1.7.1: register не_embedит data-next');
+  const loginPlain = await renderMockPage(engine, 'login', null, { query: {} });
+  check(loginPlain.includes('data-next=""'), 'v1.7.1: login без next должен нести пустой data-next');
+  // XSS-эскейп data-next: кавычка из query.next не разрывает атрибут
+  const loginXss = await renderMockPage(engine, 'login', null, { query: { next: '"><script>alert(3)</script>' } });
+  check(!loginXss.includes('<script>alert(3)</script>'), 'v1.7.1: query.next не эскейпится в data-next (XSS)');
+  check(loginXss.includes('data-next="&#34;&gt;&lt;script&gt;alert(3)&lt;/script&gt;"'), 'v1.7.1: data-next не в escape-форме');
+  // auth.js: поведенческая проба (мини-DOM) — next + гард open-redirect
+  function mkAuthDom({ dataNext, finalUrl }) {
+    const calls = { replace: [] };
+    const listeners = {};
+    const created = [];
+    const mkEl = () => ({
+      attrs: {}, children: [], className: '',
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      removeAttribute(k) { delete this.attrs[k]; },
+      appendChild(c) { this.children.push(c); },
+    });
+    const form = {
+      attrs: { action: '/login', 'data-next': dataNext },
+      getAttribute(k) { return this.attrs[k] ?? null; },
+      querySelector(sel) { return sel === 'button[type="submit"]' ? button : null; },
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      parentNode: {
+        querySelector() { return null; },
+        insertBefore(el) { created.push(el); return el; },
+      },
+    };
+    const button = {
+      disabled: false, textContent: '', attrs: {},
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      removeAttribute(k) { delete this.attrs[k]; },
+    };
+    const document = {
+      querySelectorAll: (sel) => (sel === 'form.auth-form' ? [form] : []),
+      createElement: () => mkEl(),
+      createTextNode: (t) => ({ text: t }),
+    };
+    const location = { replace(u) { calls.replace.push(String(u)); } };
+    const fetchMock = () => Promise.resolve({ url: finalUrl });
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'auth.js'), 'utf8');
+    new Function('document', 'window', 'fetch', 'FormData', 'location', src)(
+      document, {}, fetchMock,
+      function FormData() { this.append = function () {}; },
+      location
+    );
+    const submit = () => { for (const fn of listeners.submit ?? []) fn({ preventDefault() {} }); };
+    const tick = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 0)); };
+    return { calls, submit, tick, created };
+  }
+  const SUCCESS = 'https://shop.test/account';
+  // a) валидный next → возврат на товар (НЕ response.url)
+  {
+    const d = mkAuthDom({ dataNext: '/shop/product/mug-linen', finalUrl: SUCCESS });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 1 && d.calls.replace[0] === '/shop/product/mug-linen',
+      `v1.7.1: валидный next не сработал: ${JSON.stringify(d.calls.replace)}`);
+  }
+  // b) чужой домен — игнорируется, серверный дефолт
+  {
+    const d = mkAuthDom({ dataNext: 'https://evil.com', finalUrl: SUCCESS });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 1 && d.calls.replace[0] === SUCCESS,
+      `v1.7.1: open-redirect https://evil.com НЕ проигнорирован: ${JSON.stringify(d.calls.replace)}`);
+  }
+  // c) protocol-relative — игнорируется
+  {
+    const d = mkAuthDom({ dataNext: '//evil.com', finalUrl: SUCCESS });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 1 && d.calls.replace[0] === SUCCESS,
+      `v1.7.1: open-redirect //evil.com НЕ проигнорирован: ${JSON.stringify(d.calls.replace)}`);
+  }
+  // d) бэкслеш-трюк (браузеры нормализуют \ в /) — игнорируется
+  {
+    const d = mkAuthDom({ dataNext: '/\\evil.com', finalUrl: SUCCESS });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 1 && d.calls.replace[0] === SUCCESS,
+      `v1.7.1: open-redirect /\\evil.com НЕ проигнорирован: ${JSON.stringify(d.calls.replace)}`);
+  }
+  // e) пустой data-next — дефолт (прошлое поведение)
+  {
+    const d = mkAuthDom({ dataNext: '', finalUrl: SUCCESS });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 1 && d.calls.replace[0] === SUCCESS,
+      `v1.7.1: без next дефолт сломан: ${JSON.stringify(d.calls.replace)}`);
+  }
+  // f) неуспешный вход — навигации нет, ошибка инлайн
+  {
+    const d = mkAuthDom({ dataNext: '/shop/product/mug-linen', finalUrl: 'https://shop.test/login?failed=1' });
+    d.submit(); await d.tick();
+    check(d.calls.replace.length === 0, `v1.7.1: фейл-логин увёл навигацией: ${JSON.stringify(d.calls.replace)}`);
+    check(d.created.length >= 1, 'v1.7.1: фейл-логин без инлайн-ошибки');
+  }
+  if (fails.length) {
+    failed++;
+    console.log('FAIL revlogin: ' + fails.join(' | '));
+  } else {
+    console.log('OK   revlogin (форма только member\'у; гость — CTA «Войдите…» с next на товар; auth.js: успешный вход → data-next, гард open-redirect https:///\\// → дефолт, фейл — на месте)');
   }
 }
 
@@ -2020,4 +2150,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + revlogin + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

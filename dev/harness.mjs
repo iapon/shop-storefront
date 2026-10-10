@@ -357,9 +357,18 @@ export function harnessMiddleware(engine) {
         page: url.searchParams.get('page') || '',
         q: url.searchParams.get('q') || '',
         sort: url.searchParams.get('sort') || '',
-        review: url.searchParams.get('review') || ''
+        review: url.searchParams.get('review') || '',
+        next: url.searchParams.get('next') || '' // v1.7.1: data-next на login/register
       };
-      const html = await renderMockPage(engine, mockName, variant, { query });
+      const overrides = { query };
+      // dev-мембер (кука dev_member=1, как у API-шим): страницы рендерятся
+      // с member-контекстом — карточка показывает форму отзыва (v1.7.1),
+      // шапка/кабинет — member-ветки. Прод-аналог: member-запросы всегда
+      // рендерятся живьём (кэш TTL только для анонимов).
+      if ((req.headers.cookie || '').includes('dev_member=1')) {
+        overrides.member = { id: 'd3adb33f-c000-4bad-a555-000000000001' };
+      }
+      const html = await renderMockPage(engine, mockName, variant, overrides);
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(html);
     } catch (err) {

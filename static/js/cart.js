@@ -13,6 +13,11 @@
                                  | {ok: false, error: "stock_exceeded", slug, label?, max}
                                  | {ok: false, error: "payment_failed", order_id}
                                  | {ok: false, error: "cart_invalid"}
+                                 | {ok: false, error: "delivery_invalid"}   (B2b: доставка не выбрана/неактивна)
+                                 | {ok: false, error: "promo_invalid"}      (B2b: код не существует/просрочен/
+                                                                            исчерпан/неактивен — причина НЕ
+                                                                            раскрывается, анти-перебор; оба
+                                                                            БЛОКИРУЮТ чекаут, F2)
    POST <base>/api/retry-payment → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
    B2a (D23): identity строки корзины — ПАРА slug+variant (variant — id
    варианта товара; строки без варианта хранят голый {slug, qty} — ключ
@@ -255,6 +260,9 @@
     if (form.querySelectorAll) required = form.querySelectorAll('input[required]');
     function clearInvalid() {
       for (var i = 0; i < required.length; i++) required[i].removeAttribute('aria-invalid');
+      /* B2b: метка невалидного промокода гасится на следующей попытке. */
+      var promoEl = form.querySelector('[name="promo_code"]');
+      if (promoEl) promoEl.removeAttribute('aria-invalid');
     }
     function fail(msgText) {
       if (errBox) { errBox.textContent = msgText; errBox.setAttribute('data-visible', '1'); }
@@ -271,6 +279,10 @@
     var payload = {
       customer: { name: val('name'), email: val('email'), phone: val('phone') },
       comment: val('comment'),
+      /* B2b: способ доставки (radio, первый активный выбран SSR-ом) и промокод.
+         Деньги считает СЕРВЕР (k_calc): код/способ — только намерение. */
+      delivery_id: val('delivery_id'),
+      promo_code: val('promo_code'),
       website: val('website'), // honeypot: человек оставляет пустым
       // Страховка: слоты корзины (slug+qty) дублируются в теле — сервер всё
       // равно считает цены и суммы по своему каталогу.
@@ -304,6 +316,21 @@
           var max = Number(resp.max) || 0;
           fail(max > 0 ? stockOnlyMsg(max) : msg('stock', 'В корзине больше, чем есть в наличии — уменьшите количество.'));
           if (btn) btn.disabled = false;
+          return;
+        }
+        /* B2b (F2): невалидный промокод БЛОКИРУЕТ оформление с ЕДИНЫМ
+           сообщением (причина — не существует/просрочен/исчерпан/неактивен —
+           не раскрывается: анти-перебор). Поле помечается aria-invalid. */
+        if (resp && resp.error === 'promo_invalid') {
+          var promoEl = form.querySelector('[name="promo_code"]');
+          if (promoEl) promoEl.setAttribute('aria-invalid', 'true');
+          fail(msg('promo-invalid', 'Промокод не применён — проверьте код.'));
+          return;
+        }
+        /* B2b: доставка обязательна — не выбрана или неактивна (тот же
+           блокирующий отказ; список доставки на странице — SSR). */
+        if (resp && resp.error === 'delivery_invalid') {
+          fail(msg('delivery-invalid', 'Выберите способ доставки.'));
           return;
         }
         fail(resp && resp.error === 'cart_invalid'

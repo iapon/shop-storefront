@@ -106,6 +106,77 @@
       "query": {}
     }
   },
+  "mix": {
+    "_comment": "B2a: смешанная корзина — вариантная строка (slug+variant, цена/label из vars.data.variants) рядом с обычной; ключи степперов/«×» составные «slug|variant».",
+    "results": {
+      "ci": {
+        "items": [
+          {
+            "slug": "hudi-oversayz",
+            "variant": "var-1",
+            "qty": 2
+          },
+          {
+            "slug": "planner-pine",
+            "qty": 1
+          }
+        ]
+      }
+    },
+    "cart": {
+      "data": {
+        "carts": [
+          {
+            "id": "cart-anon-1",
+            "items": "[{\"slug\":\"hudi-oversayz\",\"variant\":\"var-1\",\"qty\":2},{\"slug\":\"planner-pine\",\"qty\":1}]"
+          }
+        ]
+      }
+    },
+    "prods": {
+      "data": {
+        "products": [
+          {
+            "id": "p-hudi",
+            "title": "Худи оверсайз",
+            "slug": "hudi-oversayz",
+            "price_kopecks": 299000,
+            "stock": 12,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          },
+          {
+            "id": "p-3",
+            "title": "Планинг «Сосна»",
+            "slug": "planner-pine",
+            "price_kopecks": 34900,
+            "stock": 4,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "vars": {
+      "data": {
+        "variants": [
+          { "id": "var-1", "product_slug": "hudi-oversayz", "label": "Красный / M", "sku": "HUDI-RM", "price_kopecks": 319000, "stock": 4 },
+          { "id": "var-2", "product_slug": "hudi-oversayz", "label": "Синий / L", "sku": "HUDI-BL", "price_kopecks": 299000, "stock": 7 }
+        ]
+      }
+    },
+    "site": {
+      "version": 7,
+      "params": {},
+      "query": {}
+    }
+  },
   "empty": {
     "results": {
       "ci": {

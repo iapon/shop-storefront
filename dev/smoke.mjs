@@ -20,8 +20,10 @@ const cases = [
   ['category', 'nested', ['Керамика', 'Тарелки', 'category/ceramics', 'Товаров: 1']],
   ['category', 'not_found', ['Категория не найдена']],
   ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
+  ['product', 'vars', ['Худи оверсайз', 'data-variant-picker', 'data-variant-id="var-1"', 'data-price="319000"', 'data-stock="4"', 'data-variant="var-1"', 'checked', '3190.00', '>В наличии</span>', 'В корзину', 'data-pv-price', 'data-pv-badge']],
   ['product', 'not_found', ['Товар не найден']],
   ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии']],
+  ['checkout', 'mix', ['Ваш заказ', 'cart-line-variant', 'Красный / M', '3190.00 ₽ × 2', '349.00 ₽ × 1', 'data-cart-qty-inc="hudi-oversayz|var-1"', 'data-cart-qty-dec="hudi-oversayz|var-1"', 'data-cart-remove="hudi-oversayz|var-1"', 'data-cart-remove="planner-pine"', '(Красный / M) × 2', 'data-stock="4"']],
   ['checkout', 'member', ['Ваш заказ', '1490.00']],
   ['checkout', 'empty', ['Корзина пуста']],
   ['cart', 'guest', ['Ваш заказ', '990.00']],
@@ -1067,6 +1069,213 @@ async function smokeW9Cart() {
 }
 await smokeW9Cart();
 
+/* ── Проба B2a: пикер вариантов — SSR-контракт + поведенческая DOM-проба ──
+   Вариантный товар: дефолт = первый вариант со stock > 0 (checked), цена
+   карточки = его цена, бейдж БИНАРНЫЙ по вариантам (product.stock
+   игнорируется), JSON-LD: offers.sku первого варианта, availability по
+   вариантам; все нули → пикер disabled, бейдж «Нет в наличии», кнопки
+   нет. Безвариантный товар: никаких маркеров пикера (байт-совместимость).
+   Поведение: инлайн-скрипт пикера — change обновляет цену/бейдж/карман
+   кнопки (data-variant/data-stock). */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const plain = await renderMockPage(engine, 'product', null, { query: { ...q } });
+  check(!plain.includes('data-variant-picker'), 'B2a: безвариантный товар рендерит пикер');
+  check(!plain.includes('data-pv-badge'), 'B2a: безвариантный товар несёт карман пикера на бейдже');
+  check(plain.includes('В наличии: 12'), 'B2a: безвариантный бейдж потерял p.stock-ветку');
+
+  const varsHtml = await renderMockPage(engine, 'product', 'vars', { query: { ...q } });
+  const checkedRe = /<input type="radio" name="variant" value="var-1"[^>]*checked/.test(varsHtml.replace(/\n\s*/g, ' '));
+  check(checkedRe, 'B2a: дефолт пикера — не первый вариант со stock > 0');
+  check(/data-pv-badge[^>]*>В наличии<\/span>/.test(varsHtml), 'B2a: бейдж вариантного товара не бинарный «В наличии»');
+  check(varsHtml.includes('>3190.00</span>'), 'B2a: цена карточки не равна цене дефолтного варианта');
+  check(varsHtml.includes('>Нет в наличии</span>') === false, 'B2a: в моке vars оба варианта в наличии — бейджей «Нет» быть не должно');
+  check(!varsHtml.includes('variant-row-off') && !varsHtml.includes(' disabled'), 'B2a: в наличии-вариантах не должно быть off-разметки/disabled');
+  const varsLd = extractJsonLd(varsHtml).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2a: JSON-LD вариантной карточки не парсится: ' + e.message); return null; } }).filter(Boolean);
+  const varsOffer = varsLd.find((o) => o['@type'] === 'Product')?.offers;
+  check(varsOffer && varsOffer.sku === 'HUDI-RM', `B2a: offers.sku не из первого варианта: ${varsOffer && varsOffer.sku}`);
+  check(varsOffer && varsOffer.price === '2990.00', 'B2a: offers.price обязан остаться базовой (F4)');
+  check(varsOffer && varsOffer.availability === 'https://schema.org/InStock', 'B2a: availability не по вариантам');
+  check(varsHtml.includes('b2a-picker-start'), 'B2a: инлайн-скрипт пикера не в рендере');
+
+  // смешанный набор: нулевой вариант — off-строка с бейджем «Нет», не дефолт
+  const mixVars = {
+    data: { variants: [
+      { id: 'var-1', product_slug: 'hudi-oversayz', label: 'Красный / M', sku: 'HUDI-RM', price_kopecks: 319000, stock: 4 },
+      { id: 'var-2', product_slug: 'hudi-oversayz', label: 'Синий / L', sku: 'HUDI-BL', price_kopecks: 299000, stock: 0 },
+    ] },
+  };
+  const mixHtml = await renderMockPage(engine, 'product', 'vars', { query: { ...q }, vars: mixVars });
+  check(mixHtml.includes('variant-row-off'), 'B2a: нулевой вариант не помечен variant-row-off');
+  check(/value="var-2"[^>]*disabled/.test(mixHtml.replace(/\n\s*/g, ' ')), 'B2a: нулевой вариант не disabled');
+  check(/variant-row-off[\s\S]{0,400}?Нет в наличии<\/span>/.test(mixHtml), 'B2a: у off-строки нет бейджа «Нет в наличии»');
+  check(/value="var-1"[^>]*checked/.test(mixHtml.replace(/\n\s*/g, ' ')), 'B2a: дефолт при смешанном наборе — не первый со stock > 0');
+
+  // все варианты нулевые: пикер disabled, бейдж «Нет», кнопки/степпера нет
+  const zeroVars = {
+    data: { variants: [
+      { id: 'var-1', product_slug: 'hudi-oversayz', label: 'Красный / M', sku: 'HUDI-RM', price_kopecks: 319000, stock: 0 },
+      { id: 'var-2', product_slug: 'hudi-oversayz', label: 'Синий / L', sku: 'HUDI-BL', price_kopecks: 299000, stock: 0 },
+    ] },
+  };
+  const zero = await renderMockPage(engine, 'product', 'vars', { query: { ...q }, vars: zeroVars });
+  check(zero.includes('badge badge-error" data-pv-badge') || /data-pv-badge[^>]*>Нет в наличии<\/span>/.test(zero), 'B2a: все варианты нулевые — бейдж не «Нет в наличии»');
+  check((zero.match(/value="var-\d"[^>]*disabled/g) || []).length === 2, 'B2a: нулевые варианты не disabled');
+  check(!zero.includes('checked'), 'B2a: нулевые варианты не выбираются по умолчанию');
+  check(!zero.includes('data-cart-add') && !zero.includes('data-cart-stepper'), 'B2a: у распроданного вариантного товара осталась кнопка/степпер');
+  const zeroLd = extractJsonLd(zero).map((s) => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
+  const zeroOffer = zeroLd.find((o) => o['@type'] === 'Product')?.offers;
+  check(zeroOffer && zeroOffer.availability === 'https://schema.org/OutOfStock', 'B2a: все нули — availability не OutOfStock');
+
+  // поведенческая проба: change на radio обновляет цену/бейдж/кнопку
+  const m = /\/\* b2a-picker-start \*\/([\s\S]*?)\/\* b2a-picker-end \*\//.exec(varsHtml);
+  check(!!m, 'B2a: инлайн-скрипт пикера не извлекается из рендера');
+  if (m) {
+    const el = (attrs) => ({
+      attrs, textContent: '', className: '', disabled: false, handlers: {},
+      getAttribute(k) { return attrs[k] ?? null; },
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      addEventListener(t, fn) { (this.handlers[t] ??= []).push(fn); },
+    });
+    const r1 = el({ 'data-variant-id': 'var-1', 'data-price': '319000', 'data-stock': '4' });
+    const r2 = el({ 'data-variant-id': 'var-2', 'data-price': '299000', 'data-stock': '7' });
+    const priceEl = el({});
+    const badgeEl = el({ 'data-pv-badge': '' });
+    const addBtn = el({ 'data-cart-add': 'hudi-oversayz', 'data-variant': 'var-1', 'data-stock': '4' });
+    const shim = {
+      querySelector(sel) {
+        if (sel === '[data-variant-picker]') return { querySelectorAll: (s2) => (s2 === 'input[data-variant-id]' ? [r1, r2] : []) };
+        if (sel === '[data-pv-price]') return priceEl;
+        if (sel === '[data-pv-badge]') return badgeEl;
+        if (sel === '[data-cart-add]') return addBtn;
+        return null;
+      },
+    };
+    new Function('document', m[1])(shim);
+    check(r1.handlers.change && r1.handlers.change.length === 1 && r2.handlers.change.length === 1, 'B2a: пикер не подписался на change обоих radio');
+    r2.handlers.change[0]({ target: r2 });
+    check(priceEl.textContent === '2990.00', `B2a: change не обновил цену: «${priceEl.textContent}»`);
+    check(badgeEl.className === 'badge badge-success' && badgeEl.textContent === 'В наличии', `B2a: change не обновил бейдж: «${badgeEl.className}/${badgeEl.textContent}»`);
+    check(addBtn.attrs['data-variant'] === 'var-2' && addBtn.attrs['data-stock'] === '7' && addBtn.disabled === false, 'B2a: change не обновил карман кнопки «В корзину»');
+    // нулевой вариант (если бы не был disabled) — бейдж честно гаснет
+    const r0 = el({ 'data-variant-id': 'var-0', 'data-price': '10000', 'data-stock': '0' });
+    r0.handlers.change = [];
+    new Function('document', m[1])({
+      querySelector(sel) {
+        if (sel === '[data-variant-picker]') return { querySelectorAll: () => [r0] };
+        if (sel === '[data-pv-price]') return priceEl;
+        if (sel === '[data-pv-badge]') return badgeEl;
+        if (sel === '[data-cart-add]') return addBtn;
+        return null;
+      },
+    });
+    r0.handlers.change[0]({ target: r0 });
+    check(badgeEl.className === 'badge badge-error' && badgeEl.textContent === 'Нет в наличии' && addBtn.disabled === true, 'B2a: нулевой вариант не гасит бейдж/кнопку');
+  }
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2a-picker: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2a-picker (дефолт=первый со stock>0; бейдж бинарь по вариантам; цена карточки = варианта; offers.sku первого + availability; все нули → disabled+Нет+без кнопки; change обновляет цену/бейдж/кнопку)');
+  }
+}
+
+/* ── Проба B2a (D23): cart.js — строки-пары slug+variant не склеиваются ──
+   add кладёт {slug, variant, qty} из data-variant кнопки; find/inc/remove
+   матчат по ПАРЕ (составные ключи «slug|variant»); hydration хранит
+   вариантные строки сервера как есть. */
+async function smokeB2aCart() {
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const TICKS = 6;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  function mkDom({ items }) {
+    const calls = [];
+    const listeners = {};
+    const note = { textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const document = {
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      querySelectorAll: () => [],
+      querySelector: (sel) => (sel === '[data-cart-note]' ? note : null),
+      body: { attrs: { 'data-stock-tpl': 'В наличии только {{n}} шт.' }, getAttribute(k) { return this.attrs[k] ?? null; } },
+    };
+    const fetchMock = (url, opts) => {
+      const method = (opts && opts.method) || 'GET';
+      let resp;
+      if (method === 'GET') resp = { items: JSON.parse(JSON.stringify(items)) };
+      else resp = { items: JSON.parse(opts.body).items };
+      calls.push({ url, method, body: opts && opts.body ? JSON.parse(opts.body) : null });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(resp) });
+    };
+    const click = (attrs) => {
+      for (const fn of listeners.click ?? []) {
+        fn({
+          preventDefault() {},
+          target: {
+            closest: (sel) => (sel in attrs ? {
+              disabled: false,
+              getAttribute: (k) => attrs[k] ?? attrs['[' + k + ']'] ?? null,
+            } : null),
+          },
+        });
+      }
+    };
+    const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'cart.js'), 'utf8'));
+    new Function('document', 'window', 'fetch', src)(document, { location: {} }, fetchMock);
+    return { calls, click, tick: async () => { for (let i = 0; i < TICKS; i++) await tick(); } };
+  }
+
+  // 1) две строки одного товара (вариант / без варианта) не склеиваются
+  {
+    const d = mkDom({ items: [{ slug: 'hudi', variant: 'v1', qty: 2 }, { slug: 'hudi', qty: 1 }] });
+    await d.tick();
+    d.click({ '[data-cart-add]': 'hudi', 'data-variant': 'v2', 'data-stock': '9' });
+    await d.tick();
+    const post = d.calls.find((c) => c.method === 'POST');
+    check(post && post.body.items.length === 3, `B2a: строки склеились: ${post && JSON.stringify(post.body.items)}`);
+    check(post && post.body.items.some((l) => l.slug === 'hudi' && l.variant === 'v2' && l.qty === 1), 'B2a: add не положил пару {slug, variant, qty}');
+    d.click({ '[data-cart-add]': 'hudi', 'data-variant': 'v2', 'data-stock': '9' });
+    await d.tick();
+    const post2 = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post2 && post2.body.items.find((l) => l.slug === 'hudi' && l.variant === 'v2')?.qty === 2, 'B2a: повторный add той же пары не нашёл свою строку');
+  }
+
+  // 2) inc/remove чекаута по составному ключу
+  {
+    const d = mkDom({ items: [{ slug: 'hudi', variant: 'v1', qty: 2 }, { slug: 'hudi', qty: 1 }] });
+    await d.tick();
+    d.click({ '[data-cart-qty-inc]': 'hudi|v1', 'data-stock': '9' });
+    await d.tick();
+    let post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && post.body.items.find((l) => l.slug === 'hudi' && l.variant === 'v1')?.qty === 3, 'B2a: inc по составному ключу не поднял variant-строку');
+    check(post && post.body.items.find((l) => l.slug === 'hudi' && !l.variant)?.qty === 1, 'B2a: inc вариантной строки задел безвариантную');
+    d.click({ '[data-cart-remove]': 'hudi|v1' });
+    await d.tick();
+    post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && !post.body.items.some((l) => l.variant === 'v1') && post.body.items.some((l) => l.slug === 'hudi' && !l.variant), 'B2a: «×» по составному ключу убрал не ту строку');
+  }
+
+  // 3) гидратация: вариантная строка сервера находится парой (add той же пары растит её)
+  {
+    const d = mkDom({ items: [{ slug: 'hudi', variant: 'v1', qty: 2 }] });
+    await d.tick();
+    d.click({ '[data-cart-add]': 'hudi', 'data-variant': 'v1', 'data-stock': '9' });
+    await d.tick();
+    const post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && post.body.items.length === 1 && post.body.items[0].qty === 3 && post.body.items[0].variant === 'v1',
+      `B2a: гидратированная пара не нашлась: ${post && JSON.stringify(post.body.items)}`);
+  }
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2a-cart: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2a-cart (add/inc/remove по паре slug+variant: строки одного товара с разными вариантами не склеиваются, составные ключи, гидратация пар)');
+  }
+}
+await smokeB2aCart();
+
 /* ── Проба W9 (F10) / B1-v2: галерея v2 (scroll-snap карусель) + reduce ── */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -1482,4 +1691,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

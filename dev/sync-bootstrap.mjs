@@ -20,7 +20,7 @@ if (endIdxCanon < 0 || endIdxCanon + END.length !== canon.length) {
 }
 
 const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
-  'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
+  'favorites.liquid', 'login.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid',
   'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
 for (const e of entries) {
   const p = join(root, 'templates', e);

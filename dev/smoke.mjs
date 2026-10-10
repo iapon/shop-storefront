@@ -33,6 +33,8 @@ const cases = [
   ['order', 'not_found', ['Заказ не найден']],
   ['account', null, ['Мои заказы', '232.90', 'оплачен', 'ожидает оплаты', 'href="/shop/order/', 'Кружка «Лён» × 2']],
   ['account', 'empty', ['Заказов пока нет']],
+  ['favorites', 'filled', ['Избранное', 'product-card', 'fav-btn', 'aria-pressed="true"', 'noindex', 'Кружка «Лён»', '790.00']],
+  ['favorites', 'empty', ['Здесь пока ничего нет', 'В каталог']],
   ['login', null, ['Вход', 'action="/login"', 'type="password"']],
   ['register', null, ['Регистрация', 'action="/register"', 'Создать аккаунт']],
   ['404', null, ['Страница не найдена', 'noindex']],
@@ -1397,6 +1399,212 @@ await smokeB2aCart();
   }
 }
 
+/* ── Проба B2c: избранное — SSR-контракт /favorites + поведение favorites.js ──
+   Страница /favorites (TTL 0): сердечки ЗАЛИТЫ в разметке (card_fav —
+   честный SSR-факт), грид из partial product-card (кнопка-СОСЕД ссылки),
+   пустой набор — вежливое пустое состояние, noindex. Поведение
+   favorites.js (DOM-шим): гидратация ОДНИМ GET только при наличии
+   сердечек; клик — мгновенный aria-pressed + POST полного массива
+   (replace); ответ сервера = канон; провал записи — откат состояния;
+   catalog:swap — ре-гидрация свежих кнопок БЕЗ повторного GET. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const filled = await renderMockPage(engine, 'favorites', 'filled', { query: { ...q } });
+  check((filled.match(/data-fav-toggle="/g) || []).length === 2, 'B2c: грид /favorites не из двух карточек с сердечками');
+  check((filled.match(/aria-pressed="true"/g) || []).length === 2, 'B2c: SSR-факт на /favorites не залил сердечки (card_fav)');
+  check(/class="product-card-wrap">/.test(filled), 'B2c: карточка без обёртки .product-card-wrap (сердечко не СОСЕД ссылки)');
+  check(!filled.includes('aria-pressed="false"><svg'), 'B2c: на /favorites есть нейтральное сердечко при честном факте');
+  const empty = await renderMockPage(engine, 'favorites', 'empty', { query: { ...q } });
+  check(empty.includes('Здесь пока ничего нет'), 'B2c: пустое состояние не вежливое');
+  check(empty.includes('href="/shop/"'), 'B2c: пустое состояние без ссылки в каталог');
+  // страница товара: сердечко SSR-НЕЙТРАЛЬНОЕ (кэш TTL 300 — факт одного
+  // гостя закэшировался бы другому, F1)
+  const prod = await renderMockPage(engine, 'product', 'found', { query: { ...q } });
+  check(prod.includes('fav-btn-page'), 'B2c: на карточке товара нет сердечка');
+  check(/class="fav-btn fav-btn-page"[\s\S]{0,200}?aria-pressed="false"/.test(prod.replace(/\n\s*/g, ' ')), 'B2c: сердечко карточки товара не SSR-нейтральное (F1)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2c-favorites-ssr: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2c-favorites-ssr (/favorites: сердечки залиты SSR-фактом card_fav, грид product-card-wrap, вежливая пустышка; карточка товара — SSR-нейтральное сердечко, F1)');
+  }
+}
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const TICKS = 6;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  function mkDom({ serverSlugs, postResp, failPost } = {}) {
+    const calls = [];
+    const listeners = {};
+    let buttons = [];
+    const mkBtn = (slug, pressed) => ({
+      attrs: { 'data-fav-toggle': slug, 'aria-pressed': pressed || 'false' },
+      getAttribute(k) { return this.attrs[k] ?? null; },
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+    });
+    const document = {
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      querySelectorAll: (sel) => (sel === '[data-fav-toggle]' ? buttons : []),
+    };
+    const fetchMock = (url, opts) => {
+      const method = (opts && opts.method) || 'GET';
+      calls.push({ url, method, body: opts && opts.body ? JSON.parse(opts.body) : null });
+      if (method === 'GET') return Promise.resolve({ ok: true, json: () => Promise.resolve({ slugs: JSON.parse(JSON.stringify(serverSlugs || [])) }) });
+      if (failPost) return Promise.reject(new Error('network'));
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(postResp ?? { slugs: JSON.parse(opts.body).slugs }) });
+    };
+    const click = (slug) => {
+      for (const fn of listeners.click ?? []) {
+        fn({ preventDefault() {}, target: { closest: (sel) => (sel === '[data-fav-toggle]' ? buttons.find((b) => b.attrs['data-fav-toggle'] === slug) ?? null : null) } });
+      }
+    };
+    const pressed = (slug) => {
+      const b = buttons.find((x) => x.attrs['data-fav-toggle'] === slug);
+      return b ? b.attrs['aria-pressed'] : null;
+    };
+    const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'favorites.js'), 'utf8'));
+    let api;
+    const load = () => { calls.length = 0; api = new Function('document', 'window', 'fetch', src)(document, { location: {} }, fetchMock); return api; };
+    return { calls, mkBtn, setButtons: (b) => { buttons = b; }, pressed, click, dispatchSwap: () => { for (const fn of listeners['catalog:swap'] ?? []) fn({}); }, load, tick: async () => { for (let i = 0; i < TICKS; i++) await tick(); } };
+  }
+
+  // 1) гидратация: ОДИН GET при наличии сердечек; aria-pressed по набору сервера
+  {
+    const d = mkDom({ serverSlugs: ['mug-linen'] });
+    d.setButtons([d.mkBtn('mug-linen'), d.mkBtn('plate-pebble')]);
+    d.load();
+    await d.tick();
+    check(d.calls.filter((c) => c.method === 'GET').length === 1, 'B2c: гидратация не ОДНИМ GET');
+    check(d.calls[0] && d.calls[0].url === '/shop/api/favorites', `B2c: GET не на /shop/api/favorites: ${d.calls[0] && d.calls[0].url}`);
+    check(d.pressed('mug-linen') === 'true' && d.pressed('plate-pebble') === 'false', 'B2c: гидратация не проставила aria-pressed по набору сервера');
+  }
+  // 2) без сердечек на странице GET-а нет
+  {
+    const d = mkDom({ serverSlugs: ['mug-linen'] });
+    d.setButtons([]);
+    d.load();
+    await d.tick();
+    check(d.calls.length === 0, 'B2c: страница без сердечек сделала запрос гидратации');
+  }
+  // 3) клик: мгновенный тоггл + POST полного массива; ответ сервера = канон
+  {
+    const d = mkDom({ serverSlugs: ['mug-linen'] });
+    d.setButtons([d.mkBtn('mug-linen'), d.mkBtn('plate-pebble')]);
+    d.load();
+    await d.tick();
+    d.click('plate-pebble');
+    check(d.pressed('plate-pebble') === 'true', 'B2c: клик не залил сердечко мгновенно');
+    await d.tick();
+    const post = d.calls.find((c) => c.method === 'POST');
+    check(post && JSON.stringify(post.body.slugs) === JSON.stringify(['mug-linen', 'plate-pebble']),
+      `B2c: POST не полный массив: ${post && JSON.stringify(post.body)}`);
+    // повторный клик снимает: POST без слага, порядок сохранён
+    d.click('mug-linen');
+    await d.tick();
+    const post2 = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post2 && JSON.stringify(post2.body.slugs) === JSON.stringify(['plate-pebble']),
+      `B2c: снятие сердечка не выкинуло слаг: ${post2 && JSON.stringify(post2.body)}`);
+    check(d.pressed('mug-linen') === 'false', 'B2c: снятие не вернуло контур');
+  }
+  // 4) провал записи — честный откат состояния
+  {
+    const d = mkDom({ serverSlugs: [], failPost: true });
+    d.setButtons([d.mkBtn('mug-linen')]);
+    d.load();
+    await d.tick();
+    d.click('mug-linen');
+    await d.tick();
+    check(d.pressed('mug-linen') === 'false', 'B2c: провал записи не откатил состояние (витрина врёт о сохранении)');
+  }
+  // 5) catalog:swap: свежие кнопки получают состояние БЕЗ повторного GET
+  {
+    const d = mkDom({ serverSlugs: ['plate-pebble'] });
+    d.setButtons([d.mkBtn('plate-pebble')]);
+    d.load();
+    await d.tick();
+    const getsAfterHydration = d.calls.filter((c) => c.method === 'GET').length;
+    d.setButtons([d.mkBtn('mug-linen'), d.mkBtn('plate-pebble')]); // свап: новое дерево, SSR-нейтральное
+    d.dispatchSwap();
+    await d.tick();
+    check(d.pressed('plate-pebble') === 'true' && d.pressed('mug-linen') === 'false',
+      'B2c: после catalog:swap свежие сердечки без состояния');
+    check(d.calls.filter((c) => c.method === 'GET').length === getsAfterHydration,
+      'B2c: ре-гидрация после свапа сделала повторный GET');
+    // клик по свапнутой кнопке ловится делегированием (document)
+    d.click('mug-linen');
+    await d.tick();
+    const post = d.calls.filter((c) => c.method === 'POST').pop();
+    check(post && JSON.stringify(post.body.slugs) === JSON.stringify(['plate-pebble', 'mug-linen']),
+      `B2c: клик после свапа не долетел до API: ${post && JSON.stringify(post.body)}`);
+  }
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2c-favorites-js: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2c-favorites-js (один GET при сердечках; мгновенный тоггл + POST полного массива; ответ=канон; провал — откат; catalog:swap — ре-гидрация без GET, делегирование живо)');
+  }
+}
+
+/* ── Проба B2c: отзывы на карточке товара ────────────────────────────
+   SSR: блок отзывов (средняя 4.5 · 2), список published (новые сверху),
+   форма (имя/оценка/текст + honeypot + скрытый slug), подтверждение
+   ?review=ok; AggregateRating в JSON-LD ТОЛЬКО при ≥1 published;
+   поля анонима (author_name/body) эскейпятся — B-1. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const html = await renderMockPage(engine, 'product', 'found', { query: { ...q } });
+  check(html.includes('id="reviews-title"'), 'B2c: секция отзывов без заголовка');
+  check(html.includes('<span class="reviews-avg">4.5</span> из 5 · 2'), 'B2c: средняя/количество не 4.5 · 2');
+  check(html.includes('review-author">Дмитрий</span>') && html.includes('review-author">Мария</span>'), 'B2c: список published неполный');
+  check(html.indexOf('Дмитрий') < html.indexOf('Мария'), 'B2c: порядок отзывов не created_at DESC');
+  check(html.includes('name="author_name"') && html.includes('name="rating"') && html.includes('name="body"'), 'B2c: в форме отзыва нет полей имя/оценка/текст');
+  check(/<option value="5"[^>]*>/.test(html), 'B2c: шкала оценки без вариантов');
+  check(html.includes('name="website"') && html.includes('type="hidden" name="slug" value="mug-linen"'), 'B2c: форма без honeypot/скрытого слага');
+  check(html.includes('action="/shop/review"'), 'B2c: форма отзыва постит не на /shop/review');
+  let ld = extractJsonLd(html).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2c: JSON-LD с отзывами не парсится: ' + e.message); return null; } }).filter(Boolean);
+  let prodLd = ld.find((o) => o['@type'] === 'Product');
+  check(prodLd && prodLd.aggregateRating && prodLd.aggregateRating.ratingValue === '4.5' && prodLd.aggregateRating.reviewCount === '2',
+    `B2c: aggregateRating не 4.5/2: ${prodLd && JSON.stringify(prodLd.aggregateRating)}`);
+  // без published-отзывов: ключа aggregateRating НЕТ, «Пока нет отзывов», форма на месте
+  const noRevs = await renderMockPage(engine, 'product', 'vars', { query: { ...q } });
+  check(noRevs.includes('Пока нет отзывов'), 'B2c: без отзывов нет вежливой подписи');
+  check(noRevs.includes('review-form'), 'B2c: без отзывов пропала форма');
+  ld = extractJsonLd(noRevs).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2c: JSON-LD без отзывов не парсится: ' + e.message); return null; } }).filter(Boolean);
+  prodLd = ld.find((o) => o['@type'] === 'Product');
+  check(prodLd && !prodLd.aggregateRating, 'B2c: aggregateRating отрисовался без published-отзывов');
+  // подтверждение ?review=ok
+  const okPage = await renderMockPage(engine, 'product', 'found', { query: { ...q, review: 'ok' } });
+  check(okPage.includes('появится на странице после проверки'), 'B2c: ?review=ok без подтверждения модерации');
+  // B-1: поля анонима эскейпятся
+  const xssRevs = {
+    data: { reviews: [
+      { id: 'rev-x', product_slug: 'mug-linen', author_name: '<script>alert(1)</script>', rating: 5, body: '<svg onload=alert(2)>', status: 'published', created_at: '2026-10-01T12:00:00Z' },
+    ] },
+  };
+  const xss = await renderMockPage(engine, 'product', 'found', { query: { ...q }, revs: xssRevs });
+  check(!xss.includes('<script>alert(1)</script>'), 'B-1/B2c: сырой <script> из author_name попал в выдачу');
+  check(!xss.includes('<svg onload'), 'B-1/B2c: сырой вектор из body попал в выдачу');
+  check(xss.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'B-1/B2c: author_name не в escape-форме');
+  const xssLd = extractJsonLd(xss).map((s) => { try { return JSON.parse(s); } catch (e) { fails.push('B2c: JSON-LD xss-карточки не парсится: ' + e.message); return null; } }).filter(Boolean);
+  check(xssLd.some((o) => o['@type'] === 'Product' && o.aggregateRating && o.aggregateRating.reviewCount === '1'), 'B2c: xss-отзыв не посчитан в aggregateRating');
+  // CSS-инварианты сердечка (F1): мгновенное переключение — transition НЕТ
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  check(/\.fav-btn\s*\{[^}]*width:\s*var\(--shop-touch\)/.test(css), 'B2c: тач-цель сердечка ниже 44px-поля');
+  check(!/\.fav-btn[^{]*\{[^}]*transition/.test(css), 'F1: у сердечка есть transition — переключение обязано быть мгновенным');
+  check(/\[aria-pressed="true"\] \.fav-heart\s*\{[^}]*fill:\s*var\(--accent\)/.test(css), 'F1: залитое сердечко не accent');
+  const cardSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', 'partials', 'product-card.liquid'), 'utf8');
+  check(cardSrc.indexOf('<button class="fav-btn"') > cardSrc.indexOf('</a>'), 'B2c: сердечко вложено в ссылку карточки (вложенный интерактив невалиден)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2c-reviews: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2c-reviews (средняя 4.5·2, published DESC, форма+honeypot+slug, ?review=ok, aggregateRating только при published, эскейп author_name/body — B-1, сердечко: 44px/мгновенно/accent, кнопка-сосед ссылки)');
+  }
+}
+
 /* ── Проба W9 (F10) / B1-v2: галерея v2 (scroll-snap карусель) + reduce ── */
 {
   const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -1710,7 +1918,7 @@ await smokeB2aCart();
   }
   const bootstrap = readFileSync(join(rootDir, 'dev', 'site-config-bootstrap.liquid'), 'utf8');
   const entries = ['404.liquid', 'account.liquid', 'catalog.liquid', 'category.liquid', 'checkout.liquid',
-    'login.liquid', 'offer.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid', 'tos.liquid',
+    'favorites.liquid', 'login.liquid', 'offer.liquid', 'order-status.liquid', 'product.liquid', 'register.liquid', 'tos.liquid',
     'email-order-customer.liquid', 'email-order-vendor.liquid', 'email-layout.liquid'];
   // Регион бутстрапа в entry-шаблоне: ровно canon.length байт от старт-маркера
   // — обязан быть байт-в-байт равен канону (простой includes не ловит
@@ -1812,4 +2020,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

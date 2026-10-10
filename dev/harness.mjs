@@ -158,6 +158,7 @@ const PAGE_FOR_MOCK = {
   product: { template: 'product', mock: 'product', pick: 'found' },
   category: { template: 'category', mock: 'category', pick: 'found' },
   checkout: { template: 'checkout', mock: 'checkout', pick: 'guest' },
+  favorites: { template: 'favorites', mock: 'favorites', pick: 'filled' },
   cart: { template: 'checkout', mock: 'cart', pick: 'guest' }, // отдельной страницы корзины нет: та же типографика
   order: { template: 'order-status', mock: 'order-status', pick: 'new' },
   account: { template: 'account', mock: 'account', pick: 'default' },
@@ -173,6 +174,7 @@ const PATH_ROUTES = [
   { re: /^\/product\/[^/]+\/?$/, mock: 'product' },
   { re: /^\/order\/[^/]+\/?$/, mock: 'order' },
   { re: /^\/account\/?$/, mock: 'account' },
+  { re: /^\/favorites\/?$/, mock: 'favorites' },
   { re: /^\/login\/?$/, mock: 'login' },
   { re: /^\/register\/?$/, mock: 'register' }
 ];
@@ -225,9 +227,10 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
   return engine.renderFile(template, ctx).then(withShopBase);
 }
 
-/* ── Дев-эмуляция API корзины/чекаута (in-memory, на процесс) ── */
+/* ── Дев-эмуляция API корзины/избранного/чекаута (in-memory, на процесс) ── */
 
 const cartsByAnon = new Map(); // anonId -> items
+const favsByAnon = new Map(); // anonId -> slugs
 
 function anonId(req, res) {
   const m = (req.headers.cookie || '').match(/(?:^|;\s*)shop_cart_dev=([^;]+)/);
@@ -274,6 +277,22 @@ async function handleApi(req, res, url) {
       if (!Array.isArray(body.items)) return sendJson(res, 400, { error: 'cart_invalid' });
       cartsByAnon.set(id, body.items); // ответ сервера = канон
       return sendJson(res, 200, { items: body.items });
+    }
+  }
+  // B2c: избранное (та же sealing-механика куки shop_cart, что у корзины —
+  // гость получает её от API-флоу при первом тоггле; member — id сессии).
+  if (url.pathname === SHOP_BASE + '/api/favorites' || url.pathname === '/api/favorites') {
+    const id = anonId(req, res);
+    if (req.method === 'GET') {
+      const slugs = favsByAnon.get(id) ?? (isMember ? loadMock('favorites').member.slugs : []);
+      return sendJson(res, 200, { slugs });
+    }
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse((await readBody(req)) || '{}'); } catch { /* 400 ниже */ }
+      if (!Array.isArray(body.slugs)) return sendJson(res, 400, { error: 'favorites_invalid' });
+      favsByAnon.set(id, body.slugs); // replace-семантика корзины; ответ = канон
+      return sendJson(res, 200, { slugs: body.slugs });
     }
   }
   if ((url.pathname === SHOP_BASE + '/api/checkout' || url.pathname === '/api/checkout') && req.method === 'POST') {
@@ -337,7 +356,8 @@ export function harnessMiddleware(engine) {
         cat: url.searchParams.get('cat') || '',
         page: url.searchParams.get('page') || '',
         q: url.searchParams.get('q') || '',
-        sort: url.searchParams.get('sort') || ''
+        sort: url.searchParams.get('sort') || '',
+        review: url.searchParams.get('review') || ''
       };
       const html = await renderMockPage(engine, mockName, variant, { query });
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

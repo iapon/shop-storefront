@@ -1,11 +1,19 @@
 {
-  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); cats — биндинг shop_catalog_categories (узел g_cat флоу): тайтлы категорий для крошек (W6 №1); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4. B2a: вариант «vars» — товар с вариантами (vars.data.variants — узел g_vars флоу, library shop_product_variants): дефолт пикера = первый со stock > 0, цена карточки = его цена, бейдж бинарный по вариантам.",
+  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); cats — биндинг shop_catalog_categories (узел g_cat флоу): тайтлы категорий для крошек (W6 №1); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4. B2a: вариант «vars» — товар с вариантами (vars.data.variants — узел g_vars флоу, library shop_product_variants): дефолт пикера = первый со stock > 0, цена карточки = его цена, бейдж бинарный по вариантам. B2c: revs — биндинг shop_product_reviews (узел g_revs: только published, новые сверху): found — 2 отзыва (средняя (5+4)/2 = 4.5, aggregateRating в JSON-LD), vars/not_found — пусто (ключа aggregateRating нет, «Пока нет отзывов»).",
   "found": {
     "cats": {
       "data": {
         "categories": [
           { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
           { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null }
+        ]
+      }
+    },
+    "revs": {
+      "data": {
+        "reviews": [
+          { "id": "rev-2", "product_slug": "mug-linen", "author_name": "Дмитрий", "rating": 4, "body": "Кружка отличная, держит тепло. Подарили с доставкой на день позже обещанного — поэтому четыре.", "status": "published", "created_at": "2026-10-01T12:00:00Z" },
+          { "id": "rev-1", "product_slug": "mug-linen", "author_name": "Мария", "rating": 5, "body": "Замечательная кружка: приятная в руке, глазурь без изъянов.", "status": "published", "created_at": "2026-09-20T09:30:00Z" }
         ]
       }
     },
@@ -49,6 +57,7 @@
         ]
       }
     },
+    "revs": { "data": { "reviews": [] } },
     "p": {
       "data": {
         "products": [
@@ -89,6 +98,7 @@
     "site": { "version": 7, "params": { "slug": "hudi-oversayz" }, "query": {} }
   },
   "not_found": {
+    "revs": { "data": { "reviews": [] } },
     "p": { "data": { "products": [] } },
     "rel": { "data": { "products": [] } },
     "site": { "version": 7, "params": { "slug": "gone-item" }, "query": {} }

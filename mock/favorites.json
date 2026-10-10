@@ -1,0 +1,23 @@
+{
+  "_comment": "Мок страницы «Избранное» (B2c). Форма = GraphQL envelope. fav — биндинг shop_favorites_get (узел g_fav: строка избранного по owner_id — member.id или shop_cart.anon; slugs — json-строка, парсит variables_expr узла g_prods); prods — переиспользованный shop_checkout_products (slug in $slugs + published + photos { url }). filled — у гостя набор из двух товаров (на странице сердечки рендерятся ЗАЛИТЫМИ: TTL 0 делает SSR-факт честным, card_fav=true); empty — пустой набор / гость без куки: вежливое пустое состояние. member.slugs — стартовый набор дев-эмуляции API для режима dev_member=1.",
+  "filled": {
+    "fav": { "data": { "favorites": [{ "id": "fav-1", "owner_id": "anon-uuid-1", "slugs": "[\"mug-linen\",\"plate-pebble\"]" }] } },
+    "prods": {
+      "data": {
+        "products": [
+          { "id": "p-1", "title": "Кружка «Лён»", "slug": "mug-linen", "price_kopecks": 99000, "stock": 12, "photos": [{ "url": "/static/photos/placeholder.svg" }] },
+          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 8, "photos": [] }
+        ]
+      }
+    },
+    "site": { "version": 7, "params": {}, "query": {} }
+  },
+  "empty": {
+    "fav": { "data": { "favorites": [] } },
+    "prods": { "data": { "products": [] } },
+    "site": { "version": 7, "params": {}, "query": {} }
+  },
+  "member": {
+    "slugs": ["mug-linen"]
+  }
+}

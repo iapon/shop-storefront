@@ -7,13 +7,18 @@
    - счётчик в шапке — [data-cart-count];
    - сабмит чекаута перехватывается → POST SHOP_BASE + /api/checkout → location = redirect.
    API витрины (все пути — под базой магазина SHOP_BASE):
-   GET  <base>/api/cart          → {items: [{slug, qty}]}
-   POST <base>/api/cart          → {items: [{slug, qty}]}   (полный replace)
+   GET  <base>/api/cart          → {items: [{slug, variant?, qty}]}
+   POST <base>/api/cart          → {items: [{slug, variant?, qty}]}  (полный replace)
    POST <base>/api/checkout      → {ok: true, redirect: "<url>"}
-                                 | {ok: false, error: "stock_exceeded", slug, max}
+                                 | {ok: false, error: "stock_exceeded", slug, label?, max}
                                  | {ok: false, error: "payment_failed", order_id}
                                  | {ok: false, error: "cart_invalid"}
    POST <base>/api/retry-payment → {ok: true, redirect: "<url>"} | {ok: false, error: "..."}
+   B2a (D23): identity строки корзины — ПАРА slug+variant (variant — id
+   варианта товара; строки без варианта хранят голый {slug, qty} — ключ
+   опционален, старые корзины валидны). Разметка несёт СОСТАВНОЙ ключ
+   «slug|variant» (data-cart-qty-inc/dec, data-cart-remove); кнопка
+   «В корзину» несёт текущий вариант в data-variant (обновляет пикер).
  */
 (function () {
   'use strict';
@@ -24,7 +29,7 @@
      замени литерал сам (см. README, раздел «__SHOP_BASE__»). */
   var SHOP_BASE = '__SHOP_BASE__';
 
-  var state = { items: [] }; // [{slug: string, qty: number}]
+  var state = { items: [] }; // [{slug: string, variant?: string, qty: number}]
 
   /* Мост текстов: шаблон рендерит data-msg-* на <body> (константы шаблона);
      здесь — чтение атрибута с вшитым фоллбеком. */
@@ -91,16 +96,33 @@
     });
   }
 
-  function find(slug) {
-    for (var i = 0; i < state.items.length; i++) if (state.items[i].slug === slug) return state.items[i];
+  /* B2a (D23): ключ строки — пара (slug, variant). splitKey разбирает
+     составной ключ разметки «slug|variant» (голый slug = без варианта);
+     find/removeLine матчат по ПАРЕ — две строки одного товара с разными
+     вариантами никогда не склеиваются. */
+  function splitKey(key) {
+    var k = String(key == null ? '' : key);
+    var i = k.indexOf('|');
+    return i < 0 ? { slug: k, variant: null } : { slug: k.slice(0, i), variant: k.slice(i + 1) };
+  }
+  function sameLine(l, slug, variant) {
+    return l.slug === slug && (l.variant || null) === (variant || null);
+  }
+  function find(slug, variant) {
+    for (var i = 0; i < state.items.length; i++) if (sameLine(state.items[i], slug, variant)) return state.items[i];
     return null;
   }
+  function removeLine(slug, variant) {
+    state.items = state.items.filter(function (l) { return !sameLine(l, slug, variant); });
+  }
 
-  /* cap — остаток товара (data-stock кнопки «В корзину», 0 = неизвестен):
-     попытка добавить больше гасится до остатка С сообщением (F6a), не молча. */
-  function add(slug, qty, cap) {
+  /* cap — остаток (data-stock кнопки «В корзину», 0 = неизвестен):
+     попытка добавить больше гасится до остатка С сообщением (F6a), не молча.
+     B2a: у вариантного товара карман несёт остаток ВЫБРАННОГО варианта
+     (обновляет пикер), variant — текущий вариант (data-variant кнопки). */
+  function add(slug, variant, qty, cap) {
     qty = Math.max(1, Math.floor(Number(qty)) || 1);
-    var line = find(slug);
+    var line = find(slug, variant);
     var next = (line ? line.qty : 0) + qty;
     cap = Number(cap) || 0;
     if (cap > 0 && next > cap) {
@@ -108,21 +130,24 @@
       note(stockOnlyMsg(cap));
     }
     if (line) line.qty = next;
-    else state.items.push({ slug: slug, qty: next });
+    else state.items.push(variant ? { slug: slug, variant: variant, qty: next } : { slug: slug, qty: next });
     return save();
   }
 
-  function setQty(slug, qty) {
-    var line = find(slug);
+  /* Степперы/«×» чекаута приходят с составным ключом «slug|variant». */
+  function setQty(key, qty) {
+    var p = splitKey(key);
+    var line = find(p.slug, p.variant);
     if (!line) return Promise.resolve();
     qty = Math.floor(Number(qty) || 0);
-    if (qty <= 0) state.items = state.items.filter(function (l) { return l.slug !== slug; });
+    if (qty <= 0) removeLine(p.slug, p.variant);
     else line.qty = qty;
     return save();
   }
 
-  function remove(slug) {
-    state.items = state.items.filter(function (l) { return l.slug !== slug; });
+  function remove(key) {
+    var p = splitKey(key);
+    removeLine(p.slug, p.variant);
     return save();
   }
 
@@ -147,15 +172,18 @@
       ev.preventDefault();
       if (btn.disabled) return;
       var slug = btn.getAttribute('data-cart-add');
+      /* B2a: текущий вариант несёт data-variant (пикер обновляет);
+         у безвариантного товара атрибута нет → строка без пары. */
+      var variant = btn.getAttribute('data-variant') || null;
       var qtyEl = document.querySelector('[data-cart-qty]');
       var qty = qtyEl ? qtyEl.value : 1;
       var cap = Number(btn.getAttribute('data-stock')) || 0; // W9 F6a: карман остатка
       btn.disabled = true;
-      add(slug, qty, cap).then(function () { btn.disabled = false; });
+      add(slug, variant, qty, cap).then(function () { btn.disabled = false; });
       return;
     }
     /* Степпер количества на карточке (D23): крутит существующий
-       [data-cart-qty], контракт add(slug, qty) не меняется. */
+       [data-cart-qty], контракт add(slug, variant, qty) не меняется. */
     var stp = ev.target.closest('[data-qty-step]');
     if (stp) {
       ev.preventDefault();
@@ -168,27 +196,30 @@
       return;
     }
     /* Степперы строк чекаута (D23): replace-семантика — setQty полным
-       массивом; data-stock гасит бессмысленный заход за остаток
+       массивом; ключ составной «slug|variant» (безвариантные — голый
+       slug); data-stock гасит бессмысленный заход за остаток
        (серверный гард остаётся истиной). W9 (F6a): гашение НЕ молча —
        появляется «В наличии только N шт.» (data-cart-note). */
     var inc = ev.target.closest('[data-cart-qty-inc]');
     if (inc) {
       ev.preventDefault();
-      var s1 = inc.getAttribute('data-cart-qty-inc');
-      var line1 = find(s1);
+      var key1 = inc.getAttribute('data-cart-qty-inc');
+      var pk1 = splitKey(key1);
+      var line1 = find(pk1.slug, pk1.variant);
       var q1 = ((line1 ? Number(line1.qty) : 0) || 0) + 1;
       var cap = Number(inc.getAttribute('data-stock')) || 0;
       if (cap > 0 && q1 > cap) { q1 = cap; note(stockOnlyMsg(cap)); }
-      setQty(s1, q1).then(refreshCartPage);
+      setQty(key1, q1).then(refreshCartPage);
       return;
     }
     var dec = ev.target.closest('[data-cart-qty-dec]');
     if (dec) {
       ev.preventDefault();
-      var s2 = dec.getAttribute('data-cart-qty-dec');
-      var line2 = find(s2);
+      var key2 = dec.getAttribute('data-cart-qty-dec');
+      var pk2 = splitKey(key2);
+      var line2 = find(pk2.slug, pk2.variant);
       var q2 = ((line2 ? Number(line2.qty) : 1) || 1) - 1;
-      setQty(s2, q2).then(refreshCartPage); // qty 0 = строка исчезает (replace)
+      setQty(key2, q2).then(refreshCartPage); // qty 0 = строка исчезает (replace)
       return;
     }
     var rm = ev.target.closest('[data-cart-remove]');

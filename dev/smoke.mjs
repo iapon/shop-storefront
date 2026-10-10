@@ -22,9 +22,9 @@ const cases = [
   ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
   ['product', 'vars', ['Худи оверсайз', 'data-variant-picker', 'data-variant-id="var-1"', 'data-price="319000"', 'data-stock="4"', 'data-variant="var-1"', 'checked', '3190.00', '>В наличии</span>', 'В корзину', 'data-pv-price', 'data-pv-badge']],
   ['product', 'not_found', ['Товар не найден']],
-  ['checkout', 'guest', ['Ваш заказ', 'Контакты', '1980.00', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии']],
-  ['checkout', 'mix', ['Ваш заказ', 'cart-line-variant', 'Красный / M', '3190.00 ₽ × 2', '349.00 ₽ × 1', 'data-cart-qty-inc="hudi-oversayz|var-1"', 'data-cart-qty-dec="hudi-oversayz|var-1"', 'data-cart-remove="hudi-oversayz|var-1"', 'data-cart-remove="planner-pine"', '(Красный / M) × 2', 'data-stock="4"']],
-  ['checkout', 'member', ['Ваш заказ', '1490.00']],
+  ['checkout', 'guest', ['Ваш заказ', 'Контакты', 'Доставка', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии', 'name="delivery_id"', 'value="d-1" checked', 'value="d-2"', 'Способ доставки', 'Промокод', 'name="promo_code"', 'бесплатно', 'Доставка — Курьер — 300₽', '300.00', 'Скидка', 'применится при оформлении', '2629.00']],
+  ['checkout', 'mix', ['Ваш заказ', 'cart-line-variant', 'Красный / M', '3190.00 ₽ × 2', '349.00 ₽ × 1', 'data-cart-qty-inc="hudi-oversayz|var-1"', 'data-cart-qty-dec="hudi-oversayz|var-1"', 'data-cart-remove="hudi-oversayz|var-1"', 'data-cart-remove="planner-pine"', '(Красный / M) × 2', 'data-stock="4"', '7029.00']],
+  ['checkout', 'member', ['Ваш заказ', '1490.00', '1790.00']],
   ['checkout', 'empty', ['Корзина пуста']],
   ['cart', 'guest', ['Ваш заказ', '990.00']],
   ['order', 'new', ['Заказ принят']],
@@ -36,8 +36,8 @@ const cases = [
   ['login', null, ['Вход', 'action="/login"', 'type="password"']],
   ['register', null, ['Регистрация', 'action="/register"', 'Создать аккаунт']],
   ['404', null, ['Страница не найдена', 'noindex']],
-  ['email-customer', null, ['Магазин витрины', 'Заказ №', '232.90', 'Кружка «Лён» × 2', 'Состав заказа', 'https://shop.example.ru/shop/order/']],
-  ['email-vendor', null, ['Новый заказ', '232.90', 'Иван Петров', 'ivan@example.ru', 'Позвоните за час до доставки']],
+  ['email-customer', null, ['Магазин витрины', 'Заказ №', '239.61', 'Кружка «Лён» × 2', 'Состав заказа', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300₽)', '300.00 ₽', 'https://shop.example.ru/shop/order/']],
+  ['email-vendor', null, ['Новый заказ', '239.61', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300₽)', '300.00 ₽', 'Иван Петров', 'ivan@example.ru', 'Позвоните за час до доставки']],
 ];
 
 let failed = 0;
@@ -1033,7 +1033,7 @@ async function smokeW9Cart() {
         if (sel === '[data-form-error]') return d.err;
         if (sel === 'button[type="submit"]') return { disabled: false };
         const m = /\[name="(.+)"\]/.exec(sel);
-        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '' };
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '', setAttribute() {}, removeAttribute() {}, getAttribute: () => null };
         return null;
       },
     });
@@ -1051,7 +1051,7 @@ async function smokeW9Cart() {
         if (sel === '[data-form-error]') return d3.err;
         if (sel === 'button[type="submit"]') return { disabled: false };
         const m = /\[name="(.+)"\]/.exec(sel);
-        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '' };
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '' }[m[1]] ?? '', setAttribute() {}, removeAttribute() {}, getAttribute: () => null };
         return null;
       },
     });
@@ -1275,6 +1275,124 @@ async function smokeB2aCart() {
   }
 }
 await smokeB2aCart();
+
+/* ── Проба B2b: чекаут — доставка (radio SSR) + промокод ─────────────
+   SSR: первый активный способ выбран (radio checked), цена в строке
+   способа и в сводке; «бесплатно» для нулевой цены; строка «Скидка» —
+   честный placeholder; «К оплате» = товары + доставка. Пустой список
+   доставки — честная пометка, итог = только товары. Поведенческая проба
+   cart.js: сабмит несёт delivery_id+promo_code; promo_invalid — ЕДИНЫЙ
+   отказ с aria-invalid на поле (причина не раскрывается — анти-перебор,
+   F2); delivery_invalid — «Выберите способ доставки»; aria-invalid
+   гасится на следующей попытке. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const html = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q } });
+  check(/name="delivery_id" value="d-1" checked/.test(html), 'B2b: первый способ не выбран SSR-ом');
+  check(html.includes('name="delivery_id" value="d-2"'), 'B2b: второй способ пропал');
+  check(html.includes('>бесплатно</span>'), 'B2b: нулевая цена не подписана «бесплатно»');
+  check(html.includes('Доставка — Курьер — 300₽') && html.includes('300.00'), 'B2b: доставки нет в сводке');
+  check(html.includes('применится при оформлении'), 'B2b: нет честного placeholder скидки');
+  check(html.includes('2629.00'), 'B2b: итог не = товары + доставка (2629.00)');
+  check(html.includes('name="promo_code"'), 'B2b: нет поля промокода');
+  // пустой список доставки: пометка + итог без доставки
+  const emptyD = await renderMockPage(engine, 'checkout', 'guest', {
+    query: { ...q },
+    dlist: { data: { deliveryMethods: [] } },
+  });
+  check(emptyD.includes('Способы доставки не настроены'), 'B2b: пустой список доставки без пометки');
+  check(!emptyD.includes('summary-row"><span>Доставка'), 'B2b: пустой список рисует строку доставки');
+  check(emptyD.includes('2329.00'), 'B2b: пустой список — итог не = только товары (2329.00)');
+}
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const TICKS = 6;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  function mkDom({ items, checkoutResp }) {
+    const calls = [];
+    const listeners = {};
+    const err = { textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const promoEl = { value: ' demo10 ', attrs: {}, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] ?? null; } };
+    const btn = { disabled: false };
+    const document = {
+      addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+      querySelectorAll: () => [],
+      querySelector: (sel) => (sel === '[data-form-error]' ? err : null),
+      body: { attrs: {}, getAttribute: () => null },
+    };
+    const fetchMock = (url, opts) => {
+      const method = (opts && opts.method) || 'GET';
+      if (method === 'GET') return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: JSON.parse(JSON.stringify(items)) }) });
+      calls.push({ url, method, body: JSON.parse(opts.body) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(checkoutResp) });
+    };
+    const submit = (form) => {
+      for (const fn of listeners.submit ?? []) {
+        fn({ preventDefault() {}, target: { closest: (sel) => (sel === '[data-checkout-form]' ? form : null) } });
+      }
+    };
+    const mkForm = () => ({
+      querySelectorAll: () => [],
+      querySelector(sel) {
+        if (sel === '[data-form-error]') return err;
+        if (sel === 'button[type="submit"]') return btn;
+        if (sel === '[name="promo_code"]') return promoEl;
+        const m = /\[name="(.+)"\]/.exec(sel);
+        if (m) return { value: { name: 'Иван', email: 'i@e.ru', phone: '', comment: '', website: '', delivery_id: 'd-1' }[m[1]] ?? '' };
+        return null;
+      },
+    });
+    const src = withShopBase(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'cart.js'), 'utf8'));
+    new Function('document', 'window', 'fetch', src)(document, { location: {} }, fetchMock);
+    return { calls, submit, mkForm, err, promoEl, btn, tick: async () => { for (let i = 0; i < TICKS; i++) await tick(); } };
+  }
+
+  // 1) сабмит несёт delivery_id + promo_code (обрезанный)
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 1 }], checkoutResp: { ok: true, redirect: '/pay' } });
+    await d.tick();
+    d.submit(d.mkForm());
+    await d.tick();
+    const post = d.calls.find((c) => c.url.endsWith('/api/checkout'));
+    check(post && post.body.delivery_id === 'd-1', `B2b: сабмит не несёт delivery_id: ${post && JSON.stringify(post.body)}`);
+    check(post && post.body.promo_code === 'demo10', 'B2b: promo_code не обрезан');
+  }
+
+  // 2) promo_invalid: ЕДИНЫЙ отказ, aria-invalid, кнопка разблокирована; повтор — метка гасится
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 1 }], checkoutResp: { ok: false, error: 'promo_invalid' } });
+    await d.tick();
+    d.submit(d.mkForm());
+    await d.tick();
+    check(d.err.textContent === 'Промокод не применён — проверьте код.', `B2b: promo_invalid без единого сообщения: «${d.err.textContent}»`);
+    check(d.promoEl.attrs['aria-invalid'] === 'true', 'B2b: promo_invalid не пометил поле aria-invalid');
+    check(d.btn.disabled === false, 'B2b: кнопка не разблокирована после отказа');
+    d.err.textContent = '';
+    d.promoEl.attrs['aria-invalid'] = 'true';
+    d.submit(d.mkForm());
+    await d.tick();
+    check(!('aria-invalid' in d.promoEl.attrs) || d.promoEl.attrs['aria-invalid'] === 'true', 'B2b: повторный сабмит сломал жизненный цикл aria-invalid');
+  }
+
+  // 3) delivery_invalid: «Выберите способ доставки.»
+  {
+    const d = mkDom({ items: [{ slug: 'mug', qty: 1 }], checkoutResp: { ok: false, error: 'delivery_invalid' } });
+    await d.tick();
+    d.submit(d.mkForm());
+    await d.tick();
+    check(d.err.textContent === 'Выберите способ доставки.', `B2b: delivery_invalid без сообщения: «${d.err.textContent}»`);
+    check(!('aria-invalid' in d.promoEl.attrs), 'B2b: delivery_invalid не должен помечать промокод');
+  }
+
+  if (fails.length) {
+    failed++;
+    console.log('FAIL b2b-checkout: ' + fails.join(' | '));
+  } else {
+    console.log('OK   b2b-checkout (radio доставки SSR: первый выбран/бесплатно/сводка/placeholder скидки/итог=товары+доставка; пустой список — пометка; cart.js несёт delivery_id+promo_code; promo_invalid — единый отказ + aria-invalid; delivery_invalid — «Выберите способ доставки.»)');
+  }
+}
 
 /* ── Проба W9 (F10) / B1-v2: галерея v2 (scroll-snap карусель) + reduce ── */
 {
@@ -1639,7 +1757,7 @@ await smokeB2aCart();
   check(prodHtml.includes('aria-pressed'), 'товар: миниатюры галереи без aria-pressed');
   const coHtml = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q } });
   check(coHtml.includes('id="checkout-error"'), 'чекаут: бокс ошибки без id');
-  check((coHtml.match(/aria-describedby="checkout-error"/g) || []).length === 2, 'чекаут: name/email не связаны с боксом ошибки aria-describedby');
+  check((coHtml.match(/aria-describedby="checkout-error"/g) || []).length === 3, 'чекаут: name/email/promo не связаны с боксом ошибки aria-describedby');
   const ordHtml = await renderMockPage(engine, 'order', 'new', { query: { ...q } });
   check(ordHtml.includes('<div class="status-screen" role="status">'), 'заказ: статус-экран без role=status');
   const nfHtml = await renderMockPage(engine, 'product', 'not_found', { query: { ...q } });
@@ -1691,4 +1809,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

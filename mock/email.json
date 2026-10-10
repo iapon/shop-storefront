@@ -1,5 +1,5 @@
 {
-  "_comment": "Мок контекста писем о заказе (волна A, D22). Форма = сырой tplCtx API-флоу БЕЗ hoist (M1): только results.* и json.* — results.calc (k_calc), results.order.createOrder (createOrder), results.g_site (shop_site_common). Письма рендерятся двухпроходом: тело → email-layout (content_for_layout).",
+  "_comment": "Мок контекста писем о заказе (волна A, D22). Форма = сырой tplCtx API-флоу БЕЗ hoist (M1): только results.* и json.* — results.calc (k_calc), results.order.createOrder (createOrder), results.g_site (shop_site_common). B2b: calc несёт снапшот скидки/доставки (232900 − 23290 + 30000 = 239.61 — сумма согласована). Письма рендерятся двухпроходом: тело → email-layout (content_for_layout).",
   "results": {
     "calc": {
       "ok": true,
@@ -19,7 +19,11 @@
       ],
       "total_kopecks": 232900,
       "summary": "Кружка «Лён» × 2, Планинг «Сосна» × 1",
-      "amount": "232.90"
+      "amount": "239.61",
+      "delivery_title": "Курьер — 300₽",
+      "delivery_price_kopecks": 30000,
+      "promo_code": "DEMO10",
+      "discount_kopecks": 23290
     },
     "order": {
       "createOrder": {

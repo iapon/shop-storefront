@@ -1,5 +1,5 @@
 {
-  "_comment": "Мок данных страницы чекаута: prods.data.products (товары корзины) + results.ci.items (позиции серверной корзины — флоу парсит json-строку items узлом k_ci, Liquid не читает JSON-строки). cart.data.carts показывает «сырую» строку (json-поле приезжает СТРОКОЙ — P0-1). guest — гость, member — сессия; empty — нет идентификатора/пустая корзина («Корзина пуста»).",
+  "_comment": "Мок данных страницы чекаута: prods.data.products (товары корзины) + results.ci.items (позиции серверной корзины — флоу парсит json-строку items узлом k_ci, Liquid не читает JSON-строки). cart.data.carts показывает «сырую» строку (json-поле приезжает СТРОКОЙ — P0-1). guest — гость, member — сессия; empty — нет идентификатора/пустая корзина («Корзина пуста»). B2b: dlist.data.deliveryMethods — активные способы доставки (radio чекаута, первый выбран SSR-ом); итог сводки = товары + доставка (300.00 у гостя/микса, 1790.00 у члена), скидка — честный placeholder.",
   "guest": {
     "results": {
       "ci": {
@@ -59,6 +59,26 @@
       "version": 7,
       "params": {},
       "query": {}
+    },
+    "dlist": {
+      "data": {
+        "deliveryMethods": [
+          {
+            "id": "d-1",
+            "title": "Курьер — 300₽",
+            "type": "courier",
+            "price_kopecks": 30000,
+            "description": "1–2 дня по городу"
+          },
+          {
+            "id": "d-2",
+            "title": "Самовывоз — 0₽",
+            "type": "pickup",
+            "price_kopecks": 0,
+            "description": "Бесплатно, адрес — в контактах"
+          }
+        ]
+      }
     }
   },
   "member": {
@@ -104,6 +124,26 @@
       "version": 7,
       "params": {},
       "query": {}
+    },
+    "dlist": {
+      "data": {
+        "deliveryMethods": [
+          {
+            "id": "d-1",
+            "title": "Курьер — 300₽",
+            "type": "courier",
+            "price_kopecks": 30000,
+            "description": "1–2 дня по городу"
+          },
+          {
+            "id": "d-2",
+            "title": "Самовывоз — 0₽",
+            "type": "pickup",
+            "price_kopecks": 0,
+            "description": "Бесплатно, адрес — в контактах"
+          }
+        ]
+      }
     }
   },
   "mix": {
@@ -166,8 +206,22 @@
     "vars": {
       "data": {
         "variants": [
-          { "id": "var-1", "product_slug": "hudi-oversayz", "label": "Красный / M", "sku": "HUDI-RM", "price_kopecks": 319000, "stock": 4 },
-          { "id": "var-2", "product_slug": "hudi-oversayz", "label": "Синий / L", "sku": "HUDI-BL", "price_kopecks": 299000, "stock": 7 }
+          {
+            "id": "var-1",
+            "product_slug": "hudi-oversayz",
+            "label": "Красный / M",
+            "sku": "HUDI-RM",
+            "price_kopecks": 319000,
+            "stock": 4
+          },
+          {
+            "id": "var-2",
+            "product_slug": "hudi-oversayz",
+            "label": "Синий / L",
+            "sku": "HUDI-BL",
+            "price_kopecks": 299000,
+            "stock": 7
+          }
         ]
       }
     },
@@ -175,6 +229,26 @@
       "version": 7,
       "params": {},
       "query": {}
+    },
+    "dlist": {
+      "data": {
+        "deliveryMethods": [
+          {
+            "id": "d-1",
+            "title": "Курьер — 300₽",
+            "type": "courier",
+            "price_kopecks": 30000,
+            "description": "1–2 дня по городу"
+          },
+          {
+            "id": "d-2",
+            "title": "Самовывоз — 0₽",
+            "type": "pickup",
+            "price_kopecks": 0,
+            "description": "Бесплатно, адрес — в контактах"
+          }
+        ]
+      }
     }
   },
   "empty": {

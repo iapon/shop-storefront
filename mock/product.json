@@ -1,5 +1,5 @@
 {
-  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); cats — биндинг shop_catalog_categories (узел g_cat флоу): тайтлы категорий для крошек (W6 №1); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4. B2a: вариант «vars» — товар с вариантами (vars.data.variants — узел g_vars флоу, library shop_product_variants): дефолт пикера = первый со stock > 0, цена карточки = его цена, бейдж бинарный по вариантам. B2c: revs — биндинг shop_product_reviews (узел g_revs: только published, новые сверху): found — 2 отзыва (средняя (5+4)/2 = 4.5, aggregateRating в JSON-LD), vars/not_found — пусто (ключа aggregateRating нет, «Пока нет отзывов»).",
+  "_comment": "Мок данных карточки товара. Вариант «найден»: p.data.products = [товар] (photos ×2 — галерея, features string[], meta_title/meta_description — SEO-поля D26, categories — slugs для крошек); cats — биндинг shop_catalog_categories (узел g_cat флоу): тайтлы категорий для крошек (W6 №1); вариант «не найден»: products = [] (рендерится состояние в шаблоне). rel — «Похожие» ≤4. B2a: вариант «vars» — товар с вариантами (vars.data.variants — узел g_vars флоу, library shop_product_variants): дефолт пикера = первый со stock > 0, цена карточки = его цена, бейдж бинарный по вариантам. v1.7.2: у вариантов СВОИ photos (library дотягивает photos{url}) — SSR-слайды = фото дефолта (#rm), у Синего (#bl) свой кадр, отличимый от общей галереи товара (голый svg/#2); вариант без photos-ключа → SSR показывает общую галерею (фолбэк). B2c: revs — биндинг shop_product_reviews (узел g_revs: только published, новые сверху): found — 2 отзыва (средняя (5+4)/2 = 4.5, aggregateRating в JSON-LD), vars/not_found — пусто (ключа aggregateRating нет, «Пока нет отзывов»).",
   "found": {
     "cats": {
       "data": {
@@ -83,8 +83,8 @@
     "vars": {
       "data": {
         "variants": [
-          { "id": "var-1", "product_slug": "hudi-oversayz", "label": "Красный / M", "options": ["color:Красный", "size:M"], "sku": "HUDI-RM", "price_kopecks": 319000, "stock": 4 },
-          { "id": "var-2", "product_slug": "hudi-oversayz", "label": "Синий / L", "options": ["color:Синий", "size:L"], "sku": "HUDI-BL", "price_kopecks": 299000, "stock": 7 }
+          { "id": "var-1", "product_slug": "hudi-oversayz", "label": "Красный / M", "options": ["color:Красный", "size:M"], "sku": "HUDI-RM", "price_kopecks": 319000, "stock": 4, "photos": [{ "url": "/static/photos/placeholder.svg#rm" }] },
+          { "id": "var-2", "product_slug": "hudi-oversayz", "label": "Синий / L", "options": ["color:Синий", "size:L"], "sku": "HUDI-BL", "price_kopecks": 299000, "stock": 7, "photos": [{ "url": "/static/photos/placeholder.svg#bl" }] }
         ]
       }
     },

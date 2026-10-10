@@ -1131,6 +1131,8 @@ await smokeW9Cart();
   check(zeroOffer && zeroOffer.availability === 'https://schema.org/OutOfStock', 'B2a: все нули — availability не OutOfStock');
 
   // поведенческая проба: change на radio обновляет цену/бейдж/кнопку
+  // (v1.7.2: и шлёт gallery:replace с url'ами выбранного варианта — карта
+  // data-gallery-map; вариант без ключа/фото → ключ "product", общая галерея)
   const m = /\/\* b2a-picker-start \*\/([\s\S]*?)\/\* b2a-picker-end \*\//.exec(varsHtml);
   check(!!m, 'B2a: инлайн-скрипт пикера не извлекается из рендера');
   if (m) {
@@ -1140,38 +1142,48 @@ await smokeW9Cart();
       setAttribute(k, v) { this.attrs[k] = String(v); },
       addEventListener(t, fn) { (this.handlers[t] ??= []).push(fn); },
     });
+    const gmapShim = {
+      product: ['/static/photos/placeholder.svg', '/static/photos/placeholder.svg#2'],
+      'var-1': ['/static/photos/placeholder.svg#rm'],
+      'var-2': ['/static/photos/placeholder.svg#bl'],
+    };
+    const dispatched = [];
     const r1 = el({ 'data-variant-id': 'var-1', 'data-price': '319000', 'data-stock': '4' });
     const r2 = el({ 'data-variant-id': 'var-2', 'data-price': '299000', 'data-stock': '7' });
     const priceEl = el({});
     const badgeEl = el({ 'data-pv-badge': '' });
     const addBtn = el({ 'data-cart-add': 'hudi-oversayz', 'data-variant': 'var-1', 'data-stock': '4' });
-    const shim = {
+    const mkShim = (radios) => ({
       querySelector(sel) {
-        if (sel === '[data-variant-picker]') return { querySelectorAll: (s2) => (s2 === 'input[data-variant-id]' ? [r1, r2] : []) };
+        if (sel === '[data-variant-picker]') return { querySelectorAll: (s2) => (s2 === 'input[data-variant-id]' ? radios : []) };
         if (sel === '[data-pv-price]') return priceEl;
         if (sel === '[data-pv-badge]') return badgeEl;
         if (sel === '[data-cart-add]') return addBtn;
+        if (sel === '[data-gallery-map]') return { textContent: JSON.stringify(gmapShim) };
         return null;
       },
-    };
-    new Function('document', m[1])(shim);
+      dispatchEvent(ev) { dispatched.push(ev); return true; },
+    });
+    new Function('document', m[1])(mkShim([r1, r2]));
     check(r1.handlers.change && r1.handlers.change.length === 1 && r2.handlers.change.length === 1, 'B2a: пикер не подписался на change обоих radio');
     r2.handlers.change[0]({ target: r2 });
     check(priceEl.textContent === '2990.00', `B2a: change не обновил цену: «${priceEl.textContent}»`);
     check(badgeEl.className === 'badge badge-success' && badgeEl.textContent === 'В наличии', `B2a: change не обновил бейдж: «${badgeEl.className}/${badgeEl.textContent}»`);
     check(addBtn.attrs['data-variant'] === 'var-2' && addBtn.attrs['data-stock'] === '7' && addBtn.disabled === false, 'B2a: change не обновил карман кнопки «В корзину»');
+    const ev2 = dispatched.find((e) => e.type === 'gallery:replace');
+    check(!!ev2 && Array.isArray(ev2.detail?.urls) && ev2.detail.urls.length === 1 && ev2.detail.urls[0] === '/static/photos/placeholder.svg#bl',
+      'v1.7.2: change не послал gallery:replace с url\'ами выбранного варианта');
+    dispatched.length = 0;
+    const rNoPhoto = el({ 'data-variant-id': 'var-x', 'data-price': '10000', 'data-stock': '3' });
+    new Function('document', m[1])(mkShim([rNoPhoto]));
+    rNoPhoto.handlers.change[0]({ target: rNoPhoto });
+    const evFb = dispatched.find((e) => e.type === 'gallery:replace');
+    check(!!evFb && evFb.detail?.urls?.length === 2 && evFb.detail.urls[0] === '/static/photos/placeholder.svg',
+      'v1.7.2: вариант без фото не вернулся на общую галерею (ключ product)');
     // нулевой вариант (если бы не был disabled) — бейдж честно гаснет
     const r0 = el({ 'data-variant-id': 'var-0', 'data-price': '10000', 'data-stock': '0' });
     r0.handlers.change = [];
-    new Function('document', m[1])({
-      querySelector(sel) {
-        if (sel === '[data-variant-picker]') return { querySelectorAll: () => [r0] };
-        if (sel === '[data-pv-price]') return priceEl;
-        if (sel === '[data-pv-badge]') return badgeEl;
-        if (sel === '[data-cart-add]') return addBtn;
-        return null;
-      },
-    });
+    new Function('document', m[1])(mkShim([r0]));
     r0.handlers.change[0]({ target: r0 });
     check(badgeEl.className === 'badge badge-error' && badgeEl.textContent === 'Нет в наличии' && addBtn.disabled === true, 'B2a: нулевой вариант не гасит бейдж/кнопку');
   }
@@ -1179,7 +1191,81 @@ await smokeW9Cart();
     failed++;
     console.log('FAIL b2a-picker: ' + fails.join(' | '));
   } else {
-    console.log('OK   b2a-picker (дефолт=первый со stock>0; бейдж бинарь по вариантам; цена карточки = варианта; offers.sku первого + availability; все нули → disabled+Нет+без кнопки; change обновляет цену/бейдж/кнопку)');
+    console.log('OK   b2a-picker (дефолт=первый со stock>0; бейдж бинарь по вариантам; цена карточки = варианта; offers.sku первого + availability; все нули → disabled+Нет+без кнопки; change обновляет цену/бейдж/кнопку + gallery:replace)');
+  }
+}
+
+/* ── Проба v1.7.2 (вариантные фото): галерея следует за выбором варианта ──
+   SSR: слайды = фото дефолт-варианта (первый со stock > 0); у варианта фото
+   нет/пусты → общая галерея товара (фолбэк); карта data-gallery-map несёт
+   ключ "product" + id вариантов (url'ы — json-эскейп); SEO-поля (og:image,
+   JSON-LD image[]) остаются ПРОДУКТОВЫМИ (M6-оговорка); у безвариантного
+   товара карты нет. CSS: кросс-фейд подмены на треке (data-swap) с
+   reduce-гейтом; [hidden] каркаса миниатюр/стрелок перебивает display-класс. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const q = {};
+  const plain = await renderMockPage(engine, 'product', null, { query: { ...q } });
+  check(!plain.includes('data-gallery-map'), 'v1.7.2: безвариантный товар несёт карту фото вариантов');
+  check(/gallery-slide[\s\S]*?src="\/static\/photos\/placeholder\.svg"/.test(plain), 'v1.7.2: безвариантный товар потерял общую галерею');
+
+  const varsHtml = await renderMockPage(engine, 'product', 'vars', { query: { ...q } });
+  // SSR-слайды = фото дефолт-варианта (#rm), НЕ общая галерея (#2)
+  const trackChunk = /data-gallery-track[\s\S]*?gallery-nav/.exec(varsHtml)?.[0] ?? '';
+  check(/gallery-slide[\s\S]*?src="\/static\/photos\/placeholder\.svg#rm"/.test(trackChunk), 'v1.7.2: SSR-слайды не из фото дефолт-варианта');
+  check(!trackChunk.includes('placeholder.svg#2'), 'v1.7.2: в SSR-трек попала общая галерея при вариантной');
+  // карта: product + оба варианта; у варианта url'ы json-эскейпятся
+  const mapMatch = /<script type="application\/json" data-gallery-map>([\s\S]*?)<\/script>/.exec(varsHtml);
+  check(!!mapMatch, 'v1.7.2: карты data-gallery-map нет на вариантной карточке');
+  let map = null;
+  try { map = JSON.parse(mapMatch[1]); } catch { /* ниже */ }
+  check(map && Array.isArray(map.product) && map.product.length === 2, 'v1.7.2: в карте нет ключа product (общей галереи)');
+  check(map && JSON.stringify(map['var-1']) === '["/static/photos/placeholder.svg#rm"]', 'v1.7.2: в карте нет фото var-1');
+  check(map && JSON.stringify(map['var-2']) === '["/static/photos/placeholder.svg#bl"]', 'v1.7.2: в карте нет фото var-2');
+  // каркас миниатюр/стрелок у вариантного товара ЕСТЬ (1 кадр → hidden)
+  check(/data-gallery-thumbs[^>]*hidden/.test(varsHtml), 'v1.7.2: полоса миниатюр не спрятана при 1 кадре');
+  check(/data-gallery-step="-1"[^>]*hidden/.test(varsHtml), 'v1.7.2: стрелки не спрятаны при 1 кадре');
+  // SEO остаётся продуктовым: og:image и JSON-LD image[] — общая галерея
+  check(/property="og:image"\s+content="[^"]*\/static\/photos\/placeholder\.svg"/.test(varsHtml), 'v1.7.2: og:image не продуктовый (SSR-канон)');
+  const varsLd = extractJsonLd(varsHtml).map((s) => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
+  const prod = varsLd.find((o) => o['@type'] === 'Product');
+  check(Array.isArray(prod?.image) && prod.image.length === 2 && prod.image[1] === '/static/photos/placeholder.svg#2',
+    'v1.7.2: JSON-LD image[] не продуктовый (M6-оговорка)');
+
+  // вариант БЕЗ photos (нет ключа в данных) → SSR-фолбэк на общую галерею
+  const noPhotoVars = {
+    data: { variants: [
+      { id: 'var-1', product_slug: 'hudi-oversayz', label: 'Красный / M', sku: 'HUDI-RM', price_kopecks: 319000, stock: 4 },
+      { id: 'var-2', product_slug: 'hudi-oversayz', label: 'Синий / L', sku: 'HUDI-BL', price_kopecks: 299000, stock: 7 },
+    ] },
+  };
+  const noPhoto = await renderMockPage(engine, 'product', 'vars', { query: { ...q }, vars: noPhotoVars });
+  const noPhotoChunk = /data-gallery-track[\s\S]*?gallery-nav/.exec(noPhoto)?.[0] ?? '';
+  check(/gallery-slide[\s\S]*?src="\/static\/photos\/placeholder\.svg"/.test(noPhotoChunk) && noPhotoChunk.includes('placeholder.svg#2'),
+    'v1.7.2: вариант без фото не показал общую галерею товара (SSR-фолбэк)');
+  check(/data-gallery-thumbs(?![^>]*hidden)/.test(noPhoto), 'v1.7.2: полоса миниатюр не видна при общей галерее 2 кадров');
+  // пустой photos-массив варианта — тоже фолбэк (не «галерея из нуля слайдов»)
+  const emptyVars = {
+    data: { variants: [
+      { id: 'var-1', product_slug: 'hudi-oversayz', label: 'Красный / M', sku: 'HUDI-RM', price_kopecks: 319000, stock: 4, photos: [] },
+    ] },
+  };
+  const emptyChunk = /data-gallery-track[\s\S]*?gallery-nav/.exec(await renderMockPage(engine, 'product', 'vars', { query: { ...q }, vars: emptyVars }))?.[0] ?? '';
+  check(emptyChunk.includes('placeholder.svg#2'), 'v1.7.2: пустой photos варианта не дал общую галерею');
+
+  // CSS: кросс-фейд подмены + reduce-гейт + [hidden] явкой
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  check(/\.gallery-track\s*\{[^}]*transition:\s*opacity/.test(css), 'v1.7.2: у трека нет перехода прозрачности (кросс-фейд подмены)');
+  check(/\.gallery-track\[data-swap="1"\]\s*\{[^}]*opacity:\s*0/.test(css), 'v1.7.2: нет фазы гашения трека (data-swap)');
+  check(/\.gallery-nav\[hidden\][^{]*\{[^}]*display:\s*none/.test(css), 'v1.7.2: [hidden] каркаса не перебивает display-класс');
+  const reduceBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\}\s*\}/g)].map((x) => x[0]).join('\n');
+  check(/\.gallery-track\s*\{[^}]*transition:\s*none/.test(reduceBlocks), 'v1.7.2: кросс-фейд подмены не гейтится prefers-reduced-motion');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL varphoto: ' + fails.join(' | '));
+  } else {
+    console.log('OK   varphoto (SSR-слайды = фото дефолт-варианта; без фото → общая галерея; карта product+варианты; каркас миниатюр hidden при 1 кадре; og:image/JSON-LD продуктовые; кросс-фейд data-swap + reduce-гейт + [hidden] явкой)');
   }
 }
 
@@ -2150,4 +2236,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + revlogin + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + varphoto + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + revlogin + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

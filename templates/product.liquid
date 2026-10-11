@@ -167,7 +167,7 @@
 {%- for v in pv_vars -%}
   {%- if v.options -%}
     {%- assign pv_opt_json = v.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}
-    {%- if pv_opt_join != blank -%}{%- assign pv_no_dims = false -%}{%- endif -%}
+    {%- if pv_opt_join != "" -%}{%- assign pv_no_dims = false -%}{%- endif -%}
   {%- endif -%}
 {%- endfor -%}
 {%- assign pv_dims = "" -%}
@@ -178,11 +178,11 @@
   {%- assign pv_pairs = pv_opt_join | split: ";" -%}
   {%- for pp in pv_pairs -%}
     {%- assign pp_t = pp | strip -%}
-    {%- if pp_t != blank -%}
+    {%- if pp_t != "" -%}
       {%- assign pv_ci = pp_t | split: ":" -%}
       {%- assign pv_dname = pv_ci[0] | strip -%}
       {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
-      {%- if pv_dname != blank and pv_dval != blank -%}
+      {%- if pv_dname != "" and pv_dval != "" -%}
         {%- assign pv_probe = "|" | append: pv_dname | append: "|" -%}
         {%- unless pv_dims contains pv_probe -%}
           {%- assign pv_dims = pv_dims | append: pv_probe -%}
@@ -195,8 +195,8 @@
 {%- comment -%} JSON-данные пикера (js/picker.js): dims в порядке строк,
    варианты с картой opts «имя → значение», дефолт = pv_def (SSR-канон M6:
    без JS кнопка несёт его же, переключение невозможно — задокументировано). {%- endcomment -%}
-{%- capture pv_dims_json -%}{%- assign pv_dfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == blank -%}{%- unless pv_dfirst -%},{%- endunless -%}{%- assign pv_dfirst = false -%}{{ pv_d | json }}{%- endunless -%}{%- endfor -%}{%- endcapture -%}
-{%- capture pv_variants_json -%}{%- assign pv_vfirst = true -%}{%- for v in pv_vars -%}{%- unless pv_vfirst -%},{%- endunless -%}{%- assign pv_vfirst = false -%}{"id":{{ v.id | json }},"price":{{ v.price_kopecks }},"stock":{{ v.stock }},"opts":{%- capture pv_vopts -%}{{ "{" }}{%- assign pv_pfirst = true -%}{%- assign pv_opt_join = "" -%}{%- if v.options -%}{%- assign pv_opt_json = v.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != blank -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname != blank and pv_dval != blank -%}{%- unless pv_pfirst -%},{%- endunless -%}{%- assign pv_pfirst = false -%}{{ pv_dname | json }}:{{ pv_dval | json }}{%- endif -%}{%- endif -%}{%- endfor -%}{{ "}" }}{%- endcapture -%}{{ pv_vopts }}{{ "}" }}{%- endfor -%}{%- endcapture -%}
+{%- capture pv_dims_json -%}{%- assign pv_dfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == "" -%}{%- unless pv_dfirst -%},{%- endunless -%}{%- assign pv_dfirst = false -%}{{ pv_d | json }}{%- endunless -%}{%- endfor -%}{%- endcapture -%}
+{%- capture pv_variants_json -%}{%- assign pv_vfirst = true -%}{%- for v in pv_vars -%}{%- unless pv_vfirst -%},{%- endunless -%}{%- assign pv_vfirst = false -%}{"id":{{ v.id | json }},"price":{{ v.price_kopecks }},"stock":{{ v.stock }},"opts":{%- capture pv_vopts -%}{{ "{" }}{%- assign pv_pfirst = true -%}{%- assign pv_opt_join = "" -%}{%- if v.options -%}{%- assign pv_opt_json = v.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname != "" and pv_dval != "" -%}{%- unless pv_pfirst -%},{%- endunless -%}{%- assign pv_pfirst = false -%}{{ pv_dname | json }}:{{ pv_dval | json }}{%- endif -%}{%- endif -%}{%- endfor -%}{{ "}" }}{%- endcapture -%}{{ pv_vopts }}{{ "}" }}{%- endfor -%}{%- endcapture -%}
 {%- if product -%}
   {%- assign page_title = product.meta_title | default: product.title -%}
   {%- assign pd_suffix = "купить в интернет-магазине" -%}
@@ -238,7 +238,7 @@
         {%- if v.price_kopecks > pv_hi -%}{%- assign pv_hi = v.price_kopecks -%}{%- endif -%}
       {%- endif -%}
     {%- endfor -%}
-    {%- capture pv_offers_json -%}{%- for v in pv_vars -%}{% unless forloop.first %},{% endunless %}{"@type":"Offer","price":"{{ v.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if v.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"{% if v.sku != blank %},"sku":{{ v.sku | json }}{% endif %}}{%- endfor -%}{%- endcapture -%}
+    {%- capture pv_offers_json -%}{%- for v in pv_vars -%}{% unless forloop.first %},{% endunless %}{"@type":"Offer","price":"{{ v.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if v.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"{% if v.sku != "" %},"sku":{{ v.sku | json }}{% endif %}}{%- endfor -%}{%- endcapture -%}
     {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}}{% if pv_has %},"offers":{"@type":"AggregateOffer","url":"{{ canon_base }}{{ page_canon }}","lowPrice":"{{ pv_lo | times: 0.01 | money }}","highPrice":"{{ pv_hi | times: 0.01 | money }}","priceCurrency":"RUB","offerCount":"{{ pv_vars.size }}","offers":[{{ pv_offers_json }}]}{% else %},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% endif %}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
     {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
@@ -370,14 +370,14 @@
              без hex-литералов (канон W7 №3, проба w7-canon). {%- endcomment -%}
           <fieldset class="variant-picker" data-variant-picker>
             <legend class="sr-only">Вариант</legend>
-            <p class="pv-status" data-pv-status aria-live="polite">{%- if pv_def -%}{%- assign pv_status_vals = "" -%}{%- assign pv_sfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == blank -%}{%- assign pv_defval = blank -%}{%- assign pv_opt_join = "" -%}{%- if pv_def.options -%}{%- assign pv_opt_json = pv_def.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != blank -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}{%- endif -%}{%- endfor -%}{%- if pv_defval != blank -%}{% unless pv_sfirst %}{% assign pv_status_vals = pv_status_vals | append: " / " %}{% endunless %}{% assign pv_status_vals = pv_status_vals | append: pv_defval %}{% assign pv_sfirst = false %}{%- endif -%}{%- endunless -%}{%- endfor -%}<b>{{ pv_status_vals }}</b> — {{ pv_def.price_kopecks | times: 0.01 | money }} ₽ · в наличии {{ pv_def.stock }}{%- else -%}<span class="pv-status-off">нет в наличии</span>{%- endif -%}</p>
+            <p class="pv-status" data-pv-status aria-live="polite">{%- if pv_def -%}{%- assign pv_status_vals = "" -%}{%- assign pv_sfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == "" -%}{%- assign pv_defval = "" -%}{%- assign pv_opt_join = "" -%}{%- if pv_def.options -%}{%- assign pv_opt_json = pv_def.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname == pv_d and pv_dval != "" -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}{%- endif -%}{%- endfor -%}{%- if pv_defval != "" -%}{% unless pv_sfirst %}{% assign pv_status_vals = pv_status_vals | append: " / " %}{% endunless %}{% assign pv_status_vals = pv_status_vals | append: pv_defval %}{% assign pv_sfirst = false %}{%- endif -%}{%- endunless -%}{%- endfor -%}<b>{{ pv_status_vals }}</b> — {{ pv_def.price_kopecks | times: 0.01 | money }} ₽ · в наличии {{ pv_def.stock }}{%- else -%}<span class="pv-status-off">нет в наличии</span>{%- endif -%}</p>
             {%- assign pv_color_names = "|синий|голубой|красный|розовый|зелёный|оливковый|чёрный|серый|белый|жёлтый|оранжевый|фиолетовый|сиреневый|коричневый|бежевый|бирюзовый|бордовый|мятный|" -%}
             {%- comment -%} фото варианта говорят о его ЦВЕТЕ — свотчи живут
                на ПЕРВОМ измерении, у значений которого они есть (у размера —
                пилюли/заливка, мокап A). {%- endcomment -%}
             {%- assign pv_photo_dims = "" -%}
             {%- for pv_d in pv_dim_arr -%}
-              {%- unless pv_d == blank -%}
+              {%- unless pv_d == "" -%}
                 {%- assign pv_d_hasphoto = false -%}
                 {%- for v in pv_vars -%}
                   {%- if pv_d_hasphoto -%}{%- break -%}{%- endif -%}
@@ -388,11 +388,11 @@
                   {%- assign pv_pairs = pv_opt_join | split: ";" -%}
                   {%- for pp in pv_pairs -%}
                     {%- assign pp_t = pp | strip -%}
-                    {%- if pp_t != blank -%}
+                    {%- if pp_t != "" -%}
                       {%- assign pv_ci = pp_t | split: ":" -%}
                       {%- assign pv_dname = pv_ci[0] | strip -%}
                       {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
-                      {%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_d_hasphoto = true -%}{%- break -%}{%- endif -%}
+                      {%- if pv_dname == pv_d and pv_dval != "" -%}{%- assign pv_d_hasphoto = true -%}{%- break -%}{%- endif -%}
                     {%- endif -%}
                   {%- endfor -%}
                 {%- endfor -%}
@@ -405,11 +405,11 @@
             {%- assign pv_photo_arr = pv_photo_dims | split: "|" -%}
             {%- assign pv_photo_first = "" -%}
             {%- for pv_x in pv_photo_arr -%}
-              {%- if pv_x != blank and pv_photo_first == "" -%}{%- assign pv_photo_first = pv_x -%}{%- endif -%}
+              {%- if pv_x != "" and pv_photo_first == "" -%}{%- assign pv_photo_first = pv_x -%}{%- endif -%}
             {%- endfor -%}
             {%- for pv_d in pv_dim_arr -%}
-            {%- unless pv_d == blank -%}
-                        {%- assign pv_defval = blank -%}
+            {%- unless pv_d == "" -%}
+                        {%- assign pv_defval = "" -%}
             {%- if pv_def -%}
               {%- assign pv_opt_join = "" -%}
               {%- if pv_def.options -%}{%- assign pv_opt_json = pv_def.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}
@@ -417,11 +417,11 @@
               {%- assign pv_pairs = pv_opt_join | split: ";" -%}
               {%- for pp in pv_pairs -%}
                 {%- assign pp_t = pp | strip -%}
-                {%- if pp_t != blank -%}
+                {%- if pp_t != "" -%}
                   {%- assign pv_ci = pp_t | split: ":" -%}
                   {%- assign pv_dname = pv_ci[0] | strip -%}
                   {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
-                  {%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}
+                  {%- if pv_dname == pv_d and pv_dval != "" -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}
                 {%- endif -%}
               {%- endfor -%}
             {%- endif -%}
@@ -434,11 +434,11 @@
               {%- assign pv_pairs = pv_opt_join | split: ";" -%}
               {%- for pp in pv_pairs -%}
                 {%- assign pp_t = pp | strip -%}
-                {%- if pp_t != blank -%}
+                {%- if pp_t != "" -%}
                   {%- assign pv_ci = pp_t | split: ":" -%}
                   {%- assign pv_dname = pv_ci[0] | strip -%}
                   {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
-                  {%- if pv_dname == pv_d and pv_dval != blank -%}
+                  {%- if pv_dname == pv_d and pv_dval != "" -%}
                     {%- assign pv_vprobe = "|" | append: pv_dval | append: "|" -%}
                     {%- unless pv_vals contains pv_vprobe -%}{%- assign pv_vals = pv_vals | append: pv_vprobe -%}{%- endunless -%}
                     {%- if v.photos and v.photos.size > 0 -%}{%- assign pv_d_hasphoto = true -%}{%- endif -%}
@@ -452,7 +452,7 @@
                иначе текстовые пилюли. {%- endcomment -%}
             {%- assign pv_fillmiss = 0 -%}
             {%- for pv_v in pv_val_arr -%}
-              {%- unless pv_v == blank -%}
+              {%- unless pv_v == "" -%}
                 {%- assign pv_vdown = pv_v | downcase | strip -%}
                 {%- assign pv_cprobe = "|" | append: pv_vdown | append: "|" -%}
                 {%- unless pv_color_names contains pv_cprobe -%}{%- assign pv_fillmiss = pv_fillmiss | plus: 1 -%}{%- endunless -%}
@@ -461,10 +461,10 @@
             {%- assign pv_mode = "pill" -%}
             {%- if pv_d_hasphoto and pv_d == pv_photo_first -%}{%- assign pv_mode = "swatch" -%}{%- elsif pv_fillmiss == 0 -%}{%- assign pv_mode = "fill" -%}{%- endif -%}
             <div class="pv-dim">
-              <span class="pv-dim-label" id="pv-dim-{{ forloop.index0 }}-label">{{ pv_d }}: <span class="pv-dim-val" data-pv-dim-val="{{ pv_d | escape }}">{% if pv_defval != blank %}{{ pv_defval }}{% else %}—{% endif %}</span></span>
+              <span class="pv-dim-label" id="pv-dim-{{ forloop.index0 }}-label">{{ pv_d }}: <span class="pv-dim-val" data-pv-dim-val="{{ pv_d | escape }}">{% if pv_defval != "" %}{{ pv_defval }}{% else %}—{% endif %}</span></span>
               <div class="pv-values" role="radiogroup" aria-labelledby="pv-dim-{{ forloop.index0 }}-label" data-pv-group="{{ pv_d | escape }}" data-pv-mode="{{ pv_mode }}">
               {%- for pv_v in pv_val_arr -%}
-              {%- unless pv_v == blank -%}
+              {%- unless pv_v == "" -%}
                 {%- assign pv_vphoto = "" -%}
                 {%- assign pv_vok = false -%}
                 {%- for v in pv_vars -%}
@@ -474,13 +474,13 @@
                   {%- assign pv_pairs = pv_opt_join | split: ";" -%}
                   {%- for pp in pv_pairs -%}
                     {%- assign pp_t = pp | strip -%}
-                    {%- if pp_t != blank -%}
+                    {%- if pp_t != "" -%}
                       {%- assign pv_ci = pp_t | split: ":" -%}
                       {%- assign pv_dname = pv_ci[0] | strip -%}
                       {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
                       {%- if pv_dname == pv_d and pv_dval == pv_v -%}
                         {%- if v.stock > 0 -%}{%- assign pv_vok = true -%}{%- endif -%}
-                        {%- if pv_vphoto == blank and v.photos and v.photos.size > 0 -%}
+                        {%- if pv_vphoto == "" and v.photos and v.photos.size > 0 -%}
                           {%- assign pv_vp = v.photos | first -%}
                           {%- assign pv_vphoto = pv_vp.url -%}
                         {%- endif -%}
@@ -517,7 +517,7 @@
                         {%- unless pv_vok %} aria-disabled="true"{% endunless %}
                         aria-label="{{ pv_v | escape }}{%- unless pv_vok %}, нет в наличии{% endunless -%}">
                 {%- if pv_mode == "swatch" -%}
-                  {%- if pv_vphoto != blank -%}
+                  {%- if pv_vphoto != "" -%}
                   <img src="{{ pv_vphoto }}" alt="" loading="lazy" decoding="async" width="48" height="48">
                   {%- else -%}
                   <span class="pv-fill" style="background:{{ pv_vhex }}"></span>

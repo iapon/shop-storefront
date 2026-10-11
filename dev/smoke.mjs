@@ -1119,8 +1119,8 @@ await smokeW9Cart();
   check(/Цвет: <span class="pv-dim-val"[^>]*>Синий<\/span>/.test(varsHtml), 'B2a: лейбл цвета не отражает дефолт');
   // режимы значений: Цвет — свотчи (есть фото), внутри Красный — заливка по карте;
   // Размер — пилюли
-  check(/data-pv-group="1"[^>]*data-pv-mode="swatch"/.test(varsHtml), 'B2a: измерение с фото не в режиме swatch');
-  check(/data-pv-group="3"[^>]*data-pv-mode="pill"/.test(varsHtml), 'B2a: размерный ряд не в режиме pill');
+  check(/data-pv-group="Цвет"[^>]*data-pv-mode="swatch"/.test(varsHtml), 'B2a: измерение с фото не в режиме swatch');
+  check(/data-pv-group="Размер"[^>]*data-pv-mode="pill"/.test(varsHtml), 'B2a: размерный ряд не в режиме pill');
   check(/data-pv-value="Красный"[^>]*>\s*<span class="pv-fill" style="background:#d64545">/.test(varsHtml),
     'B2a: значение без фото не получило заливку по карте цветов');
   check(/data-pv-value="Синий"[^>]*>\s*<img src="\/static\/photos\/placeholder\.svg#rm"/.test(varsHtml),
@@ -1180,7 +1180,7 @@ await smokeW9Cart();
   const noOptsPv = JSON.parse(/<script type="application\/json" data-pv-data>([\s\S]*?)<\/script>/.exec(noOptsHtml)[1]);
   check(JSON.stringify(noOptsPv.dims) === '["Вариант"]', `v1.7.3: без options не один псевдо-размер: ${JSON.stringify(noOptsPv.dims)}`);
   check(noOptsPv.variants[1].opts['Вариант'] === 'Синий / L', 'v1.7.3: значение псевдо-размера не лейбл варианта');
-  check(/data-pv-group="\d+"[^>]*data-pv-mode="pill"/.test(noOptsHtml), 'v1.7.3: псевдо-размер не пилюли');
+  check(/data-pv-group="[^"]+"[^>]*data-pv-mode="pill"/.test(noOptsHtml), 'v1.7.3: псевдо-размер не пилюли');
   check(/data-pv-value="Красный \/ M"[^>]*aria-checked="true"/.test(noOptsHtml), 'v1.7.3: дефолт псевдо-размера не первый со stock > 0');
 
   // пары-элементы options (форма сида B2a «color:Красный») — те же гарантии
@@ -1195,6 +1195,21 @@ await smokeW9Cart();
   check(JSON.stringify(pairPv.dims) === '["color","size"]', `v1.7.3: пары-элементы options не распарсились: ${JSON.stringify(pairPv.dims)}`);
   check(pairPv.variants[0].opts['color'] === 'Красный' && pairPv.variants[0].opts['size'] === 'M', 'v1.7.3: opts из пар-элементов неверны');
   check(/data-pv-value="Синий"[^>]*aria-checked="false"/.test(pairHtml), 'v1.7.3: значения из пар-элементов не разметились');
+
+  // SCALAR-форма options (админ-форма, живой hoodie-demo): join на скаляре
+  // ронял Go-движок рантайм-ошибкой (карточка 404) — нормализация | json
+  const scalarVars = {
+    data: { variants: [
+      { id: 'var-1', product_slug: 'hudi-oversayz', label: 'Синий / M', options: 'Цвет: Синий; Размер: M', sku: 'HD-DM-01', price_kopecks: 299000, stock: 12 },
+      { id: 'var-2', product_slug: 'hudi-oversayz', label: 'Синий / L', options: 'Цвет: Синий; Размер: L', sku: 'HD-DM-02', price_kopecks: 319000, stock: 8 },
+    ] },
+  };
+  const scalarHtml = await renderMockPage(engine, 'product', 'vars', { query: { ...q }, vars: scalarVars });
+  check(scalarHtml.includes('data-variant-picker'), 'v1.7.3: скалярный options потерял пикер');
+  const scalarPv = JSON.parse(/<script type="application\/json" data-pv-data>([\s\S]*?)<\/script>/.exec(scalarHtml)[1]);
+  check(JSON.stringify(scalarPv.dims) === '["Цвет","Размер"]' && scalarPv.variants[0].opts['Размер'] === 'M',
+    `v1.7.3: скалярный options не распарсился: ${JSON.stringify(scalarPv.dims)}`);
+  check(/data-pv-group="Цвет"[^>]*data-pv-mode="fill"/.test(scalarHtml), 'v1.7.3: скалярный options — цвет не fill (без фото — заливка по карте)');
 
   /* Логика (чистые функции) + поведение делегированного клика на шим-DOM. */
   const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'js', 'picker.js'), 'utf8');
@@ -1218,13 +1233,13 @@ await smokeW9Cart();
     attrs: { 'data-pv-group': idx, 'data-pv-mode': 'pill' },
     getAttribute(k) { return this.attrs[k] ?? null; },
     querySelectorAll() { return this.btns; },
-    parentElement: { querySelector(sel) { return sel.includes(`data-pv-dim-val="${idx}"`) ? label : null; } },
+    parentElement: { querySelector() { return label; } },
   });
   function mkDom({ pvdata, gmap }) {
     const labels = [{ textContent: 'Синий' }, { textContent: 'M' }];
     const groups = [
-      mkGroup('0', [mkBtn(null, 'Синий'), mkBtn(null, 'Красный')], labels[0]),
-      mkGroup('1', [mkBtn(null, 'M'), mkBtn(null, 'L')], labels[1]),
+      mkGroup('Цвет', [mkBtn(null, 'Синий'), mkBtn(null, 'Красный')], labels[0]),
+      mkGroup('Размер', [mkBtn(null, 'M'), mkBtn(null, 'L')], labels[1]),
     ];
     groups[0].btns.forEach((b) => { b.group = groups[0]; });
     groups[1].btns.forEach((b) => { b.group = groups[1]; });

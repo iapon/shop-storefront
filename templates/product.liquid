@@ -28,14 +28,23 @@
   Вариантные фото (v1.7.2): у варианта своя галерея photos (entity[]+
   entity_ref:media, пустая = общей галереи нет). Слайды — фото ВЫБРАННОГО
   варианта (SSR — дефолт пикера; у варианта нет фото → общая галерея
-  товара); выбор варианта — инлайн-скриптом пикера (событие gallery:replace
+  товара); выбор варианта — скриптом пикера (событие gallery:replace
   → трек кроссфейдит подмену: data-swap opacity, prefers-reduced-motion —
   мгновенно), миниатюры/стрелки синхронны. SEO (og:image, JSON-LD image[])
   ОСТАЁТСЯ продуктовым: SSR не знает выбор варианта — это клиентская
   интеракция (оговорка M6: расхождение display-only, canonical-картинка —
   товарная). no-JS: карточка показывает галерею SSR-дефолта (первый
   вариант со stock > 0; у него нет фото — общую товара), переключение
-  вариантов без JS невозможно (radio без автосабмита) — задокументировано.
+  вариантов без JS невозможно (кнопки пикера без автосабмита) —
+  задокументировано.
+  v1.7.3 — пикер A «WB-универсал» + отзывы A «Ряд» + вариантные офферы:
+  пикер = строка на измерение (группировка по options-парам «имя:Значение»,
+  обе живые формы поля), значения — фото-свотч / цветная заливка по карте /
+  текстовая пилюля; логика в js/picker.js (дефолт SSR, данные data-pv-data,
+  контракт корзины D23 не тронут); JSON-LD: offers = AggregateOffer
+  (lowPrice/highPrice/offerCount + Offer на КАЖДЫЙ вариант — price/
+  availability/sku); отзывы — SVG-звёзды (инлайн-спрайт, --warn), шапка со
+  средней/счётчиком/CTA, карточки с аватаром-инициалом.
 {%- endcomment -%}
 {%- comment -%}
   БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
@@ -79,16 +88,13 @@
 {%- assign product = p.data.products | first -%}
 {%- comment -%} B2a: варианты товара (vars.data.variants). pv_def — первый
   вариант со stock > 0 (дефолт пикера), pv_in_stock — сколько вариантов
-  в наличии (бейдж: любой > 0 = «В наличии», все нули = «Нет»);
-  pv_first — ПЕРВЫЙ по sort (offers.sku в JSON-LD — из него).
+  в наличии (бейдж: любой > 0 = «В наличии», все нули = «Нет»).
   product.stock у вариантного товара игнорируется (F4: грид показывает
   базовую цену, платит k_calc — расхождение display-only). {%- endcomment -%}
 {%- assign pv_vars = vars.data.variants -%}
 {%- assign pv_def = nil -%}
-{%- assign pv_first = nil -%}
 {%- assign pv_in_stock = 0 -%}
 {%- for v in pv_vars -%}
-  {%- if pv_first == nil -%}{%- assign pv_first = v -%}{%- endif -%}
   {%- if v.stock > 0 -%}
     {%- assign pv_in_stock = pv_in_stock | plus: 1 -%}
     {%- if pv_def == nil -%}{%- assign pv_def = v -%}{%- endif -%}
@@ -118,6 +124,76 @@
 {%- for r in revs_list -%}{%- assign revs_sum = revs_sum | plus: r.rating -%}{%- endfor -%}
 {%- assign revs_avg = 0 -%}
 {%- if revs_count > 0 -%}{%- assign revs_avg = revs_sum | times: 10 | divided_by: revs_count | divided_by: 10.0 -%}{%- endif -%}
+{%- comment -%} v1.7.3 (отзывы «Ряд»): средняя ×10 ЦЕЛОЧИСЛЕННО (45 = 4.5) —
+   проценты заливки SVG-звёзд считаются без плавающей точки (см. review-stars). {%- endcomment -%}
+{%- assign revs_avg10 = 0 -%}
+{%- if revs_count > 0 -%}{%- assign revs_avg10 = revs_sum | times: 10 | divided_by: revs_count -%}{%- endif -%}
+{%- comment -%} Проценты заливки звёзд шапки (средняя): звезда i = кламп
+   (avg10 − (i−1)·10, 0..10) ·10 — половина 4.5 = 50%. {%- endcomment -%}
+{%- assign pv_fill = revs_avg10 -%}
+{%- if pv_fill > 10 -%}{%- assign pv_fill = 10 -%}{%- endif -%}
+{%- if pv_fill < 0 -%}{%- assign pv_fill = 0 -%}{%- endif -%}
+{%- assign revs_star1 = pv_fill | times: 10 -%}
+{%- assign pv_fill = revs_avg10 | minus: 10 -%}
+{%- if pv_fill > 10 -%}{%- assign pv_fill = 10 -%}{%- endif -%}
+{%- if pv_fill < 0 -%}{%- assign pv_fill = 0 -%}{%- endif -%}
+{%- assign revs_star2 = pv_fill | times: 10 -%}
+{%- assign pv_fill = revs_avg10 | minus: 20 -%}
+{%- if pv_fill > 10 -%}{%- assign pv_fill = 10 -%}{%- endif -%}
+{%- if pv_fill < 0 -%}{%- assign pv_fill = 0 -%}{%- endif -%}
+{%- assign revs_star3 = pv_fill | times: 10 -%}
+{%- assign pv_fill = revs_avg10 | minus: 30 -%}
+{%- if pv_fill > 10 -%}{%- assign pv_fill = 10 -%}{%- endif -%}
+{%- if pv_fill < 0 -%}{%- assign pv_fill = 0 -%}{%- endif -%}
+{%- assign revs_star4 = pv_fill | times: 10 -%}
+{%- assign pv_fill = revs_avg10 | minus: 40 -%}
+{%- if pv_fill > 10 -%}{%- assign pv_fill = 10 -%}{%- endif -%}
+{%- if pv_fill < 0 -%}{%- assign pv_fill = 0 -%}{%- endif -%}
+{%- assign revs_star5 = pv_fill | times: 10 -%}
+{%- comment -%} v1.7.3 (пикер A «WB-универсал»): группировка вариантов по
+   options-парам «имя:Значение». Живые формы поля options (string[]): пары
+   по элементам ["color:Красный","size:M"] И одна строка с ';'-парами
+   ["Цвет: Синий; Размер: M"] — нормализация: join(';') → split(';') →
+   разделение по ПЕРВОМУ ':' (значение может содержать ':'). Порядок строк —
+   первое появление измерения (варианты приходят по sort), значений — первое
+   появление. Ни у одного варианта пар нет → ОДИН псевдо-размер «Вариант»
+   со значениями-лейблами (безопцийные варианты не теряют покупабельность —
+   фолбэк плоского списка B2a). Данные пикеру отдаёт SSR (дефолт = pv_def,
+   канон M6), интерактив — js/picker.js. {%- endcomment -%}
+{%- assign pv_no_dims = true -%}
+{%- for v in pv_vars -%}
+  {%- if v.options -%}
+    {%- assign pv_opt_join = v.options | join: ";" -%}
+    {%- if pv_opt_join != blank -%}{%- assign pv_no_dims = false -%}{%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign pv_dims = "" -%}
+{%- for v in pv_vars -%}
+  {%- assign pv_opt_join = "" -%}
+  {%- if v.options -%}{%- assign pv_opt_join = v.options | join: ";" -%}{%- endif -%}
+  {%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}
+  {%- assign pv_pairs = pv_opt_join | split: ";" -%}
+  {%- for pp in pv_pairs -%}
+    {%- assign pp_t = pp | strip -%}
+    {%- if pp_t != blank -%}
+      {%- assign pv_ci = pp_t | split: ":" -%}
+      {%- assign pv_dname = pv_ci[0] | strip -%}
+      {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
+      {%- if pv_dname != blank and pv_dval != blank -%}
+        {%- assign pv_probe = "|" | append: pv_dname | append: "|" -%}
+        {%- unless pv_dims contains pv_probe -%}
+          {%- assign pv_dims = pv_dims | append: pv_probe -%}
+        {%- endunless -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- assign pv_dim_arr = pv_dims | split: "|" -%}
+{%- comment -%} JSON-данные пикера (js/picker.js): dims в порядке строк,
+   варианты с картой opts «имя → значение», дефолт = pv_def (SSR-канон M6:
+   без JS кнопка несёт его же, переключение невозможно — задокументировано). {%- endcomment -%}
+{%- capture pv_dims_json -%}{%- assign pv_dfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == blank -%}{%- unless pv_dfirst -%},{%- endunless -%}{%- assign pv_dfirst = false -%}{{ pv_d | json }}{%- endunless -%}{%- endfor -%}{%- endcapture -%}
+{%- capture pv_variants_json -%}{%- assign pv_vfirst = true -%}{%- for v in pv_vars -%}{%- unless pv_vfirst -%},{%- endunless -%}{%- assign pv_vfirst = false -%}{"id":{{ v.id | json }},"price":{{ v.price_kopecks }},"stock":{{ v.stock }},"opts":{%- capture pv_vopts -%}{{ "{" }}{%- assign pv_pfirst = true -%}{%- assign pv_opt_join = "" -%}{%- if v.options -%}{%- assign pv_opt_join = v.options | join: ";" -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != blank -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname != blank and pv_dval != blank -%}{%- unless pv_pfirst -%},{%- endunless -%}{%- assign pv_pfirst = false -%}{{ pv_dname | json }}:{{ pv_dval | json }}{%- endif -%}{%- endif -%}{%- endfor -%}{{ "}" }}{%- endcapture -%}{{ pv_vopts }}{{ "}" }}{%- endfor -%}{%- endcapture -%}
 {%- if product -%}
   {%- assign page_title = product.meta_title | default: product.title -%}
   {%- assign pd_suffix = "купить в интернет-магазине" -%}
@@ -139,16 +215,28 @@
     {%- comment -%} JSON-LD Product — в page_jsonld (head); BreadcrumbList
       эмитит partial breadcrumbs ИНЛАЙНОМ в месте вызова (partial — чистая
       функция, capture вверх не доезжает). Строки вычищаются от
-      кавычек/бэкслешей — ld-блок обязан парситься всегда; offers.price —
-      базовая цена (F4: грид и offers.price показывают базовую цену,
-      платит k_calc); B2a: offers.sku — из ПЕРВОГО варианта (sku может
-      быть пустым — тогда ключа нет), availability — по вариантам
-      (product.stock у вариантного товара игнорируется). B2c: при ≥1
-      published-отзыве дописывается aggregateRating (ratingValue —
-      средняя с одним знаком, reviewCount — число published); без
-      published-отзывов ключа НЕТ (пустой AggregateRating — мимо схем
+      кавычек/бэкслешей — ld-блок обязан парситься всегда. B2a: availability —
+      по вариантам (product.stock у вариантного товара игнорируется).
+      v1.7.3: у вариантного товара offers = AggregateOffer (канон Google для
+      вариантов): lowPrice/highPrice по ВСЕМ вариантам + offerCount + offers[]
+      — Offer на КАЖДЫЙ вариант (price/availability/sku по нему; пустой sku —
+      ключа нет). У безвариантного — прежний одиночный Offer (offers.price —
+      базовая цена, F4: грид и offers.price показывают базовую цену, платит
+      k_calc). B2c: при ≥1 published-отзыве дописывается aggregateRating
+      (ratingValue — средняя с одним знаком, reviewCount — число published);
+      без published-отзывов ключа НЕТ (пустой AggregateRating — мимо схем
       поисковиков). {%- endcomment -%}
-    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB"{% if pv_first and pv_first.sku %},"sku":{{ pv_first.sku | json }}{% endif %},"availability":"{% if pv_has %}{% if pv_in_stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}{% elsif product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
+    {%- assign pv_lo = 0 -%}{%- assign pv_hi = 0 -%}{%- assign pv_lofirst = true -%}
+    {%- for v in pv_vars -%}
+      {%- if pv_lofirst -%}
+        {%- assign pv_lo = v.price_kopecks -%}{%- assign pv_hi = v.price_kopecks -%}{%- assign pv_lofirst = false -%}
+      {%- else -%}
+        {%- if v.price_kopecks < pv_lo -%}{%- assign pv_lo = v.price_kopecks -%}{%- endif -%}
+        {%- if v.price_kopecks > pv_hi -%}{%- assign pv_hi = v.price_kopecks -%}{%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- capture pv_offers_json -%}{%- for v in pv_vars -%}{% unless forloop.first %},{% endunless %}{"@type":"Offer","price":"{{ v.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if v.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"{% if v.sku != blank %},"sku":{{ v.sku | json }}{% endif %}}{%- endfor -%}{%- endcapture -%}
+    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}}{% if pv_has %},"offers":{"@type":"AggregateOffer","url":"{{ canon_base }}{{ page_canon }}","lowPrice":"{{ pv_lo | times: 0.01 | money }}","highPrice":"{{ pv_hi | times: 0.01 | money }}","priceCurrency":"RUB","offerCount":"{{ pv_vars.size }}","offers":[{{ pv_offers_json }}]}{% else %},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"RUB","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% endif %}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
     {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
       Тайтл приезжает биндингом cats (узел g_cat флоу переиспользует
@@ -264,22 +352,187 @@
           {%- assign badge_stock = nil -%}
           {%- assign badge_attrs = nil -%}
           {%- comment -%} пикер рендерится для ЛЮБОГО вариантного товара:
-             все нули → строки disabled (видно, что за варианты были),
-             бейдж «Нет в наличии», кнопки/степпера/скрипта нет. {%- endcomment -%}
+             все нули → значения aria-disabled (видно, что за варианты были),
+             бейдж «Нет в наличии», кнопки/степпера/скрипта данных нет.
+             v1.7.3 — A «WB-универсал» (мокапы picker-design/mock-A-*):
+             строка на измерение; значения с фото — фото-свотчи (кроп,
+             radius 10, выбран = accent-кольцо), без фото — цветная заливка
+             по карте (иначе нейтральная), измерение без фото/цветов —
+             текстовые пилюли (тап ≥ 44px, gap --shop-space-2). A11y:
+             role=radiogroup/radio + aria-checked/aria-disabled, roving
+             tabindex, стрелки — js/picker.js. Данные — SSR (дефолт pv_def,
+             канон M6); no-JS: выбран дефолт-вариант, переключение невозможно
+             (как в B2a — задокументировано). Цветные заливки — ДАННЫЕ товара
+             (цвет значения), не тема: hex живёт здесь, shop.css остаётся
+             без hex-литералов (канон W7 №3, проба w7-canon). {%- endcomment -%}
           <fieldset class="variant-picker" data-variant-picker>
             <legend class="sr-only">Вариант</legend>
+            <p class="pv-status" data-pv-status aria-live="polite">{%- if pv_def -%}{%- capture pv_status_vals -%}{%- assign pv_sfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == blank -%}{%- assign pv_defval = blank -%}{%- assign pv_opt_join = "" -%}{%- if pv_def.options -%}{%- assign pv_opt_join = pv_def.options | join: ";" -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != blank -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}{%- endif -%}{%- endfor -%}{%- if pv_defval != blank -%}{%- unless pv_sfirst -%}{{ " / " }}{%- endunless -%}{%- assign pv_sfirst = false -%}{{ pv_defval }}{%- endif -%}{%- endunless -%}{%- endfor -%}{%- endcapture -%}<b>{{ pv_status_vals }}</b> — {{ pv_def.price_kopecks | times: 0.01 | money }} ₽ · в наличии {{ pv_def.stock }}{%- else -%}<span class="pv-status-off">нет в наличии</span>{%- endif -%}</p>
+            {%- assign pv_color_names = "|синий|голубой|красный|розовый|зелёный|оливковый|чёрный|серый|белый|жёлтый|оранжевый|фиолетовый|сиреневый|коричневый|бежевый|бирюзовый|бордовый|мятный|" -%}
+            {%- comment -%} фото варианта говорят о его ЦВЕТЕ — свотчи живут
+               на ПЕРВОМ измерении, у значений которого они есть (у размера —
+               пилюли/заливка, мокап A). {%- endcomment -%}
+            {%- assign pv_photo_dims = "" -%}
+            {%- for pv_d in pv_dim_arr -%}
+              {%- unless pv_d == blank -%}
+                {%- assign pv_d_hasphoto = false -%}
+                {%- for v in pv_vars -%}
+                  {%- if pv_d_hasphoto -%}{%- break -%}{%- endif -%}
+                  {%- unless v.photos and v.photos.size > 0 -%}{%- continue -%}{%- endunless -%}
+                  {%- assign pv_opt_join = "" -%}
+                  {%- if v.options -%}{%- assign pv_opt_join = v.options | join: ";" -%}{%- endif -%}
+                  {%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}
+                  {%- assign pv_pairs = pv_opt_join | split: ";" -%}
+                  {%- for pp in pv_pairs -%}
+                    {%- assign pp_t = pp | strip -%}
+                    {%- if pp_t != blank -%}
+                      {%- assign pv_ci = pp_t | split: ":" -%}
+                      {%- assign pv_dname = pv_ci[0] | strip -%}
+                      {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
+                      {%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_d_hasphoto = true -%}{%- break -%}{%- endif -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endfor -%}
+                {%- if pv_d_hasphoto -%}
+                  {%- assign pv_probe = "|" | append: pv_d | append: "|" -%}
+                  {%- unless pv_photo_dims contains pv_probe -%}{%- assign pv_photo_dims = pv_photo_dims | append: pv_probe -%}{%- endunless -%}
+                {%- endif -%}
+              {%- endunless -%}
+            {%- endfor -%}
+            {%- assign pv_photo_arr = pv_photo_dims | split: "|" -%}
+            {%- assign pv_photo_first = "" -%}
+            {%- for pv_x in pv_photo_arr -%}
+              {%- if pv_x != blank and pv_photo_first == "" -%}{%- assign pv_photo_first = pv_x -%}{%- endif -%}
+            {%- endfor -%}
+            {%- for pv_d in pv_dim_arr -%}
+            {%- unless pv_d == blank -%}
+                        {%- assign pv_defval = blank -%}
+            {%- if pv_def -%}
+              {%- assign pv_opt_join = "" -%}
+              {%- if pv_def.options -%}{%- assign pv_opt_join = pv_def.options | join: ";" -%}{%- endif -%}
+              {%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}
+              {%- assign pv_pairs = pv_opt_join | split: ";" -%}
+              {%- for pp in pv_pairs -%}
+                {%- assign pp_t = pp | strip -%}
+                {%- if pp_t != blank -%}
+                  {%- assign pv_ci = pp_t | split: ":" -%}
+                  {%- assign pv_dname = pv_ci[0] | strip -%}
+                  {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
+                  {%- if pv_dname == pv_d and pv_dval != blank -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+            {%- assign pv_vals = "" -%}
+            {%- assign pv_d_hasphoto = false -%}
             {%- for v in pv_vars -%}
-            <label class="variant-row{% if v.stock <= 0 %} variant-row-off{% endif %}">
-              <input type="radio" name="variant" value="{{ v.id }}"
-                     data-variant-id="{{ v.id }}" data-price="{{ v.price_kopecks }}" data-stock="{{ v.stock }}"
-                     {% if v.stock <= 0 %}disabled{% endif %}
-                     {% if pv_def and pv_def.id == v.id %}checked{% endif %}>
-              <span class="variant-name">{{ v.label }}</span>
-              {%- if v.stock <= 0 -%}<span class="badge badge-error">Нет в наличии</span>{%- endif -%}
-              <span class="variant-price">{{ v.price_kopecks | times: 0.01 | money }} ₽</span>
-            </label>
+              {%- assign pv_opt_join = "" -%}
+              {%- if v.options -%}{%- assign pv_opt_join = v.options | join: ";" -%}{%- endif -%}
+              {%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}
+              {%- assign pv_pairs = pv_opt_join | split: ";" -%}
+              {%- for pp in pv_pairs -%}
+                {%- assign pp_t = pp | strip -%}
+                {%- if pp_t != blank -%}
+                  {%- assign pv_ci = pp_t | split: ":" -%}
+                  {%- assign pv_dname = pv_ci[0] | strip -%}
+                  {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
+                  {%- if pv_dname == pv_d and pv_dval != blank -%}
+                    {%- assign pv_vprobe = "|" | append: pv_dval | append: "|" -%}
+                    {%- unless pv_vals contains pv_vprobe -%}{%- assign pv_vals = pv_vals | append: pv_vprobe -%}{%- endunless -%}
+                    {%- if v.photos and v.photos.size > 0 -%}{%- assign pv_d_hasphoto = true -%}{%- endif -%}
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+            {%- assign pv_val_arr = pv_vals | split: "|" -%}
+            {%- comment -%} режим значений: фото-свотчи, если у значений есть
+               фото; иначе цветная заливка, если ВСЕ значения в карте цветов;
+               иначе текстовые пилюли. {%- endcomment -%}
+            {%- assign pv_fillmiss = 0 -%}
+            {%- for pv_v in pv_val_arr -%}
+              {%- unless pv_v == blank -%}
+                {%- assign pv_vdown = pv_v | downcase | strip -%}
+                {%- assign pv_cprobe = "|" | append: pv_vdown | append: "|" -%}
+                {%- unless pv_color_names contains pv_cprobe -%}{%- assign pv_fillmiss = pv_fillmiss | plus: 1 -%}{%- endunless -%}
+              {%- endunless -%}
+            {%- endfor -%}
+            {%- assign pv_mode = "pill" -%}
+            {%- if pv_d_hasphoto and pv_d == pv_photo_first -%}{%- assign pv_mode = "swatch" -%}{%- elsif pv_fillmiss == 0 -%}{%- assign pv_mode = "fill" -%}{%- endif -%}
+            <div class="pv-dim">
+              <span class="pv-dim-label" id="pv-dim-{{ forloop.index0 }}-label">{{ pv_d }}: <span class="pv-dim-val" data-pv-dim-val="{{ pv_d | escape }}">{% if pv_defval != blank %}{{ pv_defval }}{% else %}—{% endif %}</span></span>
+              <div class="pv-values" role="radiogroup" aria-labelledby="pv-dim-{{ forloop.index0 }}-label" data-pv-group="{{ pv_d | escape }}" data-pv-mode="{{ pv_mode }}">
+              {%- for pv_v in pv_val_arr -%}
+              {%- unless pv_v == blank -%}
+                {%- assign pv_vphoto = "" -%}
+                {%- assign pv_vok = false -%}
+                {%- for v in pv_vars -%}
+                  {%- assign pv_opt_join = "" -%}
+                  {%- if v.options -%}{%- assign pv_opt_join = v.options | join: ";" -%}{%- endif -%}
+                  {%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}
+                  {%- assign pv_pairs = pv_opt_join | split: ";" -%}
+                  {%- for pp in pv_pairs -%}
+                    {%- assign pp_t = pp | strip -%}
+                    {%- if pp_t != blank -%}
+                      {%- assign pv_ci = pp_t | split: ":" -%}
+                      {%- assign pv_dname = pv_ci[0] | strip -%}
+                      {%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}
+                      {%- if pv_dname == pv_d and pv_dval == pv_v -%}
+                        {%- if v.stock > 0 -%}{%- assign pv_vok = true -%}{%- endif -%}
+                        {%- if pv_vphoto == blank and v.photos and v.photos.size > 0 -%}
+                          {%- assign pv_vp = v.photos | first -%}
+                          {%- assign pv_vphoto = pv_vp.url -%}
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endfor -%}
+                {%- assign pv_on = false -%}
+                {%- if pv_def and pv_defval == pv_v -%}{%- assign pv_on = true -%}{%- endif -%}
+                {%- assign pv_vdown = pv_v | downcase | strip -%}
+                {%- assign pv_vhex = "#9aa3af" -%}
+                {%- case pv_vdown -%}
+                  {%- when "синий" -%}{%- assign pv_vhex = "#2f6fed" -%}
+                  {%- when "голубой" -%}{%- assign pv_vhex = "#38bdf8" -%}
+                  {%- when "красный" -%}{%- assign pv_vhex = "#d64545" -%}
+                  {%- when "розовый" -%}{%- assign pv_vhex = "#ec4899" -%}
+                  {%- when "зелёный" -%}{%- assign pv_vhex = "#2f8f5b" -%}
+                  {%- when "оливковый" -%}{%- assign pv_vhex = "#6b8e23" -%}
+                  {%- when "чёрный" -%}{%- assign pv_vhex = "#1f2328" -%}
+                  {%- when "серый" -%}{%- assign pv_vhex = "#9aa3af" -%}
+                  {%- when "белый" -%}{%- assign pv_vhex = "#f2f3f5" -%}
+                  {%- when "жёлтый" -%}{%- assign pv_vhex = "#f5c518" -%}
+                  {%- when "оранжевый" -%}{%- assign pv_vhex = "#f97316" -%}
+                  {%- when "фиолетовый" -%}{%- assign pv_vhex = "#8b5cf6" -%}
+                  {%- when "сиреневый" -%}{%- assign pv_vhex = "#c084fc" -%}
+                  {%- when "коричневый" -%}{%- assign pv_vhex = "#8b5a2b" -%}
+                  {%- when "бежевый" -%}{%- assign pv_vhex = "#d9c8a9" -%}
+                  {%- when "бирюзовый" -%}{%- assign pv_vhex = "#14b8a6" -%}
+                  {%- when "бордовый" -%}{%- assign pv_vhex = "#7f1d1d" -%}
+                  {%- when "мятный" -%}{%- assign pv_vhex = "#6ee7b7" -%}
+                {%- endcase -%}
+                <button type="button" role="radio" class="pv-btn" data-pv-dim="{{ pv_d | escape }}" data-pv-value="{{ pv_v | escape }}"
+                        aria-checked="{% if pv_on %}true{% else %}false{% endif %}" tabindex="{% if pv_on %}0{% else %}-1{% endif %}"
+                        {%- unless pv_vok %} aria-disabled="true"{% endunless %}
+                        aria-label="{{ pv_v | escape }}{%- unless pv_vok %}, нет в наличии{% endunless -%}">
+                {%- if pv_mode == "swatch" -%}
+                  {%- if pv_vphoto != blank -%}
+                  <img src="{{ pv_vphoto }}" alt="" loading="lazy" decoding="async" width="48" height="48">
+                  {%- else -%}
+                  <span class="pv-fill" style="background:{{ pv_vhex }}"></span>
+                  {%- endif -%}
+                {%- elsif pv_mode == "fill" -%}
+                  <span class="pv-fill" style="background:{{ pv_vhex }}"></span>
+                {%- else -%}
+                  {{ pv_v }}
+                {%- endif -%}
+                </button>
+              {%- endunless -%}
+              {%- endfor -%}
+              </div>
+            </div>
+            {%- endunless -%}
             {%- endfor -%}
           </fieldset>
+          <script type="application/json" data-pv-data>{"default":{% if pv_def %}{{ pv_def.id | json }}{% else %}null{% endif %},"dims":[{{ pv_dims_json }}],"variants":[{{ pv_variants_json }}]}</script>
           {%- if pv_def -%}
           <div class="qty-stepper" data-cart-stepper>
             <button class="qty-btn" type="button" data-qty-step="-1" aria-label="Уменьшить количество">−</button>
@@ -327,31 +580,62 @@
 
     {%- comment -%} B2c: отзывы — только published (модерация статусом в
        админке: форма пишет status=new, владелец переводит в published —
-       написанный отзыв появляется на витрине после проверки). Форма —
+       написанный отзыв появляется на странице после проверки). Форма —
        НАТИВНЫЙ POST (no-JS контракт; редирект 303 делает флоу
        shop_review): honeypot «сайт» — как на чекауте, ?review=ok —
        подтверждение. Поля отзыва эскейпятся — B-1 (данные анонима).
        v1.7.1: сама форма — только вошедшему (гейт ниже), плюс серверный
-       гард во флоу shop_review (cookies.member — код auth_required). {%- endcomment -%}
+       гард во флоу shop_review (cookies.member — код auth_required).
+       v1.7.3 — дизайн A «Ряд» (мокапы picker-design/review-A-*): шапка
+       одной строкой — заголовок + средняя крупно + ЧЕСТНЫЕ SVG-звёзды
+       (4.5 = 4 полных + половина: трек + заливка-обрезка по ширине,
+       инлайн-спрайт #shop-star, aria-hidden — оценка дублирует текст)
+       + счётчик (русские формы), справа «Написать отзыв» (member — якорь
+       формы, гость — логин с next-возвратом). Карточки: инициал-аватар
+       (accent-tint), имя, «Проверенная покупка» (БУДУЩЕЕ поле member-связи —
+       в схеме review его нет, сегодня бейджа нет и блок не ломается), дата
+       справа, мелкие звёзды оценки, текст. Цвет звёзд — токен --warn
+       (рейтинг-семантика, не бренд); в тёмной теме автосветление токеном. {%- endcomment -%}
     <section class="reviews" aria-labelledby="reviews-title">
+      <svg class="review-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><symbol id="shop-star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></symbol></svg>
       <div class="reviews-head">
-        <h2 class="rel-heading" id="reviews-title">Отзывы</h2>
+        <h2 class="reviews-title" id="reviews-title">Отзывы</h2>
         {%- if revs_count > 0 -%}
-        <p class="reviews-meta"><span class="reviews-avg">{{ revs_avg }}</span> из 5 · {{ revs_count }}</p>
+        {%- assign pv_n10 = revs_count | modulo: 10 -%}{%- assign pv_n100 = revs_count | modulo: 100 -%}
+        {%- assign revs_word = "отзывов" -%}
+        {%- unless pv_n100 >= 12 and pv_n100 <= 14 -%}
+          {%- if pv_n10 == 1 -%}{%- assign revs_word = "отзыв" -%}{%- elsif pv_n10 == 2 or pv_n10 == 3 or pv_n10 == 4 -%}{%- assign revs_word = "отзыва" -%}{%- endif -%}
+        {%- endunless -%}
+        <span class="reviews-avg">{{ revs_avg | replace: ".", "," }}</span>
+        <span class="stars stars-lg" role="img" aria-label="Средняя оценка {{ revs_avg | replace: ".", "," }} из 5">{%- for i in (1..5) -%}<span class="star"><svg class="star-track" aria-hidden="true" focusable="false"><use href="#shop-star"/></svg><span class="star-fill" style="width:{% if i == 1 %}{{ revs_star1 }}{% elsif i == 2 %}{{ revs_star2 }}{% elsif i == 3 %}{{ revs_star3 }}{% elsif i == 4 %}{{ revs_star4 }}{% else %}{{ revs_star5 }}{% endif %}%" aria-hidden="true"><svg focusable="false"><use href="#shop-star"/></svg></span></span>{%- endfor -%}</span>
+        <span class="reviews-count">{{ revs_count }} {{ revs_word }}</span>
+        {%- endif -%}
+        {%- if member and member.id -%}
+        <a class="reviews-cta" href="#review-form">Написать отзыв</a>
         {%- else -%}
-        <p class="reviews-meta">Пока нет отзывов — станьте первым.</p>
+        <a class="reviews-cta" href="/login?next=__SHOP_BASE__/product/{{ product.slug | escape }}">Написать отзыв</a>
         {%- endif -%}
       </div>
+      {%- if revs_count == 0 -%}
+      <p class="reviews-meta">Пока нет отзывов — станьте первым.</p>
+      {%- endif -%}
       {%- if revs_count > 0 -%}
       <ul class="review-list">
         {%- for r in revs_list -%}
-        <li class="review">
-          <div class="review-head">
-            <span class="review-author">{{ r.author_name | escape }}</span>
-            <span class="review-rating" aria-label="Оценка {{ r.rating }} из 5">{{ r.rating }}<span class="review-star" aria-hidden="true">★</span></span>
-            <span class="review-date">{{ r.created_at | date: "%d.%m.%Y" }}</span>
+        <li class="review-card">
+          <span class="review-avatar" aria-hidden="true">{{ r.author_name | strip | slice: 0, 1 | upcase }}</span>
+          <div class="review-main">
+            <div class="review-head">
+              <span class="review-author">{{ r.author_name | escape }}</span>
+              {%- comment -%} «Проверенная покупка» — будущее поле member-связи
+                 (picker-design §3): в схеме review его нет — бейдж не
+                 рендерится и блок не ломается (опция карточки). {%- endcomment -%}
+              {%- if r.verified -%}<span class="review-verified"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true" focusable="false"><path d="M2 6.5L4.5 9 10 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Проверенная покупка</span>{%- endif -%}
+              <span class="review-date">{{ r.created_at | date_ru: "%-d %B %Y" }}</span>
+            </div>
+            <div class="review-stars-row"><span class="stars stars-sm" role="img" aria-label="Оценка {{ r.rating }} из 5">{%- for i in (1..5) -%}<span class="star"><svg class="star-track" aria-hidden="true" focusable="false"><use href="#shop-star"/></svg><span class="star-fill" style="width:{% if i <= r.rating %}100{% else %}0{% endif %}%" aria-hidden="true"><svg focusable="false"><use href="#shop-star"/></svg></span></span>{%- endfor -%}</span></div>
+            {%- if r.body -%}<p class="review-body">{{ r.body | escape }}</p>{%- endif -%}
           </div>
-          {%- if r.body -%}<p class="review-body">{{ r.body | escape }}</p>{%- endif -%}
         </li>
         {%- endfor -%}
       </ul>
@@ -367,7 +651,7 @@
          и переход — в js/auth.js, no-JS фоллбек — дефолт-редирект сервера).
          Список отзывов/средняя/?review=ok — видны всем. {%- endcomment -%}
       {%- if member and member.id -%}
-      <form class="review-form" method="post" action="__SHOP_BASE__/review">
+      <form class="review-form" id="review-form" method="post" action="__SHOP_BASE__/review">
         <h3 class="review-form-title">Оставить отзыв</h3>
         {%- comment -%} honeypot: поле «сайт» скрыто от человека; боты заполняют.
            Сервер молча отдаёт 303 без записи (паттерн чекаута). {%- endcomment -%}
@@ -541,59 +825,17 @@
   })();
   </script>
 
-  {%- if pv_def -%}
-  <script>
-  /* b2a-picker-start */
-  /* B2a: пикер вариантов — change обновляет цену, бейдж наличия и карман
-     остатка кнопки покупки (data-variant/data-stock, контракт cart.js).
-     Бейдж бинарный по варианту (как SSR: > 0 = «В наличии», 0 = «Нет»).
-     Страница товара — нативный переход (вне data-shop-main-свапа):
-     элементные слушатели, ре-инициализация не нужна. Без JS пикер —
-     обычные radio, чекнут по умолчанию SSR-дефолт, кнопка несёт его же.
-     v1.7.2 (вариантные фото): change также переставляет слайды галереи —
-     событие gallery:replace с url'ами ВЫБРАННОГО варианта (карта
-     data-gallery-map); у варианта фото нет/ключ пуст → urls = общая
-     галерея товара (ключ "product"). Галерея не критична: провал события
-     не влияет на цену/сток. */
-  (function () {
-    var picker = document.querySelector('[data-variant-picker]');
-    if (!picker) return;
-    var radios = picker.querySelectorAll('input[data-variant-id]');
-    var priceEl = document.querySelector('[data-pv-price]');
-    var badgeEl = document.querySelector('[data-pv-badge]');
-    var addBtn = document.querySelector('[data-cart-add]');
-    var gmapEl = document.querySelector('[data-gallery-map]');
-    var gmap = null;
-    try { gmap = gmapEl ? JSON.parse(gmapEl.textContent || '{}') : null; } catch (e) { gmap = null; }
-    function apply(v) {
-      var price = Number(v.getAttribute('data-price'));
-      var stock = Number(v.getAttribute('data-stock')) || 0;
-      if (priceEl && isFinite(price)) priceEl.textContent = (price / 100).toFixed(2);
-      if (badgeEl) {
-        badgeEl.className = stock > 0 ? 'badge badge-success' : 'badge badge-error';
-        badgeEl.textContent = stock > 0 ? 'В наличии' : 'Нет в наличии';
-      }
-      if (addBtn) {
-        addBtn.setAttribute('data-variant', v.getAttribute('data-variant-id') || '');
-        addBtn.setAttribute('data-stock', String(stock));
-        addBtn.disabled = stock <= 0;
-      }
-      if (gmap && typeof document.dispatchEvent === 'function') {
-        var urls = gmap[v.getAttribute('data-variant-id') || ''];
-        if (!urls || !urls.length) urls = gmap.product || [];
-        if (urls.length) {
-          try {
-            document.dispatchEvent(new CustomEvent('gallery:replace', { detail: { urls: urls } }));
-          } catch (e) { /* галерея не критична — цена/сток уже обновлены */ }
-        }
-      }
-    }
-    for (var i = 0; i < radios.length; i++) {
-      radios[i].addEventListener('change', function (ev) { apply(ev.target); });
-    }
-  })();
-  /* b2a-picker-end */
-  </script>
+  {%- if pv_has -%}
+  {%- comment -%} v1.7.3: логика пикера вынесена в static/js/picker.js —
+     группировка вариантов по options-парам, выбор по измерениям → резолв в
+     вариант id, WB-механика недоступной комбинации (авто-перескок, клик по
+     приглушённому не выбирает), строка статуса aria-live. Делегирование на
+     document — переживает fetch-свапы (совместимость с catalog.js/favorites.js),
+     ре-инициализация не нужна. Данные — data-pv-data выше. Контракт корзины
+     B2a (D23) НЕ тронут: кнопка несёт data-variant/data-stock выбранного
+     варианта (обновляет picker.js), cart.js кладёт строку-пару. Без JS скрипт
+     не работает — SSR-дефолт честен (см. data-pv-data). {%- endcomment -%}
+  <script src="/static/js/picker.js?v={{ site.version }}" defer></script>
   {%- endif -%}
 
     {%- if rel.data.products.size > 0 -%}

@@ -207,6 +207,10 @@ export async function renderMockPage(engine, mockName, variant, overrides = {}) 
     // config.layout): тело → layout c content_for_layout (D22/M1).
     const emailMock = loadMock('email');
     ctx = variant && emailMock[variant] ? emailMock[variant] : emailMock;
+    // v1.7.7: оверрайды доезжают и до писем (пробы валюты из smoke);
+    // g_site/host в письмах НЕ подмешиваем — в продовом send_email их нет,
+    // cfg приходит веткой results.g_site.cfg бутстрапа.
+    ctx = { ...ctx, ...overrides };
     template = mockName === 'email-customer' ? 'email-order-customer' : 'email-order-vendor';
     const body = await engine.renderFile(template, ctx);
     const wrapped = await engine.renderFile('email-layout', { ...ctx, content_for_layout: body });

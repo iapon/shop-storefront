@@ -66,6 +66,9 @@
 {%- else -%}
   {%- assign canon_base = "https://" | append: canon_base -%}
 {%- endif -%}
+{%- comment -%} v1.7.7: символ валюты магазина (cfg.currency, пусто ≡ RUB) —
+  capture+include партиала-карты (assigns include не поднимает). {%- endcomment -%}
+{%- capture cur_sym %}{% include "partials/currency" %}{%- endcapture -%}
 
 
 {%- assign page_title = "Оформление заказа" -%}
@@ -136,7 +139,7 @@
               <div class="cart-line-info">
                 <a class="cart-line-name" href="__SHOP_BASE__/product/{{ line.slug }}">{{ line.title }}</a>
                 {%- if line_var -%}<span class="cart-line-variant">{{ line_var.label }}</span>{%- endif -%}
-                <span class="cart-line-price">{{ line_price | times: 0.01 | money }} ₽ × {{ i.qty }}</span>
+                <span class="cart-line-price">{{ line_price | times: 0.01 | money }} {{ cur_sym }} × {{ i.qty }}</span>
                 {%- if line_stock <= 0 -%}
                   <span class="badge badge-error">Нет в наличии</span>
                 {%- elsif line_over -%}
@@ -151,7 +154,7 @@
                   <button class="qty-btn" type="button" data-cart-qty-inc="{{ line_key }}" data-stock="{{ line_stock }}"
                           aria-label="Увеличить количество">+</button>
                 </span>
-                <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} ₽</span>
+                <span class="cart-line-sum">{{ line_sum | times: 0.01 | money }} {{ cur_sym }}</span>
               </div>
               <button class="cart-line-remove" type="button" data-cart-remove="{{ line_key }}"
                       aria-label="Убрать из корзины: {{ line.title }}{% if line_var %} ({{ line_var.label }}){% endif %}" title="Убрать из корзины">×</button>
@@ -185,7 +188,7 @@
               <span class="delivery-option-title">{{ m.title }}</span>
               {%- if m.description -%}<span class="delivery-option-desc">{{ m.description }}</span>{%- endif -%}
             </span>
-            <span class="delivery-option-price">{% if m.price_kopecks > 0 %}{{ m.price_kopecks | times: 0.01 | money }} ₽{% else %}бесплатно{% endif %}</span>
+            <span class="delivery-option-price">{% if m.price_kopecks > 0 %}{{ m.price_kopecks | times: 0.01 | money }} {{ cur_sym }}{% else %}бесплатно{% endif %}</span>
           </label>
           {%- endfor -%}
         </div>
@@ -236,19 +239,19 @@
         {%- if line -%}
           {%- if sum_var -%}{%- assign line_price = sum_var.price_kopecks -%}{%- else -%}{%- assign line_price = line.price_kopecks -%}{%- endif -%}
           {%- assign line_sum = line_price | times: i.qty -%}
-          <div class="summary-row"><span>{{ line.title }}{% if sum_var %} ({{ sum_var.label }}){% endif %} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} ₽</span></div>
+          <div class="summary-row"><span>{{ line.title }}{% if sum_var %} ({{ sum_var.label }}){% endif %} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} {{ cur_sym }}</span></div>
         {%- endif -%}
       {%- endfor -%}
       {%- comment -%} B2b: доставка (SSR-выбор — первый активный) и честный
          placeholder скидки: финальную цифру со скидкой даёт только сервер
          (k_calc), поэтому «К оплате» = товары + выбранный способ доставки. {%- endcomment -%}
       {%- if sel_delivery -%}
-      <div class="summary-row"><span>Доставка — {{ sel_delivery.title }}</span><span>{{ sel_delivery.price_kopecks | times: 0.01 | money }} ₽</span></div>
+      <div class="summary-row"><span>Доставка — {{ sel_delivery.title }}</span><span>{{ sel_delivery.price_kopecks | times: 0.01 | money }} {{ cur_sym }}</span></div>
       {%- endif -%}
       <div class="summary-row summary-discount"><span>Скидка</span><span>применится при оформлении</span></div>
       {%- assign grand_k = total_k -%}
       {%- if sel_delivery -%}{%- assign grand_k = total_k | plus: sel_delivery.price_kopecks -%}{%- endif -%}
-      <div class="summary-total"><span>К оплате</span><span>{{ grand_k | times: 0.01 | money }} ₽</span></div>
+      <div class="summary-total"><span>К оплате</span><span>{{ grand_k | times: 0.01 | money }} {{ cur_sym }}</span></div>
       {%- comment -%} W9 (F8): упоминание условий — ссылкой, когда тоС загружен
          (cfg.has_tos), иначе обычный текст (мёртвых ссылок нет). {%- endcomment -%}
       <p class="field-hint summary-note">{%- if cfg.has_tos -%}Нажимая «Перейти к оплате», вы соглашаетесь с <a href="__SHOP_BASE__/tos">условиями продажи</a>.{%- else -%}Нажимая «Перейти к оплате», вы соглашаетесь с условиями продажи.{%- endif -%}</p>

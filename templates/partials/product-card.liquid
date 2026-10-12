@@ -48,7 +48,10 @@
   </div>
   <div class="product-card-body">
     <h3 class="product-card-title">{{ p.title }}</h3>
-    <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">₽</span></div>
+    {%- comment -%} v1.7.7: символ валюты из cfg.currency (пусто ≡ RUB) —
+       include ПРЯМО на место вывода (паршал-карта — чистая функция входов;
+       capture в паршале запрещён инвариантом скоупа). {%- endcomment -%}
+    <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">{% include "partials/currency" %}</span></div>
     {%- comment -%} W7 (разнос владельца): «Нет в наличии» НЕ дублируется —
       при stock=0 его показывает оверлей на фото (выше); бейдж в теле —
       только для рабочих остатков (мало/в наличии). {%- endcomment -%}

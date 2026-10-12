@@ -1,0 +1,27 @@
+{%- comment -%}
+  Карта валют магазина (v1.7.7): вход `cfg.currency` (ISO-4217, пусто ≡ RUB),
+  выход — СИМВОЛ валюты. ЧИСТАЯ ФУНКЦИЯ входов: ни assign, ни capture
+  (инвариант скоупа паршалов — движок include не поднимает присваивания
+  включателю, osteele/liquid; смок ловит любое появление). Нормализация
+  фильтрами прямо в выражении case — фильтры в case-выражении поддерживают
+  ОБА движка (liquidjs dev + osteele/liquid прод, пробы v179).
+  Вызывающий ловит символ каноническим паттерном (README-internals,
+  дивергенция №7) или вставляет include прямо на место вывода:
+    {%- capture cur_sym %}{% include "partials/currency" %}{%- endcapture -%}
+  Неизвестный код → показываем сам код (fallback без правки шаблона).
+  Экспонента всех поддержанных валют = 2 (int-цены в минорных единицах).
+  В ПИСЬМАХ include запрещён санбоксом (liquidguard.RejectIncludes) — там
+  та же карта живёт инлайн-assign'ами рядом с `assign cfg`.
+  Класс .rub у символа — стилистический архаизм (любой символ в нём
+  выглядит корректно), сознательно НЕ переименовывается.
+{%- endcomment -%}
+{%- case cfg.currency | default: "RUB" | upcase -%}
+  {%- when "RUB" -%}₽
+  {%- when "KZT" -%}₸
+  {%- when "USD" -%}$
+  {%- when "EUR" -%}€
+  {%- when "UAH" -%}₴
+  {%- when "BYN" -%}Br
+  {%- when "CNY" -%}¥
+  {%- else -%}{{ cfg.currency | default: "RUB" | upcase }}
+{%- endcase -%}

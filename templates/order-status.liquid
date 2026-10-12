@@ -42,6 +42,9 @@
 {%- else -%}
   {%- assign canon_base = "https://" | append: canon_base -%}
 {%- endif -%}
+{%- comment -%} v1.7.7: символ валюты магазина — capture+include партиала-карты
+  (assign уже Liquid-строка — include до assign, append ловит cur_sym). {%- endcomment -%}
+{%- capture cur_sym %}{% include "partials/currency" %}{%- endcapture -%}
 
 
 {%- assign ord = o.data.order -%}
@@ -92,7 +95,7 @@
     {%- else -%}
       <span class="status-badge brand" aria-hidden="true">…</span>
       <h1 class="status-title">Заказ принят</h1>
-      {%- assign on_txt = "Осталось оплатить " | append: ord.amount | append: " ₽ — сейчас откроется платёжная страница. Статус обновится автоматически: просто обновите эту страницу через пару минут." -%}
+      {%- assign on_txt = "Осталось оплатить " | append: ord.amount | append: " " | append: cur_sym | append: " — сейчас откроется платёжная страница. Статус обновится автоматически: просто обновите эту страницу через пару минут." -%}
       <p class="status-text">{{ on_txt | escape }}</p>
       <p class="status-text">Передумаете — напишите нам до оплаты, и мы отменим заказ.</p>
     {%- endif -%}

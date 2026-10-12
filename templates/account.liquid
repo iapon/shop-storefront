@@ -42,6 +42,8 @@
 {%- else -%}
   {%- assign canon_base = "https://" | append: canon_base -%}
 {%- endif -%}
+{%- comment -%} v1.7.7: символ валюты магазина — capture+include партиала-карты. {%- endcomment -%}
+{%- capture cur_sym %}{% include "partials/currency" %}{%- endcapture -%}
 
 
 {%- assign page_title = "Мои заказы" -%}
@@ -73,7 +75,7 @@
           {%- if ord.items_summary -%}
             <p class="account-order-summary">{{ ord.items_summary }}</p>
           {%- endif -%}
-          <p class="account-order-amount">{{ ord.amount | money }} ₽</p>
+          <p class="account-order-amount">{{ ord.amount | money }} {{ cur_sym }}</p>
         </li>
       {%- endfor -%}
     </ul>

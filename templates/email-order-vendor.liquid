@@ -47,12 +47,28 @@
 {%- else -%}
   {%- assign canon_base = "https://" | append: canon_base -%}
 {%- endif -%}
+{%- comment -%} v1.7.7: карта валют магазина ИНЛАЙН — в flow-движке
+  send_email include запрещён санбоксом (liquidguard), партиал
+  partials/currency сюда не доезжает. cfg.currency (пусто ≡ RUB) →
+  cur_code (ISO-код) + cur_sym (символ). Неизвестный код → сам код. {%- endcomment -%}
+{%- assign cur_code = cfg.currency | default: "RUB" | upcase -%}
+{%- case cur_code -%}
+  {%- when "RUB" -%}{%- assign cur_sym = "₽" -%}
+  {%- when "KZT" -%}{%- assign cur_sym = "₸" -%}
+  {%- when "USD" -%}{%- assign cur_sym = "$" -%}
+  {%- when "EUR" -%}{%- assign cur_sym = "€" -%}
+  {%- when "UAH" -%}{%- assign cur_sym = "₴" -%}
+  {%- when "BYN" -%}{%- assign cur_sym = "Br" -%}
+  {%- when "CNY" -%}{%- assign cur_sym = "¥" -%}
+  {%- else -%}{%- assign cur_sym = cur_code -%}
+{%- endcase -%}
+
 
 
 {%- assign eorder_id = results.order.createOrder.id -%}
 {%- assign eamount = results.calc.amount -%}
 <h2>Новый заказ <span class="email-mono">{{ eorder_id }}</span></h2>
-<p class="email-meta">Заказ № {{ eorder_id }} · К оплате: {{ eamount }} ₽</p>
+<p class="email-meta">Заказ № {{ eorder_id }} · К оплате: {{ eamount }} {{ cur_sym }}</p>
 
 <h2>Состав заказа</h2>
 <table class="email-items" cellpadding="0" cellspacing="0">
@@ -60,7 +76,7 @@
   {%- assign line_sum = l.price_kopecks | times: l.qty -%}
   <tr>
     <td>{{ l.title }} × {{ l.qty }}</td>
-    <td class="num">{{ line_sum | times: 0.01 | money }} ₽</td>
+    <td class="num">{{ line_sum | times: 0.01 | money }} {{ cur_sym }}</td>
   </tr>
   {%- endfor -%}
 </table>
@@ -68,11 +84,11 @@
    значения молча скрывают строку. {%- endcomment -%}
 {%- assign edisc = results.calc.discount_kopecks | plus: 0 -%}
 {%- if edisc > 0 -%}
-<p class="email-meta">Скидка{% if results.calc.promo_code %} «{{ results.calc.promo_code | escape }}»{% endif %}: −{{ edisc | times: 0.01 | money }} ₽</p>
+<p class="email-meta">Скидка{% if results.calc.promo_code %} «{{ results.calc.promo_code | escape }}»{% endif %}: −{{ edisc | times: 0.01 | money }} {{ cur_sym }}</p>
 {%- endif -%}
 {%- assign edeliv = results.calc.delivery_price_kopecks | plus: 0 -%}
 {%- if edeliv > 0 -%}
-<p class="email-meta">Доставка{% if results.calc.delivery_title %} ({{ results.calc.delivery_title | escape }}){% endif %}: {{ edeliv | times: 0.01 | money }} ₽</p>
+<p class="email-meta">Доставка{% if results.calc.delivery_title %} ({{ results.calc.delivery_title | escape }}){% endif %}: {{ edeliv | times: 0.01 | money }} {{ cur_sym }}</p>
 {%- endif -%}
 
 <h2>Покупатель</h2>

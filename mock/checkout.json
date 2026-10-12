@@ -65,7 +65,7 @@
         "deliveryMethods": [
           {
             "id": "d-1",
-            "title": "Курьер — 300₽",
+            "title": "Курьер — 300",
             "type": "courier",
             "price_kopecks": 30000,
             "description": "1–2 дня по городу"
@@ -130,7 +130,7 @@
         "deliveryMethods": [
           {
             "id": "d-1",
-            "title": "Курьер — 300₽",
+            "title": "Курьер — 300",
             "type": "courier",
             "price_kopecks": 30000,
             "description": "1–2 дня по городу"
@@ -235,7 +235,7 @@
         "deliveryMethods": [
           {
             "id": "d-1",
-            "title": "Курьер — 300₽",
+            "title": "Курьер — 300",
             "type": "courier",
             "price_kopecks": 30000,
             "description": "1–2 дня по городу"

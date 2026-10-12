@@ -22,7 +22,7 @@ const cases = [
   ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
   ['product', 'vars', ['Худи оверсайз', 'data-variant-picker', 'data-pv-data', 'data-pv-group', 'data-pv-value="Синий"', 'aria-checked="true"', 'data-pv-status', 'aria-live="polite"', '2990.00', '>В наличии</span>', 'В корзину', 'data-pv-price', 'data-pv-badge', 'static/js/picker.js']],
   ['product', 'not_found', ['Товар не найден']],
-  ['checkout', 'guest', ['Ваш заказ', 'Контакты', 'Доставка', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии', 'name="delivery_id"', 'value="d-1" checked', 'value="d-2"', 'Способ доставки', 'Промокод', 'name="promo_code"', 'бесплатно', 'Доставка — Курьер — 300₽', '300.00', 'Скидка', 'применится при оформлении', '2629.00']],
+  ['checkout', 'guest', ['Ваш заказ', 'Контакты', 'Доставка', 'name="website"', 'Перейти к оплате', 'data-cart-remove=', 'data-cart-clear', 'Очистить корзину', 'data-cart-qty-inc', 'data-cart-qty-dec', 'data-stock="12"', 'cart-line-thumb', 'cart-line-price', '990.00 ₽ × 2', 'data-cart-note', 'data-stock-tpl="В наличии', 'name="delivery_id"', 'value="d-1" checked', 'value="d-2"', 'Способ доставки', 'Промокод', 'name="promo_code"', 'бесплатно', 'Доставка — Курьер — 300', '300.00', 'Скидка', 'применится при оформлении', '2629.00']],
   ['checkout', 'mix', ['Ваш заказ', 'cart-line-variant', 'Красный / M', '3190.00 ₽ × 2', '349.00 ₽ × 1', 'data-cart-qty-inc="hudi-oversayz|var-1"', 'data-cart-qty-dec="hudi-oversayz|var-1"', 'data-cart-remove="hudi-oversayz|var-1"', 'data-cart-remove="planner-pine"', '(Красный / M) × 2', 'data-stock="4"', '7029.00']],
   ['checkout', 'member', ['Ваш заказ', '1490.00', '1790.00']],
   ['checkout', 'empty', ['Корзина пуста']],
@@ -38,8 +38,8 @@ const cases = [
   ['login', null, ['Вход', 'action="/login"', 'type="password"']],
   ['register', null, ['Регистрация', 'action="/register"', 'Создать аккаунт']],
   ['404', null, ['Страница не найдена', 'noindex']],
-  ['email-customer', null, ['Магазин витрины', 'Заказ №', '2396.10', 'Кружка «Лён» × 2', 'Состав заказа', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300₽)', '300.00 ₽', 'https://shop.example.ru/shop/order/']],
-  ['email-vendor', null, ['Новый заказ', '2396.10', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300₽)', '300.00 ₽', 'Иван Петров', 'ivan@example.ru', 'Позвоните за час до доставки']],
+  ['email-customer', null, ['Магазин витрины', 'Заказ №', '2396.10', 'Кружка «Лён» × 2', 'Состав заказа', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300)', '300.00 ₽', 'https://shop.example.ru/shop/order/']],
+  ['email-vendor', null, ['Новый заказ', '2396.10', 'Скидка «DEMO10»', '−232.90 ₽', 'Доставка (Курьер — 300)', '300.00 ₽', 'Иван Петров', 'ivan@example.ru', 'Позвоните за час до доставки']],
 ];
 
 let failed = 0;
@@ -121,6 +121,47 @@ for (const [mock, variant, markers, overrides] of cases) {
     console.log('FAIL site-config: ' + fails.join(' | '));
   } else {
     console.log('OK   site-config (пустой cfg → фоллбеки и живая страница; заполненный → переопределение, hero_title в H1)');
+  }
+}
+
+/* ── Проба v1.7.7: карта валют (partials/currency) ──────────────────────
+   cfg.currency (пусто ≡ RUB, upcase-нормализация) → символ на money-местах
+   (карточка/товар/чекаут/письмо) и ISO-код в JSON-LD priceCurrency.
+   include НЕ поднимает assigns партиала (osteele/liquid) — вызывающие
+   ловят capture cur_sym; в письмах карта инлайн (include в flow-письмах
+   запрещён санбоксом). Неизвестный код → показан самим кодом.
+   Сид-титул доставки без зашитого «₽» — символ несёт колонка цены. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const kztCfg = { data: { cfg: [{ name: 'Тест-магазин', currency: 'KZT' }] } };
+  const rubCard = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  check(rubCard.includes('<span class="rub">₽</span>'), 'валюта: пустой cfg → ₽ (RUB-фоллбек) на карточке');
+  const kztCard = await renderMockPage(engine, 'catalog', null, { query: { ...q }, g_site: kztCfg });
+  check(kztCard.includes('<span class="rub">₸</span>'), 'валюта: cfg.currency=KZT → ₸ на карточке');
+  check(!kztCard.includes('₽'), 'валюта: KZT не оставляет ₽ на карточке');
+  const kztProd = await renderMockPage(engine, 'product', null, { query: { ...q }, g_site: kztCfg });
+  check(kztProd.includes('"priceCurrency":"KZT"'), 'валюта: JSON-LD priceCurrency=KZT');
+  check(kztProd.includes('<span class="rub">₸</span>'), 'валюта: ₸ на странице товара');
+  const kztCo = await renderMockPage(engine, 'checkout', 'guest', { query: { ...q }, g_site: kztCfg });
+  check(kztCo.includes('₸'), 'валюта: ₸ на чекауте');
+  check(kztCo.includes('Доставка — Курьер — 300'), 'валюта: сид-титул доставки без зашитого символа');
+  const xyzProd = await renderMockPage(engine, 'product', null, { query: { ...q }, g_site: { data: { cfg: [{ currency: 'XYZ' }] } } });
+  check(xyzProd.includes('"priceCurrency":"XYZ"'), 'валюта: неизвестный код → сам код в JSON-LD');
+  check(xyzProd.includes('<span class="rub">XYZ</span>'), 'валюта: неизвестный код → показан кодом');
+  const emptyCur = await renderMockPage(engine, 'catalog', null, { query: { ...q }, g_site: { data: { cfg: [{ currency: '' }] } } });
+  check(emptyCur.includes('<span class="rub">₽</span>'), 'валюта: пустая строка currency → ₽ (default-фоллбек)');
+  const lowerKzt = await renderMockPage(engine, 'product', null, { query: { ...q }, g_site: { data: { cfg: [{ currency: 'kzt' }] } } });
+  check(lowerKzt.includes('"priceCurrency":"KZT"') && lowerKzt.includes('₸'), 'валюта: нижний регистр нормализуется upcase');
+  const emailMock = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'mock', 'email.json'), 'utf8'));
+  emailMock.results.g_site.cfg[0].currency = 'KZT';
+  const kztMail = await renderMockPage(engine, 'email-customer', null, { results: emailMock.results });
+  check(kztMail.includes('₸') && !kztMail.includes('₽'), 'валюта: ₸ в письме покупателя (инлайн-карта, include запрещён)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL currency: ' + fails.join(' | '));
+  } else {
+    console.log('OK   currency (пусто→₽; KZT→₸ карточка/товар/чекаут/письмо + JSON-LD KZT; XYZ→код; kzt→upcase; сид-титул без ₽)');
   }
 }
 
@@ -1514,7 +1555,7 @@ await smokeB2aCart();
   check(/name="delivery_id" value="d-1" checked/.test(html), 'B2b: первый способ не выбран SSR-ом');
   check(html.includes('name="delivery_id" value="d-2"'), 'B2b: второй способ пропал');
   check(html.includes('>бесплатно</span>'), 'B2b: нулевая цена не подписана «бесплатно»');
-  check(html.includes('Доставка — Курьер — 300₽') && html.includes('300.00'), 'B2b: доставки нет в сводке');
+  check(html.includes('Доставка — Курьер — 300') && html.includes('300.00'), 'B2b: доставки нет в сводке');
   check(html.includes('применится при оформлении'), 'B2b: нет честного placeholder скидки');
   check(html.includes('2629.00'), 'B2b: итог не = товары + доставка (2629.00)');
   check(html.includes('name="promo_code"'), 'B2b: нет поля промокода');

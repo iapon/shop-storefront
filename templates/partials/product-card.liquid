@@ -18,9 +18,12 @@
   против CLS; hover — свап на ВТОРОЕ фото (оба <img> в разметке, второй
   opacity:0, CSS :hover на (hover:hover); на таче не активен); название —
   2 строки line-clamp с зарезервированной высотой; цена 18px semibold;
-  «Нет в наличии» — оверлей на фото (а не только бейдж в теле). Бейдж
-  скидки «−N%» отложен: поля old_price в схеме товара нет — выдумывать не
-  станем (заметка в отчёте W6).
+  «Нет в наличии» — оверлей на фото (а не только бейдж в теле).
+  salewave: у товара с заданной sale_price_kopecks (>0) карточка показывает
+  тихую зачёркнутую старую цену + новую + tint-бейдж «−N%» (N = floor от
+  старой; tint — accent, не semantic-красный: скидка — витринное событие,
+  а не ошибка). На гриде вариантных цен нет — старая = базовая цена товара
+  (платит k_calc со скидкой — она перекрывает и варианты).
 {%- endcomment -%}
 {%- comment -%}
   B1-v2 (джанк-фиск «фото появляются влёт»): политика загрузки карточных
@@ -50,8 +53,21 @@
     <h3 class="product-card-title">{{ p.title }}</h3>
     {%- comment -%} v1.7.7: символ валюты из cfg.currency (пусто ≡ RUB) —
        include ПРЯМО на место вывода (паршал-карта — чистая функция входов;
-       capture в паршале запрещён инвариантом скоупа). {%- endcomment -%}
-    <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">{% include "partials/currency" %}</span></div>
+       capture в паршале запрещён инвариантом скоупа).
+       salewave: заданная sale_price_kopecks (правда и > 0, и меньше базовой;
+       nil/0 в условии фальшивы — «пусто = без скидки» проверяется самим
+       if-ом, без assign — скоуп-инвариант паршалов) — тихая пара
+       «зачёркнутая старая + новая» и бейдж «−N%» (floor); проценты —
+       инлайн-цепочка фильтров по определённым числам. {%- endcomment -%}
+    {%- if p.sale_price_kopecks and p.price_kopecks > p.sale_price_kopecks -%}
+      <div class="product-card-price">
+        <s class="price-old">{{ p.price_kopecks | times: 0.01 | money }}</s>
+        <span class="price-now">{{ p.sale_price_kopecks | times: 0.01 | money }}<span class="rub">{% include "partials/currency" %}</span></span>
+        <span class="badge badge-sale">−{{ p.price_kopecks | minus: p.sale_price_kopecks | times: 100 | divided_by: p.price_kopecks | floor }}%</span>
+      </div>
+    {%- else -%}
+      <div class="product-card-price">{{ p.price_kopecks | times: 0.01 | money }}<span class="rub">{% include "partials/currency" %}</span></div>
+    {%- endif -%}
     {%- comment -%} W7 (разнос владельца): «Нет в наличии» НЕ дублируется —
       при stock=0 его показывает оверлей на фото (выше); бейдж в теле —
       только для рабочих остатков (мало/в наличии). {%- endcomment -%}

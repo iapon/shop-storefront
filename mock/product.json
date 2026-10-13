@@ -4,16 +4,42 @@
     "cats": {
       "data": {
         "categories": [
-          { "id": "cat-1", "title": "Керамика", "slug": "ceramics", "parent": null },
-          { "id": "cat-2", "title": "Текстиль", "slug": "textile", "parent": null }
+          {
+            "id": "cat-1",
+            "title": "Керамика",
+            "slug": "ceramics",
+            "parent": null
+          },
+          {
+            "id": "cat-2",
+            "title": "Текстиль",
+            "slug": "textile",
+            "parent": null
+          }
         ]
       }
     },
     "revs": {
       "data": {
         "reviews": [
-          { "id": "rev-2", "product_slug": "mug-linen", "author_name": "Дмитрий", "rating": 4, "body": "Кружка отличная, держит тепло. Подарили с доставкой на день позже обещанного — поэтому четыре.", "status": "published", "created_at": "2026-10-01T12:00:00Z" },
-          { "id": "rev-1", "product_slug": "mug-linen", "author_name": "Мария", "rating": 5, "body": "Замечательная кружка: приятная в руке, глазурь без изъянов.", "status": "published", "created_at": "2026-09-20T09:30:00Z" }
+          {
+            "id": "rev-2",
+            "product_slug": "mug-linen",
+            "author_name": "Дмитрий",
+            "rating": 4,
+            "body": "Кружка отличная, держит тепло. Подарили с доставкой на день позже обещанного — поэтому четыре.",
+            "status": "published",
+            "created_at": "2026-10-01T12:00:00Z"
+          },
+          {
+            "id": "rev-1",
+            "product_slug": "mug-linen",
+            "author_name": "Мария",
+            "rating": 5,
+            "body": "Замечательная кружка: приятная в руке, глазурь без изъянов.",
+            "status": "published",
+            "created_at": "2026-09-20T09:30:00Z"
+          }
         ]
       }
     },
@@ -26,12 +52,22 @@
             "slug": "mug-linen",
             "price_kopecks": 99000,
             "description": "Литая керамика, матовая глазурь. 350 мл, можно в посудомойку.\nСделано в мастерской на берегу Ладоги.",
-            "features": ["Материал: белая глина", "Объём: 350 мл", "Можно в посудомойку"],
+            "features": [
+              "Материал: белая глина",
+              "Объём: 350 мл",
+              "Можно в посудомойку"
+            ],
             "stock": 12,
-            "categories": ["ceramics"],
+            "categories": [
+              "ceramics"
+            ],
             "photos": [
-              { "url": "/static/photos/placeholder.svg" },
-              { "url": "/static/photos/placeholder.svg#2" }
+              {
+                "url": "/static/photos/placeholder.svg"
+              },
+              {
+                "url": "/static/photos/placeholder.svg#2"
+              }
             ],
             "meta_title": "Кружка «Лён» — керамика ручной работы",
             "meta_description": "Литая керамика, матовая глазурь, 350 мл. Ручная работа."
@@ -42,22 +78,51 @@
     "rel": {
       "data": {
         "products": [
-          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 8, "photos": [] },
-          { "id": "p-6", "title": "Блюдо «Озеро»", "slug": "dish-lake", "price_kopecks": 219000, "stock": 2, "photos": [] }
+          {
+            "id": "p-5",
+            "title": "Тарелка «Галька»",
+            "slug": "plate-pebble",
+            "price_kopecks": 79000,
+            "stock": 8,
+            "photos": []
+          },
+          {
+            "id": "p-6",
+            "title": "Блюдо «Озеро»",
+            "slug": "dish-lake",
+            "price_kopecks": 219000,
+            "stock": 2,
+            "photos": []
+          }
         ]
       }
     },
-    "site": { "version": 7, "params": { "slug": "mug-linen" }, "query": {} }
+    "site": {
+      "version": 7,
+      "params": {
+        "slug": "mug-linen"
+      },
+      "query": {}
+    }
   },
   "vars": {
     "cats": {
       "data": {
         "categories": [
-          { "id": "cat-3", "title": "Хиты", "slug": "hity", "parent": null }
+          {
+            "id": "cat-3",
+            "title": "Хиты",
+            "slug": "hity",
+            "parent": null
+          }
         ]
       }
     },
-    "revs": { "data": { "reviews": [] } },
+    "revs": {
+      "data": {
+        "reviews": []
+      }
+    },
     "p": {
       "data": {
         "products": [
@@ -67,12 +132,22 @@
             "slug": "hudi-oversayz",
             "price_kopecks": 299000,
             "description": "Худи из плотного футера с начёсом, свободный крой.\nДва цвета: красный и синий.",
-            "features": ["Материал: футер с начёсом", "Крой: оверсайз", "Размеры: S–XL"],
+            "features": [
+              "Материал: футер с начёсом",
+              "Крой: оверсайз",
+              "Размеры: S–XL"
+            ],
             "stock": 12,
-            "categories": ["hity"],
+            "categories": [
+              "hity"
+            ],
             "photos": [
-              { "url": "/static/photos/placeholder.svg" },
-              { "url": "/static/photos/placeholder.svg#2" }
+              {
+                "url": "/static/photos/placeholder.svg"
+              },
+              {
+                "url": "/static/photos/placeholder.svg#2"
+              }
             ],
             "meta_title": "Худи оверсайз",
             "meta_description": "Худи из плотного футера с начёсом, свободный крой."
@@ -83,26 +158,214 @@
     "vars": {
       "data": {
         "variants": [
-          { "id": "var-1", "product_slug": "hudi-oversayz", "label": "Синий / M", "options": ["Цвет: Синий; Размер: M"], "sku": "HD-DM-01", "price_kopecks": 299000, "stock": 12, "photos": [{ "url": "/static/photos/placeholder.svg#rm" }] },
-          { "id": "var-2", "product_slug": "hudi-oversayz", "label": "Синий / L", "options": ["Цвет: Синий; Размер: L"], "sku": "HD-DM-02", "price_kopecks": 319000, "stock": 8, "photos": [{ "url": "/static/photos/placeholder.svg#bl" }] },
-          { "id": "var-3", "product_slug": "hudi-oversayz", "label": "Красный / M", "options": ["Цвет: Красный; Размер: M"], "sku": "HD-DM-03", "price_kopecks": 299000, "stock": 15 },
-          { "id": "var-4", "product_slug": "hudi-oversayz", "label": "Красный / L", "options": ["Цвет: Красный; Размер: L"], "sku": "HD-DM-04", "price_kopecks": 319000, "stock": 0 }
+          {
+            "id": "var-1",
+            "product_slug": "hudi-oversayz",
+            "label": "Синий / M",
+            "options": [
+              "Цвет: Синий; Размер: M"
+            ],
+            "sku": "HD-DM-01",
+            "price_kopecks": 299000,
+            "stock": 12,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg#rm"
+              }
+            ]
+          },
+          {
+            "id": "var-2",
+            "product_slug": "hudi-oversayz",
+            "label": "Синий / L",
+            "options": [
+              "Цвет: Синий; Размер: L"
+            ],
+            "sku": "HD-DM-02",
+            "price_kopecks": 319000,
+            "stock": 8,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg#bl"
+              }
+            ]
+          },
+          {
+            "id": "var-3",
+            "product_slug": "hudi-oversayz",
+            "label": "Красный / M",
+            "options": [
+              "Цвет: Красный; Размер: M"
+            ],
+            "sku": "HD-DM-03",
+            "price_kopecks": 299000,
+            "stock": 15
+          },
+          {
+            "id": "var-4",
+            "product_slug": "hudi-oversayz",
+            "label": "Красный / L",
+            "options": [
+              "Цвет: Красный; Размер: L"
+            ],
+            "sku": "HD-DM-04",
+            "price_kopecks": 319000,
+            "stock": 0
+          }
         ]
       }
     },
     "rel": {
       "data": {
         "products": [
-          { "id": "p-5", "title": "Тарелка «Галька»", "slug": "plate-pebble", "price_kopecks": 79000, "stock": 8, "photos": [] }
+          {
+            "id": "p-5",
+            "title": "Тарелка «Галька»",
+            "slug": "plate-pebble",
+            "price_kopecks": 79000,
+            "stock": 8,
+            "photos": []
+          }
         ]
       }
     },
-    "site": { "version": 7, "params": { "slug": "hudi-oversayz" }, "query": {} }
+    "site": {
+      "version": 7,
+      "params": {
+        "slug": "hudi-oversayz"
+      },
+      "query": {}
+    }
   },
   "not_found": {
-    "revs": { "data": { "reviews": [] } },
-    "p": { "data": { "products": [] } },
-    "rel": { "data": { "products": [] } },
-    "site": { "version": 7, "params": { "slug": "gone-item" }, "query": {} }
+    "revs": {
+      "data": {
+        "reviews": []
+      }
+    },
+    "p": {
+      "data": {
+        "products": []
+      }
+    },
+    "rel": {
+      "data": {
+        "products": []
+      }
+    },
+    "site": {
+      "version": 7,
+      "params": {
+        "slug": "gone-item"
+      },
+      "query": {}
+    }
+  },
+  "sale": {
+    "cats": {
+      "data": {
+        "categories": [
+          {
+            "id": "cat-1",
+            "title": "Керамика",
+            "slug": "ceramics",
+            "parent": null
+          },
+          {
+            "id": "cat-2",
+            "title": "Текстиль",
+            "slug": "textile",
+            "parent": null
+          }
+        ]
+      }
+    },
+    "revs": {
+      "data": {
+        "reviews": [
+          {
+            "id": "rev-2",
+            "product_slug": "mug-linen",
+            "author_name": "Дмитрий",
+            "rating": 4,
+            "body": "Кружка отличная, держит тепло. Подарили с доставкой на день позже обещанного — поэтому четыре.",
+            "status": "published",
+            "created_at": "2026-10-01T12:00:00Z"
+          },
+          {
+            "id": "rev-1",
+            "product_slug": "mug-linen",
+            "author_name": "Мария",
+            "rating": 5,
+            "body": "Замечательная кружка: приятная в руке, глазурь без изъянов.",
+            "status": "published",
+            "created_at": "2026-09-20T09:30:00Z"
+          }
+        ]
+      }
+    },
+    "p": {
+      "data": {
+        "products": [
+          {
+            "id": "p-1",
+            "title": "Кружка «Лён»",
+            "slug": "mug-linen",
+            "price_kopecks": 129000,
+            "description": "Литая керамика, матовая глазурь. 350 мл, можно в посудомойку.\nСделано в мастерской на берегу Ладоги.",
+            "features": [
+              "Материал: белая глина",
+              "Объём: 350 мл",
+              "Можно в посудомойку"
+            ],
+            "stock": 12,
+            "categories": [
+              "ceramics"
+            ],
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              },
+              {
+                "url": "/static/photos/placeholder.svg#2"
+              }
+            ],
+            "meta_title": "Кружка «Лён» — керамика ручной работы",
+            "meta_description": "Литая керамика, матовая глазурь, 350 мл. Ручная работа.",
+            "sale_price_kopecks": 79000
+          }
+        ]
+      }
+    },
+    "rel": {
+      "data": {
+        "products": [
+          {
+            "id": "p-5",
+            "title": "Тарелка «Галька»",
+            "slug": "plate-pebble",
+            "price_kopecks": 79000,
+            "stock": 8,
+            "photos": [],
+            "sale_price_kopecks": 63000
+          },
+          {
+            "id": "p-6",
+            "title": "Блюдо «Озеро»",
+            "slug": "dish-lake",
+            "price_kopecks": 219000,
+            "stock": 2,
+            "photos": []
+          }
+        ]
+      }
+    },
+    "site": {
+      "version": 7,
+      "params": {
+        "slug": "mug-linen"
+      },
+      "query": {}
+    }
   }
 }

@@ -660,6 +660,23 @@ html.is-scrolling .product-card-photo img { transition: none !important; }
 .product-card-price .rub { color: var(--muted); font-weight: 400; margin-left: var(--shop-space-1); }
 .product-card-stock { margin-top: auto; display: flex; }
 
+/* ── salewave: цена распродажи — тихая зачёркнутая старая + новая + ──
+   tint-бейдж «−N%» (акцентный тинт, НЕ semantic-красный: скидка —
+   витринное событие, а не ошибка; цвет едет за палитрой магазина).
+   Зачёркивание — обычный <s> с приглушённым цветом и нормальной
+   насыщенностью: старая цена читается, новую не перекрикивает. */
+.price-old {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.875em;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  margin-right: 0.375rem;
+}
+.price-now { font-variant-numeric: lining-nums; }
+.badge-sale { background: var(--accent-tint); color: var(--accent-strong); }
+.product-price .badge-sale { margin-left: var(--shop-space-2); vertical-align: 0.2em; }
+
 /* ── B2c: избранное — сердечко (F1: JS-гидратация) ───────────
    Кнопка-СОСЕД ссылки карточки (вложенный интерактив в <a> невалиден):
    обёртка — grid-айтем вместо карточки, карточка растягивается на всю

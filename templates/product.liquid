@@ -91,6 +91,14 @@
 
 
 {%- assign product = p.data.products | first -%}
+{%- comment -%} salewave: цена распродажи. sale_k = заданная sale_price_kopecks
+   (пусто/0 → 0 = без скидки); ЗАДАНА → она перекрывает эффективную цену
+   ЦЕЛИКОМ, включая варианты (платит k_calc по той же константе). Старая
+   цена для зачёркивания = то, что применялось бы без скидки:
+   вариант (дефолт пикера) ?? базовая цена товара; пара «старая+бейдж»
+   честна только при old > sale (мусорные данные «скидка дороже» тихо
+   деградируют в одну цену без бейджа). Расчёт — после pv_vars/pv_def
+   (ниже), до первого использования. {%- endcomment -%}
 {%- comment -%} B2a: варианты товара (vars.data.variants). pv_def — первый
   вариант со stock > 0 (дефолт пикера), pv_in_stock — сколько вариантов
   в наличии (бейдж: любой > 0 = «В наличии», все нули = «Нет»).
@@ -107,6 +115,23 @@
 {%- endfor -%}
 {%- assign pv_has = false -%}
 {%- if pv_vars and pv_vars.size > 0 -%}{%- assign pv_has = true -%}{%- endif -%}
+{%- comment -%} salewave: расчёт скидки — после pv_vars/pv_def (см. комментарий
+   выше). sale_k — эффективная цена РАСПРОДАЖИ (0 = нет); sale_old — старая
+   цена для зачёркивания (вариант ?? товар); sale_badge — пара
+   «зачёркнутая+бейдж −N%» (только при старой ДОРОЖЕ скидки). {%- endcomment -%}
+{%- assign sale_k = 0 -%}
+{%- if product.sale_price_kopecks -%}{%- assign sale_k = product.sale_price_kopecks | plus: 0 -%}{%- endif -%}
+{%- if pv_has and pv_def -%}
+  {%- assign sale_old = pv_def.price_kopecks -%}
+{%- else -%}
+  {%- assign sale_old = product.price_kopecks -%}
+{%- endif -%}
+{%- assign sale_badge = false -%}
+{%- assign sale_off = 0 -%}
+{%- if sale_k > 0 and sale_old > sale_k -%}
+  {%- assign sale_badge = true -%}
+  {%- assign sale_off = sale_old | minus: sale_k | times: 100 | divided_by: sale_old | floor -%}
+{%- endif -%}
 {%- comment -%} v1.7.2 (вариантные фото): слайды галереи — фото ВЫБРАННОГО
   варианта (SSR — дефолт пикера, pv_def); у варианта фото нет/пусты —
   общая галерея товара. SEO-поля ниже (og:image, JSON-LD image[]) сознательно
@@ -201,7 +226,7 @@
    варианты с картой opts «имя → значение», дефолт = pv_def (SSR-канон M6:
    без JS кнопка несёт его же, переключение невозможно — задокументировано). {%- endcomment -%}
 {%- capture pv_dims_json -%}{%- assign pv_dfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == "" -%}{%- unless pv_dfirst -%},{%- endunless -%}{%- assign pv_dfirst = false -%}{{ pv_d | json }}{%- endunless -%}{%- endfor -%}{%- endcapture -%}
-{%- capture pv_variants_json -%}{%- assign pv_vfirst = true -%}{%- for v in pv_vars -%}{%- unless pv_vfirst -%},{%- endunless -%}{%- assign pv_vfirst = false -%}{"id":{{ v.id | json }},"price":{{ v.price_kopecks }},"stock":{{ v.stock }},"opts":{%- capture pv_vopts -%}{{ "{" }}{%- assign pv_pfirst = true -%}{%- assign pv_opt_join = "" -%}{%- if v.options -%}{%- assign pv_opt_json = v.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname != "" and pv_dval != "" -%}{%- unless pv_pfirst -%},{%- endunless -%}{%- assign pv_pfirst = false -%}{{ pv_dname | json }}:{{ pv_dval | json }}{%- endif -%}{%- endif -%}{%- endfor -%}{{ "}" }}{%- endcapture -%}{{ pv_vopts }}{{ "}" }}{%- endfor -%}{%- endcapture -%}
+{%- capture pv_variants_json -%}{%- assign pv_vfirst = true -%}{%- for v in pv_vars -%}{%- unless pv_vfirst -%},{%- endunless -%}{%- assign pv_vfirst = false -%}{"id":{{ v.id | json }},"price":{%- if sale_k > 0 -%}{{ sale_k }}{%- else -%}{{ v.price_kopecks }}{%- endif -%},"old_price":{%- if sale_k > 0 -%}{{ v.price_kopecks }}{%- else -%}0{%- endif -%},"stock":{{ v.stock }},"opts":{%- capture pv_vopts -%}{{ "{" }}{%- assign pv_pfirst = true -%}{%- assign pv_opt_join = "" -%}{%- if v.options -%}{%- assign pv_opt_json = v.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: v.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname != "" and pv_dval != "" -%}{%- unless pv_pfirst -%},{%- endunless -%}{%- assign pv_pfirst = false -%}{{ pv_dname | json }}:{{ pv_dval | json }}{%- endif -%}{%- endif -%}{%- endfor -%}{{ "}" }}{%- endcapture -%}{{ pv_vopts }}{{ "}" }}{%- endfor -%}{%- endcapture -%}
 {%- if product -%}
   {%- assign page_title = product.meta_title | default: product.title -%}
   {%- assign pd_suffix = "купить в интернет-магазине" -%}
@@ -234,17 +259,22 @@
       (ratingValue — средняя с одним знаком, reviewCount — число published);
       без published-отзывов ключа НЕТ (пустой AggregateRating — мимо схем
       поисковиков). {%- endcomment -%}
+    {%- comment -%} salewave: JSON-LD price = ЭФФЕКТИВНАЯ цена — заданная
+       скидка перекрывает (lowPrice/highPrice сжимаются в неё же: платить
+       будут только её). {%- endcomment -%}
     {%- assign pv_lo = 0 -%}{%- assign pv_hi = 0 -%}{%- assign pv_lofirst = true -%}
     {%- for v in pv_vars -%}
+      {%- assign pv_vprice = v.price_kopecks -%}
+      {%- if sale_k > 0 -%}{%- assign pv_vprice = sale_k -%}{%- endif -%}
       {%- if pv_lofirst -%}
-        {%- assign pv_lo = v.price_kopecks -%}{%- assign pv_hi = v.price_kopecks -%}{%- assign pv_lofirst = false -%}
+        {%- assign pv_lo = pv_vprice -%}{%- assign pv_hi = pv_vprice -%}{%- assign pv_lofirst = false -%}
       {%- else -%}
-        {%- if v.price_kopecks < pv_lo -%}{%- assign pv_lo = v.price_kopecks -%}{%- endif -%}
-        {%- if v.price_kopecks > pv_hi -%}{%- assign pv_hi = v.price_kopecks -%}{%- endif -%}
+        {%- if pv_vprice < pv_lo -%}{%- assign pv_lo = pv_vprice -%}{%- endif -%}
+        {%- if pv_vprice > pv_hi -%}{%- assign pv_hi = pv_vprice -%}{%- endif -%}
       {%- endif -%}
     {%- endfor -%}
-    {%- capture pv_offers_json -%}{%- for v in pv_vars -%}{% unless forloop.first %},{% endunless %}{"@type":"Offer","price":"{{ v.price_kopecks | times: 0.01 | money }}","priceCurrency":"{{ cur_code }}","availability":"{% if v.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"{% if v.sku != "" %},"sku":{{ v.sku | json }}{% endif %}}{%- endfor -%}{%- endcapture -%}
-    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}}{% if pv_has %},"offers":{"@type":"AggregateOffer","url":"{{ canon_base }}{{ page_canon }}","lowPrice":"{{ pv_lo | times: 0.01 | money }}","highPrice":"{{ pv_hi | times: 0.01 | money }}","priceCurrency":"{{ cur_code }}","offerCount":"{{ pv_vars.size }}","offers":[{{ pv_offers_json }}]}{% else %},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{{ product.price_kopecks | times: 0.01 | money }}","priceCurrency":"{{ cur_code }}","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% endif %}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
+    {%- capture pv_offers_json -%}{%- for v in pv_vars -%}{% unless forloop.first %},{% endunless %}{"@type":"Offer","price":"{% if sale_k > 0 %}{{ sale_k | times: 0.01 | money }}{% else %}{{ v.price_kopecks | times: 0.01 | money }}{% endif %}","priceCurrency":"{{ cur_code }}","availability":"{% if v.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"{% if v.sku != "" %},"sku":{{ v.sku | json }}{% endif %}}{%- endfor -%}{%- endcapture -%}
+    {%- capture product_ld -%}<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":{{ product.title | json }},"description":{{ product.description | default: product.title | json }}{% if product.photos and product.photos.size > 0 %},"image":[{% for ph in product.photos %}{{ ph.url | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]{% endif %},"brand":{"@type":"Brand","name":{{ shop_name | json }}}{% if pv_has %},"offers":{"@type":"AggregateOffer","url":"{{ canon_base }}{{ page_canon }}","lowPrice":"{{ pv_lo | times: 0.01 | money }}","highPrice":"{{ pv_hi | times: 0.01 | money }}","priceCurrency":"{{ cur_code }}","offerCount":"{{ pv_vars.size }}","offers":[{{ pv_offers_json }}]}{% else %},"offers":{"@type":"Offer","url":"{{ canon_base }}{{ page_canon }}","price":"{% if sale_k > 0 %}{{ sale_k | times: 0.01 | money }}{% else %}{{ product.price_kopecks | times: 0.01 | money }}{% endif %}","priceCurrency":"{{ cur_code }}","availability":"{% if product.stock > 0 %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}"}{% endif %}{% if revs_count > 0 %},"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ revs_avg }}","reviewCount":"{{ revs_count }}"}{% endif %}}</script>{%- endcapture -%}
     {%- assign page_jsonld = page_jsonld | default: "" | append: product_ld -%}
     {%- comment -%} W6 №1: крошка категории — человекочитаемый title (не slug).
       Тайтл приезжает биндингом cats (узел g_cat флоу переиспользует
@@ -338,13 +368,22 @@
       <h1 class="product-title">{{ product.title }}</h1>
       {%- comment -%} B2a: цена карточки = дефолтный вариант (первый со
          stock > 0), у безвариантного товара — базовая; span[data-pv-price]
-         обновляет пикер. {%- endcomment -%}
+         обновляет пикер.
+         salewave: заданная скидка перекрывает и цену варианта — span несёт
+         ЭФФЕКТИВНУЮ цену (pv-data пикера несёт ту же константу, зачёркнутая
+         старая — data-pv-price-old, обновляет picker.js); бейдж −N% —
+         тихий tint (accent), статичен: скидка — свойство товара, не варианта. {%- endcomment -%}
       {%- if pv_has and pv_def -%}
         {%- assign pv_shown_price = pv_def.price_kopecks -%}
       {%- else -%}
         {%- assign pv_shown_price = product.price_kopecks -%}
       {%- endif -%}
-      <div class="product-price"><span data-pv-price>{{ pv_shown_price | times: 0.01 | money }}</span><span class="rub">{{ cur_sym }}</span></div>
+      {%- if sale_k > 0 -%}{%- assign pv_shown_price = sale_k -%}{%- endif -%}
+      <div class="product-price">
+        {%- if sale_badge -%}<s class="price-old" data-pv-price-old>{{ sale_old | times: 0.01 | money }}</s>{%- endif -%}
+        <span data-pv-price>{{ pv_shown_price | times: 0.01 | money }}</span><span class="rub">{{ cur_sym }}</span>
+        {%- if sale_badge -%}<span class="badge badge-sale">−{{ sale_off }}%</span>{%- endif -%}
+      </div>
       <div class="buy-row">
         {%- if pv_has -%}
           {%- comment -%} B2a: вариантный товар — бейдж БИНАРНЫЙ по вариантам
@@ -375,7 +414,7 @@
              без hex-литералов (канон W7 №3, проба w7-canon). {%- endcomment -%}
           <fieldset class="variant-picker" data-variant-picker>
             <legend class="sr-only">Вариант</legend>
-            <p class="pv-status" data-pv-status aria-live="polite">{%- if pv_def -%}{%- assign pv_status_vals = "" -%}{%- assign pv_sfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == "" -%}{%- assign pv_defval = "" -%}{%- assign pv_opt_join = "" -%}{%- if pv_def.options -%}{%- assign pv_opt_json = pv_def.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname == pv_d and pv_dval != "" -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}{%- endif -%}{%- endfor -%}{%- if pv_defval != "" -%}{% unless pv_sfirst %}{% assign pv_status_vals = pv_status_vals | append: " / " %}{% endunless %}{% assign pv_status_vals = pv_status_vals | append: pv_defval %}{% assign pv_sfirst = false %}{%- endif -%}{%- endunless -%}{%- endfor -%}<b>{{ pv_status_vals }}</b> — {{ pv_def.price_kopecks | times: 0.01 | money }} {{ cur_sym }} · в наличии {{ pv_def.stock }}{%- else -%}<span class="pv-status-off">нет в наличии</span>{%- endif -%}</p>
+            <p class="pv-status" data-pv-status aria-live="polite">{%- if pv_def -%}{%- assign pv_status_vals = "" -%}{%- assign pv_sfirst = true -%}{%- for pv_d in pv_dim_arr -%}{%- unless pv_d == "" -%}{%- assign pv_defval = "" -%}{%- assign pv_opt_join = "" -%}{%- if pv_def.options -%}{%- assign pv_opt_json = pv_def.options | json -%}{%- if pv_opt_json contains '["' -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '["' | split: '"]' | first | split: '","' | join: ";" -%}{%- elsif pv_opt_json == "null" -%}{%- assign pv_opt_join = "" -%}{%- else -%}{%- assign pv_opt_join = pv_opt_json | remove_first: '"' | split: '"' | first -%}{%- endif -%}{%- endif -%}{%- if pv_no_dims -%}{%- assign pv_opt_join = "Вариант:" | append: pv_def.label -%}{%- endif -%}{%- assign pv_pairs = pv_opt_join | split: ";" -%}{%- for pp in pv_pairs -%}{%- assign pp_t = pp | strip -%}{%- if pp_t != "" -%}{%- assign pv_ci = pp_t | split: ":" -%}{%- assign pv_dname = pv_ci[0] | strip -%}{%- assign pv_dval = pp_t | remove_first: pv_dname | remove_first: ":" | strip -%}{%- if pv_dname == pv_d and pv_dval != "" -%}{%- assign pv_defval = pv_dval -%}{%- endif -%}{%- endif -%}{%- endfor -%}{%- if pv_defval != "" -%}{% unless pv_sfirst %}{% assign pv_status_vals = pv_status_vals | append: " / " %}{% endunless %}{% assign pv_status_vals = pv_status_vals | append: pv_defval %}{% assign pv_sfirst = false %}{%- endif -%}{%- endunless -%}{%- endfor -%}<b>{{ pv_status_vals }}</b> — {{ pv_shown_price | times: 0.01 | money }} {{ cur_sym }} · в наличии {{ pv_def.stock }}{%- else -%}<span class="pv-status-off">нет в наличии</span>{%- endif -%}</p>
             {%- assign pv_color_names = "|синий|голубой|красный|розовый|зелёный|оливковый|чёрный|серый|белый|жёлтый|оранжевый|фиолетовый|сиреневый|коричневый|бежевый|бирюзовый|бордовый|мятный|" -%}
             {%- comment -%} фото варианта говорят о его ЦВЕТЕ — свотчи живут
                на ПЕРВОМ измерении, у значений которого они есть (у размера —

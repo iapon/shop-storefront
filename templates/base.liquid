@@ -127,7 +127,10 @@
       на мобиле — в burger-details (.nav-burger-panel, без JS); в строке
       остаются только иконки 2.75rem — слипаться нечему. Блок ссылок
       дублируется в обоих местах (partial не нужен: оба места в base). {%- endcomment -%}
-    <nav class="site-nav" aria-label="Кабинет">
+    <nav class="site-nav" aria-label="Навигация">
+      {%- comment -%} salewave: раздел «Распродажа» — постоянный пункт навигации
+        (товары с заданной sale_price_kopecks; сетка тем же партиалом карточек). {%- endcomment -%}
+      <a href="__SHOP_BASE__/sale">Распродажа</a>
       {%- if member and member.id -%}
         <a href="/account">Кабинет</a>
         <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>
@@ -169,6 +172,7 @@
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
         </summary>
         <nav class="nav-burger-panel">
+          <a href="__SHOP_BASE__/sale">Распродажа</a>
           {%- if member and member.id -%}
             <a href="/account">Кабинет</a>
             <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>

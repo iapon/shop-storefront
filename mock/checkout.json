@@ -272,5 +272,87 @@
       "params": {},
       "query": {}
     }
+  },
+  "sale": {
+    "results": {
+      "ci": {
+        "items": [
+          {
+            "slug": "mug-linen",
+            "qty": 2
+          },
+          {
+            "slug": "planner-pine",
+            "qty": 1
+          }
+        ]
+      }
+    },
+    "cart": {
+      "data": {
+        "carts": [
+          {
+            "id": "cart-anon-1",
+            "items": "[{\"slug\":\"mug-linen\",\"qty\":2},{\"slug\":\"planner-pine\",\"qty\":1}]"
+          }
+        ]
+      }
+    },
+    "prods": {
+      "data": {
+        "products": [
+          {
+            "id": "p-1",
+            "title": "Кружка «Лён»",
+            "slug": "mug-linen",
+            "price_kopecks": 99000,
+            "stock": 12,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ],
+            "sale_price_kopecks": 79000
+          },
+          {
+            "id": "p-3",
+            "title": "Планинг «Сосна»",
+            "slug": "planner-pine",
+            "price_kopecks": 34900,
+            "stock": 4,
+            "photos": [
+              {
+                "url": "/static/photos/placeholder.svg"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "site": {
+      "version": 7,
+      "params": {},
+      "query": {}
+    },
+    "dlist": {
+      "data": {
+        "deliveryMethods": [
+          {
+            "id": "d-1",
+            "title": "Курьер — 300",
+            "type": "courier",
+            "price_kopecks": 30000,
+            "description": "1–2 дня по городу"
+          },
+          {
+            "id": "d-2",
+            "title": "Самовывоз — 0₽",
+            "type": "pickup",
+            "price_kopecks": 0,
+            "description": "Бесплатно, адрес — в контактах"
+          }
+        ]
+      }
+    }
   }
 }

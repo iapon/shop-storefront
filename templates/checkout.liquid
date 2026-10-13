@@ -106,6 +106,10 @@
             {%- endfor -%}
           {%- endif -%}
           {%- if line -%}
+            {%- comment -%} salewave: заданная sale_price_kopecks перекрывает
+               эффективную цену строки ЦЕЛИКОМ — и цену варианта тоже
+               (платит k_calc по той же константе); зачёркнутая старая — тихо,
+               без бейджа (бейдж живёт на карточке/странице товара). {%- endcomment -%}
             {%- if line_var -%}
               {%- assign line_price = line_var.price_kopecks -%}
               {%- assign line_stock = line_var.stock -%}
@@ -113,6 +117,9 @@
               {%- assign line_price = line.price_kopecks -%}
               {%- assign line_stock = line.stock -%}
             {%- endif -%}
+            {%- assign line_sale = line.sale_price_kopecks -%}
+            {%- assign line_was = line_price -%}
+            {%- if line_sale and line_sale > 0 -%}{%- assign line_price = line_sale -%}{%- endif -%}
             {%- assign line_key = i.slug -%}
             {%- if i.variant %}{% assign line_key = i.slug | append: "|" | append: i.variant %}{% endif -%}
             {%- assign line_sum = line_price | times: i.qty -%}
@@ -139,7 +146,7 @@
               <div class="cart-line-info">
                 <a class="cart-line-name" href="__SHOP_BASE__/product/{{ line.slug }}">{{ line.title }}</a>
                 {%- if line_var -%}<span class="cart-line-variant">{{ line_var.label }}</span>{%- endif -%}
-                <span class="cart-line-price">{{ line_price | times: 0.01 | money }} {{ cur_sym }} × {{ i.qty }}</span>
+                <span class="cart-line-price">{% if line_sale and line_sale > 0 and line_was > line_price %}<s class="price-old">{{ line_was | times: 0.01 | money }}</s> {% endif %}{{ line_price | times: 0.01 | money }} {{ cur_sym }} × {{ i.qty }}</span>
                 {%- if line_stock <= 0 -%}
                   <span class="badge badge-error">Нет в наличии</span>
                 {%- elsif line_over -%}
@@ -237,7 +244,11 @@
           {%- endfor -%}
         {%- endif -%}
         {%- if line -%}
+          {%- comment -%} salewave: сводка — от эффективной цены строки
+             (скидка перекрывает цену варианта; платит k_calc). {%- endcomment -%}
           {%- if sum_var -%}{%- assign line_price = sum_var.price_kopecks -%}{%- else -%}{%- assign line_price = line.price_kopecks -%}{%- endif -%}
+          {%- assign line_sale_s = line.sale_price_kopecks -%}
+          {%- if line_sale_s and line_sale_s > 0 -%}{%- assign line_price = line_sale_s -%}{%- endif -%}
           {%- assign line_sum = line_price | times: i.qty -%}
           <div class="summary-row"><span>{{ line.title }}{% if sum_var %} ({{ sum_var.label }}){% endif %} × {{ i.qty }}</span><span>{{ line_sum | times: 0.01 | money }} {{ cur_sym }}</span></div>
         {%- endif -%}

@@ -193,6 +193,21 @@
     /* цена/бейдж/кнопка корзины (контракт B2a) + галерея (v1.7.2) */
     var priceEl = document.querySelector('[data-pv-price]');
     if (priceEl && v) priceEl.textContent = money(v.price);
+    /* salewave: зачёркнутая старая цена = то, что платилось бы без скидки
+       (цена варианта); несёт только вариантный товар с заданной скидкой
+       (old_price > price в данных SSR). Скидка — свойство товара: бейдж
+       «−N%» статичен, переключается только ЦИФРА старой цены. */
+    var oldEl = document.querySelector('[data-pv-price-old]');
+    if (oldEl) {
+      var oldPrice = v ? Number(v.old_price) || 0 : 0;
+      if (oldPrice > (v ? Number(v.price) || 0 : 0)) {
+        oldEl.textContent = money(oldPrice);
+        oldEl.setAttribute('data-visible', '1');
+      } else {
+        oldEl.textContent = '';
+        oldEl.removeAttribute('data-visible');
+      }
+    }
     var badgeEl = document.querySelector('[data-pv-badge]');
     if (badgeEl) {
       var stock = v ? Number(v.stock) || 0 : 0;

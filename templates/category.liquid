@@ -160,11 +160,19 @@
     {% include "partials/applied-filters" %}
 
     {%- if children.data.categories.size > 0 -%}
+    {%- comment -%} uxfix (кумулятивные фильтры): чипы потомков несут
+      q/stock/sort, меняют только категорию (в пути); без page (сброс на 1). {%- endcomment -%}
+    {%- assign child_link_tail = "" -%}
+    {%- if current_q or stock_on or sort_suffix -%}{%- assign child_link_tail = "?" -%}{%- endif -%}
+    {%- if current_q -%}{%- assign child_link_tail = child_link_tail | append: "q=" | append: q_enc | append: "&amp;" -%}{%- endif -%}
+    {%- if stock_on -%}{%- assign child_link_tail = child_link_tail | append: "stock=1&amp;" -%}{%- endif -%}
+    {%- if sort_suffix -%}{%- assign child_link_tail = child_link_tail | append: "sort=" | append: sort_suffix -%}{%- endif -%}
     <nav class="chip-row" aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
       {%- for cc in children.data.categories -%}
-      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}{% if stock_on %}?stock=1{% endif %}">{{ cc.title }}</a>
+      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}{{ child_link_tail }}">{{ cc.title }}</a>
       {%- endfor -%}
     </nav>
+    {%- assign child_link_tail = nil -%}
     {%- endif -%}
 
     {%- comment -%} W9 (F4): счётчик товаров — тихой строкой над гридом (контракт каталога). {%- endcomment -%}

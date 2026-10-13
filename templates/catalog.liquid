@@ -209,12 +209,20 @@
         + «Все», D2). {%- endcomment -%}
       {%- assign chip_i = 0 -%}
       {%- assign chip_active_i = 0 -%}
-      <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
+      {%- comment -%} uxfix (кумулятивные фильтры): чипы категорий строят
+        ссылку СЛИЯНИЕМ текущего набора параметров — несут q/stock/sort,
+        меняют только свой cat; смена фильтра всегда без page (сброс на 1). {%- endcomment -%}
+      {%- assign cat_link_tail = "" -%}
+      {%- if current_q -%}{%- assign cat_link_tail = "&amp;q=" | append: q_enc | append: cat_link_tail -%}{%- endif -%}
+      {%- if stock_on -%}{%- assign cat_link_tail = cat_link_tail | append: "&amp;stock=1" -%}{%- endif -%}
+      {%- if sort_suffix -%}{%- assign cat_link_tail = cat_link_tail | append: "&amp;sort=" | append: sort_suffix -%}{%- endif -%}
+      <a class="chip" href="__SHOP_BASE__/{% if current_q or stock_on or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if stock_on %}{% if current_q %}&amp;{% endif %}stock=1{% endif %}{% if sort_suffix %}{% if current_q or stock_on %}&amp;{% endif %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
       {%- comment -%} uxfix C: чип-тоггл «Только в наличии» — рядом с
         чипами категорий; активный = aria-current (стиль чипов). href
-        держит cat/q/sort и ПЕРЕКЛЮЧАЕТ stock; в лимиты vis_n и
+        держит cat/q/sort и ПЕРЕКЛЮЧАЕТ stock (слитые href без висячих
+        «&» — хвост собирает каждая следующая часть); в лимиты vis_n и
         mobile_vis_n НЕ входит (фильтр, а не категория — виден всегда). {%- endcomment -%}
-      <a class="chip chip-stock" href="__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{% unless stock_on %}stock=1{% endunless %}" {% if stock_on %}aria-current="true"{% else %}data-stock-off="1"{% endif %}>В наличии</a>
+      <a class="chip chip-stock" href="__SHOP_BASE__/{% if current_cat or current_q or sort_suffix or stock_on != true %}?{% endif %}{% if current_cat %}cat={{ current_cat | escape }}{% endif %}{% if current_q %}{% if current_cat %}&amp;{% endif %}q={{ q_enc }}{% endif %}{% if sort_suffix %}{% if current_cat or current_q %}&amp;{% endif %}sort={{ sort_suffix }}{% endif %}{% unless stock_on %}{% if current_cat or current_q or sort_suffix %}&amp;{% endif %}stock=1{% endunless %}" {% if stock_on %}aria-current="true"{% else %}data-stock-off="1"{% endif %}>В наличии</a>
       {%- for c in cats.data.categories -%}
         {%- unless c.parent -%}
         {%- assign chip_n = 0 -%}
@@ -228,7 +236,7 @@
           {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
           {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
         {%- endif -%}
-      <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ c.slug }}{% if stock_on %}&amp;stock=1{% endif %}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
+      <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ c.slug }}{{ cat_link_tail }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
         {%- for cc in cats.data.categories -%}
           {%- if cc.parent and cc.parent.id == c.id -%}
           {%- assign chip_n = 0 -%}
@@ -242,7 +250,7 @@
             {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
             {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
           {%- endif -%}
-          <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ cc.slug }}{% if stock_on %}&amp;stock=1{% endif %}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
+          <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ cc.slug }}{{ cat_link_tail }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
           {%- endif -%}
         {%- endfor -%}
       {%- endunless -%}
@@ -271,6 +279,7 @@
         {%- endif -%}
       {%- endif -%}
     </nav>
+    {%- assign cat_link_tail = nil -%}
     {%- comment -%} B1 (D1): счётчик товаров — справа в строке тулбара (мокап
       В3); на мобиле он остаётся строкой над гридом (.cat-count ниже —
       видима только <48rem). {%- endcomment -%}

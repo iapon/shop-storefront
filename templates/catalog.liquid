@@ -2,7 +2,8 @@
   catalog.liquid — главная/каталог. Биндинги: cats.data.categories (со
   select'ом parent { id slug } — дерево), prods.data.products,
   count.data.productsCount, all.data.products (≤100 — счётчики чипов, D27),
-  query.cat/query.page/query.q/query.sort.
+  query.cat/query.page/query.q/query.sort/query.stock (uxfix C: «Только
+  в наличии», серверный фильтр stock>0 в библиотечных запросах).
   Корзинных данных в HTML нет — счётчик гидратирует JS.
   Карточный грид на странице РОВНО ОДИН (анти-card-soup).
 {%- endcomment -%}
@@ -51,6 +52,10 @@
 {%- assign current_cat = query.cat | default: nil -%}
 {%- assign current_q = query.q | default: nil -%}
 {%- assign current_sort = query.sort | default: nil -%}
+{%- comment -%} uxfix C: «Только в наличии» — ?stock=1; любое другое
+   значение параметра фильтр НЕ включает (чип-тоггл честно выключен). {%- endcomment -%}
+{%- assign stock_on = false -%}
+{%- if query.stock == "1" -%}{%- assign stock_on = true -%}{%- endif -%}
 {%- assign sort_suffix = nil -%}
 {%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
 {%- assign cat_row = nil -%}
@@ -79,6 +84,7 @@
 {%- assign applied_n = 0 -%}
 {%- if current_cat -%}{%- assign applied_n = applied_n | plus: 1 -%}{%- endif -%}
 {%- if current_q -%}{%- assign applied_n = applied_n | plus: 1 -%}{%- endif -%}
+{%- if stock_on -%}{%- assign applied_n = applied_n | plus: 1 -%}{%- endif -%}
 {%- assign sort_current_label = "Сначала новые" -%}
 {%- if current_sort == "price_asc" -%}{%- assign sort_current_label = "Сначала дешевле" -%}{%- endif -%}
 {%- if current_sort == "price_desc" -%}{%- assign sort_current_label = "Сначала дороже" -%}{%- endif -%}
@@ -92,6 +98,7 @@
 {%- assign ac_q = current_q -%}
 {%- assign ac_q_enc = q_enc -%}
 {%- assign ac_sort = sort_suffix -%}
+{%- assign ac_stock = stock_on -%}
 
 {%- comment -%} ── Hero каталога (канон лендинга, W7): центрированный блок,
   фон — градиент тинта акцента; крошки — тихой строкой слева; H1 по
@@ -150,6 +157,7 @@
   {%- if vis_n < 1 -%}{%- assign vis_n = 5 -%}{%- endif -%}
   <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools data-chips-open="0">
     {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
+    {%- if stock_on -%}<input type="hidden" name="stock" value="1">{%- endif -%}
     <div class="toolbar-mobile">
       <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4Z"/></svg>
@@ -202,6 +210,11 @@
       {%- assign chip_i = 0 -%}
       {%- assign chip_active_i = 0 -%}
       <a class="chip" href="__SHOP_BASE__/{% if current_q or sort_suffix %}?{% endif %}{% if current_q %}q={{ q_enc }}{% endif %}{% if current_q and sort_suffix %}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}{% endif %}" {% unless current_cat %}aria-current="true"{% endunless %}>Все</a>
+      {%- comment -%} uxfix C: чип-тоггл «Только в наличии» — рядом с
+        чипами категорий; активный = aria-current (стиль чипов). href
+        держит cat/q/sort и ПЕРЕКЛЮЧАЕТ stock; в лимиты vis_n и
+        mobile_vis_n НЕ входит (фильтр, а не категория — виден всегда). {%- endcomment -%}
+      <a class="chip chip-stock" href="__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{% unless stock_on %}stock=1{% endunless %}" {% if stock_on %}aria-current="true"{% else %}data-stock-off="1"{% endif %}>В наличии</a>
       {%- for c in cats.data.categories -%}
         {%- unless c.parent -%}
         {%- assign chip_n = 0 -%}
@@ -215,7 +228,7 @@
           {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
           {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
         {%- endif -%}
-      <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ c.slug }}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
+      <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ c.slug }}{% if stock_on %}&amp;stock=1{% endif %}" {% if current_cat == c.slug %}aria-current="true"{% endif %}>{{ c.title }} <span class="chip-count">{{ chip_n }}</span></a>
         {%- for cc in cats.data.categories -%}
           {%- if cc.parent and cc.parent.id == c.id -%}
           {%- assign chip_n = 0 -%}
@@ -229,7 +242,7 @@
             {%- if chip_i > vis_n -%}{%- assign chip_pin = ' data-pinned="1"' -%}{%- endif -%}
             {%- if chip_i > mobile_vis_n -%}{%- assign chip_pin_m = ' data-pinned-m="1"' -%}{%- endif -%}
           {%- endif -%}
-          <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ cc.slug }}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
+          <a class="{{ chip_cls }}"{{ chip_pin }}{{ chip_pin_m }} href="__SHOP_BASE__/?cat={{ cc.slug }}{% if stock_on %}&amp;stock=1{% endif %}" {% if current_cat == cc.slug %}aria-current="true"{% endif %}>{{ cc.title }} <span class="chip-count">{{ chip_n }}</span></a>
           {%- endif -%}
         {%- endfor -%}
       {%- endunless -%}
@@ -273,6 +286,10 @@
     <div class="product-grid">
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
+  {%- elsif stock_on -%}
+    {%- comment -%} uxfix C: пустой результат ИМЕННО фильтра наличия —
+      аккуратный EmptyState с подсказкой снять фильтр, не пустая сетка. {%- endcomment -%}
+    <p class="empty-note">В наличии сейчас ничего не нашлось — снимите фильтр «В наличии» или выберите другую категорию.</p>
   {%- else -%}
     <p class="empty-note">Здесь пока пусто — загляните позже или выберите другую категорию.</p>
   {%- endif -%}
@@ -283,19 +300,35 @@
      число страниц и прятал последние товары. | floor обязателен: liquidjs
      делит нацело-неточно (3.0833), а диапазон (1..3.0833) рисует лишнюю
      страницу; osteele/liquid в проде floor-делит сам — floor идемпотентен.
-     page: мусор/0/отрицательное → 1 (plus: 0 гасит нечисла, at_least: 1 —
-     нижняя граница; платформенный фильтр, liquid_filters.go). {%- endcomment -%}
+     page: мусор/0/отрицательное → 1. uxfix A1: НЕ «plus: 0» — платформенный
+     фильтр plus (переопределение в internal/render/liquid_filters.go) НЕ
+     парсит числовые СТРОКИ (builtin osteele парсит, override — нет:
+     query.page="2" | plus: 0 давал 0, page_no застревал на 1 и
+     aria-current после свапа не обновлялся никогда). at_least (платформенный
+     clampFilter) строки парсит сам; nil-гвард добивает «без ?page» до 1. {%- endcomment -%}
   {%- assign page_size = 12 -%}
   {%- assign page_size_m1 = page_size | minus: 1 -%}
   {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
-  {%- assign page_no = query.page | plus: 0 | at_least: 1 -%}
+  {%- assign page_no = query.page | at_least: 1 -%}
+  {%- unless page_no -%}{%- assign page_no = 1 -%}{%- endunless -%}
   {%- if pages > 1 -%}
-    <nav class="pagination" aria-label="Страницы">
-      {% for n in (1..pages) %}
-        {%- capture pg_href -%}__SHOP_BASE__/?{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
-        <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
-      {% endfor %}
-    </nav>
+    {%- comment -%} uxfix A2: окно страниц (первая/последняя/текущая ±2/
+       многоточия, неактивная сторона prev/next — disabled, не спрятана)
+       — partials/pagination; state запроса собирается один раз. {%- endcomment -%}
+    {%- capture pg_qs -%}{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if stock_on %}stock=1&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{%- endcapture -%}
+    {%- assign pg_base = "__SHOP_BASE__/" -%}
+    {%- assign pg_page = page_no -%}
+    {%- assign pg_pages = pages -%}
+    {%- assign pg_lo = page_no | minus: 2 | at_least: 1 -%}
+    {%- assign pg_hi = page_no | plus: 2 | at_most: pages -%}
+    {%- assign pg_first_gap = false -%}
+    {%- if pg_lo > 2 -%}{%- assign pg_first_gap = true -%}{%- endif -%}
+    {%- assign pg_last_m1 = pages | minus: 1 -%}
+    {%- assign pg_last_gap = false -%}
+    {%- if pg_last_m1 > pg_hi -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+    {% include "partials/pagination" %}
+    {%- assign pg_base = nil -%}{%- assign pg_page = nil -%}{%- assign pg_pages = nil -%}{%- assign pg_qs = nil -%}
+    {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_last_m1 = nil -%}
   {%- endif -%}
 
   {%- comment -%} №15: полное SEO-описание категории — под гридом {%- endcomment -%}
@@ -322,6 +355,15 @@
       <div class="sheet-group">
         <label class="sheet-label" for="drawer-q">Поиск</label>
         <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="Поиск по каталогу" data-drawer-q>
+      </div>
+      {%- comment -%} uxfix C: фацет наличия — существующая схема дравера
+        (мобильный тулбар); чип «В наличии» и чекбокс дравера — одно
+        состояние ?stock=1. {%- endcomment -%}
+      <div class="sheet-group">
+        <label class="sheet-option sheet-option-stock">
+          <input type="checkbox" name="drawer-stock" value="1" data-drawer-stock {% if stock_on %}checked{% endif %}>
+          <span>Только в наличии</span>
+        </label>
       </div>
       <fieldset class="sheet-group">
         <legend class="sheet-legend">Категории</legend>
@@ -521,15 +563,18 @@
     }
     syncChipsWrap();
 
-    /* ---- дравер: черновик → «Показать N» (batch-применение, №8) ---- */
+    /* ---- дравер: черновик → «Показать N» (batch-применение, №8).
+       uxfix C: черновик несёт и фацет наличия (drawer-stock). ---- */
     function draft() {
       var r = ui.querySelector('input[name="drawer-cat"]:checked');
       var qi = ui.querySelector('[data-drawer-q]');
+      var sk = ui.querySelector('[data-drawer-stock]');
       return {
         goto: r ? (r.getAttribute('data-goto') || base) : base,
         cat: r ? r.value : pageCat,
         countSlug: r ? (r.getAttribute('data-count-slug') || '') : pageCat,
         q: qi ? qi.value : '',
+        stock: sk && sk.checked ? '1' : '',
         sort: params.get('sort') || ''
       };
     }
@@ -537,6 +582,7 @@
       var sp = new URLSearchParams();
       if (st.cat) sp.set('cat', st.cat);
       if (st.q) sp.set('q', st.q);
+      if (st.stock) sp.set('stock', st.stock);
       if (st.sort) sp.set('sort', st.sort);
       var qs = sp.toString();
       return st.goto + (qs ? '?' + qs : '');
@@ -558,6 +604,9 @@
         var row = INDEX[i] || {};
         if (st.countSlug && (row.categories || []).indexOf(st.countSlug) < 0) continue;
         if (q && String(row.title || '').toLowerCase().indexOf(q) < 0) continue;
+        /* uxfix C: счётчик «Показать N» учитывает фацет наличия
+           (INDEX несёт stock — поле добавлено в shop_catalog_all) */
+        if (st.stock && !(Number(row.stock) > 0)) continue;
         n++;
       }
       return n;
@@ -576,12 +625,24 @@
     for (var ri = 0; ri < radios.length; ri++) radios[ri].addEventListener('change', syncN);
     var dq = ui.querySelector('[data-drawer-q]');
     if (dq) dq.addEventListener('input', syncN);
+    /* uxfix B: Enter в поиске дравера применяет черновик (та же
+       механика, что «Показать N») — раньше Enter сабмитил форму целиком,
+       drawer-q утекал в URL мусорным параметром и поиск не применялся. */
+    if (dq) dq.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      e.stopPropagation();
+      applyUrl(draft());
+    });
+    var sk0 = ui.querySelector('[data-drawer-stock]');
+    if (sk0) sk0.addEventListener('change', syncN);
     var applyBtn = ui.querySelector('[data-drawer-apply]');
     if (applyBtn) applyBtn.addEventListener('click', function () { applyUrl(draft()); });
     var resetBtn = ui.querySelector('[data-drawer-reset]');
     if (resetBtn) resetBtn.addEventListener('click', function () {
       for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === '';
       if (dq) dq.value = '';
+      if (sk0) sk0.checked = false;
       syncN();
     });
 
@@ -598,7 +659,7 @@
     for (var si = 0; si < sorts.length; si++) {
       (function (r) {
         r.addEventListener('change', function () {
-          applyUrl({ goto: base, cat: pageCat, countSlug: pageCat, q: params.get('q') || '', sort: r.value });
+          applyUrl({ goto: base, cat: pageCat, countSlug: pageCat, q: params.get('q') || '', stock: params.get('stock') || '', sort: r.value });
         });
       })(sorts[si]);
     }
@@ -654,8 +715,15 @@
       window.addEventListener('resize', function () {
         if (registry.current) registry.current.syncChipsWrap();
       });
-      /* волна C: после fetch-свапа catalog.js — перевесить UI на новое дерево */
-      document.addEventListener('catalog:swap', init);
+      /* волна C: после fetch-свапа catalog.js — перевесить UI на новое дерево.
+         uxfix B: свап уничтожает открытый дравер/лист вместе с их DOM —
+         снять блокировку скролла (html[data-sheet-open]) ДО пере-инициализации,
+         иначе страница остаётся с overflow:hidden и скролл мёртв (замер
+         до/после: data-sheet-open застревал на "1" при apply из дравера). */
+      document.addEventListener('catalog:swap', function () {
+        document.documentElement.setAttribute('data-sheet-open', '0');
+        init();
+      });
     }
     init();
 

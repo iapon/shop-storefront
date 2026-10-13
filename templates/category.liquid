@@ -55,6 +55,11 @@
    flow shop_category читает те же query.q/query.sort, что и каталог. {%- endcomment -%}
 {%- assign current_q = query.q | default: nil -%}
 {%- assign current_sort = query.sort | default: nil -%}
+{%- comment -%} uxfix C: «Только в наличии» — серверный фильтр общих с
+   каталогом library-запросов (?stock=1); uxfix A1: page — см. каталог
+   (plus-override не парсит числовые строки → at_least). {%- endcomment -%}
+{%- assign stock_on = false -%}
+{%- if query.stock == "1" -%}{%- assign stock_on = true -%}{%- endif -%}
 {%- assign sort_suffix = nil -%}
 {%- if current_sort == "price_asc" or current_sort == "price_desc" -%}{%- assign sort_suffix = current_sort -%}{%- endif -%}
 {%- assign q_enc = current_q | default: "" | url_encode -%}
@@ -76,6 +81,7 @@
   {%- assign ac_q = current_q -%}
   {%- assign ac_q_enc = q_enc -%}
   {%- assign ac_sort = sort_suffix -%}
+  {%- assign ac_stock = stock_on -%}
 {%- else -%}
   {%- assign page_title = "Категория не найдена" -%}
   {%- assign page_noindex = true -%}
@@ -119,11 +125,12 @@
       индекса товаров, поэтому кнопка «Найти» без счётчика N) и
       «Сортировка: <текущая>» (лист-меню); ≥48rem — десктопная форма. {%- endcomment -%}
     <form class="cat-tools" method="get" action="__SHOP_BASE__/category/{{ category.slug }}" data-cat-tools>
+      {%- if stock_on -%}<input type="hidden" name="stock" value="1">{%- endif -%}
       <div class="toolbar-mobile">
         <button class="toolbar-btn" type="button" data-drawer-open aria-haspopup="dialog" aria-controls="filter-drawer">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4Z"/></svg>
           <span>Фильтры</span>
-          {%- if current_q -%}<span class="toolbar-badge" data-applied-badge>1</span>{%- endif -%}
+          {%- if current_q or stock_on -%}<span class="toolbar-badge" data-applied-badge>{% if current_q and stock_on %}2{% else %}1{% endif %}</span>{%- endif -%}
         </button>
         <button class="toolbar-btn" type="button" data-sort-open aria-haspopup="dialog" aria-controls="sort-sheet">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h12M6 10h8M8 14h4"/></svg>
@@ -155,7 +162,7 @@
     {%- if children.data.categories.size > 0 -%}
     <nav class="chip-row" aria-label="{{ cfg.hero_kicker | default: "Каталог" | escape }}">
       {%- for cc in children.data.categories -%}
-      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}">{{ cc.title }}</a>
+      <a class="chip chip-child" href="__SHOP_BASE__/category/{{ cc.slug }}{% if stock_on %}?stock=1{% endif %}">{{ cc.title }}</a>
       {%- endfor -%}
     </nav>
     {%- endif -%}
@@ -167,24 +174,37 @@
       {% for p in prods.data.products %}{% include "partials/product-card" %}{% endfor %}
     </div>
 
-    {%- comment -%} та же формула страниц, что в каталоге (w3-№5); q не теряем;
-       page: мусор/0/отрицательное → 1 (plus: 0 | at_least: 1, как в каталоге) {%- endcomment -%}
+    {%- comment -%} та же формула страниц, что в каталоге (w3-№5); q/stock
+       не теряем; page: мусор/0/отрицательное → 1 (uxfix A1: НЕ plus: 0 —
+       платформенный plus-override не парсит числовые строки, page_no
+       застревал на 1; at_least строки парсит, nil-гвард → 1). {%- endcomment -%}
     {%- assign page_size = 12 -%}
     {%- assign page_size_m1 = page_size | minus: 1 -%}
     {%- assign pages = total | plus: page_size_m1 | divided_by: page_size | floor -%}
-    {%- assign page_no = query.page | plus: 0 | at_least: 1 -%}
+    {%- assign page_no = query.page | at_least: 1 -%}
+    {%- unless page_no -%}{%- assign page_no = 1 -%}{%- endunless -%}
     {%- if pages > 1 -%}
-      <nav class="pagination" aria-label="Страницы">
-        {% for n in (1..pages) %}
-          {%- capture pg_href -%}__SHOP_BASE__/category/{{ category.slug }}?{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}page={{ n }}{%- endcapture -%}
-          <a class="page-link" href="{{ pg_href }}" {% if n == page_no %}aria-current="true"{% endif %}>{{ n }}</a>
-        {% endfor %}
-      </nav>
+      {%- capture pg_qs -%}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if stock_on %}stock=1&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{%- endcapture -%}
+      {%- assign pg_base = "__SHOP_BASE__/category/" | append: category.slug -%}
+      {%- assign pg_page = page_no -%}
+      {%- assign pg_pages = pages -%}
+      {%- assign pg_lo = page_no | minus: 2 | at_least: 1 -%}
+      {%- assign pg_hi = page_no | plus: 2 | at_most: pages -%}
+      {%- assign pg_first_gap = false -%}
+      {%- if pg_lo > 2 -%}{%- assign pg_first_gap = true -%}{%- endif -%}
+      {%- assign pg_last_m1 = pages | minus: 1 -%}
+      {%- assign pg_last_gap = false -%}
+      {%- if pg_last_m1 > pg_hi -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+      {% include "partials/pagination" %}
+      {%- assign pg_base = nil -%}{%- assign pg_page = nil -%}{%- assign pg_pages = nil -%}{%- assign pg_qs = nil -%}
+      {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_last_m1 = nil -%}
     {%- endif -%}
     {%- comment -%} №15: полное SEO-описание — под гридом {%- endcomment -%}
     {%- if category.description -%}
     <div class="cat-desc-full">{{ category.description }}</div>
     {%- endif -%}
+    {%- elsif stock_on -%}
+    <p class="empty-note">В наличии сейчас ничего не нашлось — снимите фильтр «Только в наличии».</p>
     {%- else -%}
     <p class="empty-note">Здесь пока пусто — загляните позже или выберите другую категорию.</p>
     {%- endif -%}
@@ -204,6 +224,13 @@
         <div class="sheet-group">
           <label class="sheet-label" for="drawer-q">Поиск</label>
           <input class="field-input" type="search" id="drawer-q" name="drawer-q" value="{{ current_q | escape }}" placeholder="Поиск по каталогу" data-drawer-q>
+        </div>
+        {%- comment -%} uxfix C: фацет наличия (тот же ?stock=1, что у каталога). {%- endcomment -%}
+        <div class="sheet-group">
+          <label class="sheet-option sheet-option-stock">
+            <input type="checkbox" name="drawer-stock" value="1" data-drawer-stock {% if stock_on %}checked{% endif %}>
+            <span>Только в наличии</span>
+          </label>
         </div>
       </div>
       <div class="sheet-foot">
@@ -295,9 +322,10 @@
     var closes = ui.querySelectorAll('[data-sheet-close]');
     for (var ci = 0; ci < closes.length; ci++) closes[ci].addEventListener('click', closeSheet);
 
-    function applyUrl(q, sort) {
+    function applyUrl(q, sort, stock) {
       var sp = new URLSearchParams();
       if (q) sp.set('q', q);
+      if (stock) sp.set('stock', stock);
       if (sort) sp.set('sort', sort);
       var qs = sp.toString();
       var target = base + (qs ? '?' + qs : '');
@@ -305,18 +333,26 @@
       if (window.ShopCatalog) window.ShopCatalog.navigate(target);
       else window.location.assign(target);
     }
+    function draftState() {
+      var sk = ui.querySelector('[data-drawer-stock]');
+      return {
+        q: dq ? dq.value : '',
+        stock: sk && sk.checked ? '1' : '',
+        sort: params.get('sort') || ''
+      };
+    }
     var dq = ui.querySelector('[data-drawer-q]');
     var applyBtn = ui.querySelector('[data-drawer-apply]');
-    if (applyBtn) applyBtn.addEventListener('click', function () { applyUrl(dq ? dq.value : '', params.get('sort') || ''); });
+    if (applyBtn) applyBtn.addEventListener('click', function () { var st = draftState(); applyUrl(st.q, st.sort, st.stock); });
     var resetBtn = ui.querySelector('[data-drawer-reset]');
-    if (resetBtn) resetBtn.addEventListener('click', function () { if (dq) dq.value = ''; });
+    if (resetBtn) resetBtn.addEventListener('click', function () { if (dq) dq.value = ''; var sk = ui.querySelector('[data-drawer-stock]'); if (sk) sk.checked = false; });
     if (dq) dq.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); applyUrl(dq.value, params.get('sort') || ''); }
+      if (e.key === 'Enter') { e.preventDefault(); var st = draftState(); applyUrl(st.q, st.sort, st.stock); }
     });
     var sorts = ui.querySelectorAll('input[name="sort-choice"]');
     for (var si = 0; si < sorts.length; si++) {
       (function (r) {
-        r.addEventListener('change', function () { applyUrl(params.get('q') || '', r.value); });
+        r.addEventListener('change', function () { applyUrl(params.get('q') || '', r.value, params.get('stock') || ''); });
       })(sorts[si]);
     }
     var sortSel = ui.querySelector('[data-sort-select]');
@@ -357,7 +393,13 @@
         else if (e.key === 'Tab') c.trapTab(e);
       });
       /* волна C: после fetch-свапа catalog.js — перевесить UI на новое дерево */
-      document.addEventListener('catalog:swap', init);
+      /* uxfix B: свап при открытом дравере/листе уничтожает их DOM — снять
+         блокировку скролла ДО пере-инициализации (иначе html остаётся с
+         overflow:hidden — скролл мёртв; см. каталог, тот же фикс). */
+      document.addEventListener('catalog:swap', function () {
+        document.documentElement.setAttribute('data-sheet-open', '0');
+        init();
+      });
     }
     init();
   })();

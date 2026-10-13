@@ -1,0 +1,49 @@
+{%- comment -%}
+  partials/pagination.liquid — окно страниц (uxfix A2). ЧИСТАЯ ФУНКЦИЯ:
+  ноль assign/capture — вход задаёт вызывающий шаблон (каталог/категория),
+  паршал читает и эмитит на месте. ВСЯ арифметика окна — у вызывающего
+  (фильтры внутри if/for ненадёжны между движками — паттерн витрины).
+
+  Вход:
+    pg_base      — база ссылки БЕЗ query («__SHOP_BASE__/» или
+                   «__SHOP_BASE__/category/<slug>»);
+    pg_qs        — ТЕКУЩИЙ state запроса БЕЗ page, с хвостовым «&amp;»
+                   («cat=posuda&amp;q=чашка&amp;stock=1&amp;sort=price_asc&amp;»)
+                   или пустая строка;
+    pg_page      — текущая страница (целое ≥ 1);
+    pg_pages     — всего страниц (вызывается только при pg_pages > 1);
+    pg_lo/pg_hi  — границы окна: [pg_page−2 .. pg_page+2], кламп в 1..pg_pages;
+    pg_first_gap — многоточие ПОСЛЕ «1» (окно началось с ≥ 3 страницы);
+    pg_last_gap  — многоточие ПЕРЕД последней (окно кончилось до pg_pages−1).
+
+  Окно: первая, последняя, текущая ±2, многоточия (…); «Назад»/«Вперёд»
+  всегда в разметке: неактивная сторона — span[aria-disabled] (нельзя
+  кликнуть = disabled, НЕ спрятанная). Ссылки — обычные <a> (?page=N):
+  работают в no-JS, а при JS-swap состояние (aria-current/активность
+  сторон) приезжает готовое из сервера — catalog.js заменяет
+  data-shop-main целиком (uxfix A1: aria-current честный, потому что
+  сервер его честно рендерит).
+{%- endcomment -%}
+<nav class="pagination" aria-label="Страницы">
+  {%- if pg_page > 1 -%}
+  <a class="page-link page-nav" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_page | minus: 1 }}" aria-label="Назад" rel="prev">‹</a>
+  {%- else -%}
+  <span class="page-link page-nav" aria-disabled="true" aria-label="Назад">‹</span>
+  {%- endif -%}
+  {%- if pg_lo > 1 -%}
+  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page=1" aria-label="Страница 1">1</a>
+  {%- if pg_first_gap -%}<span class="page-gap" aria-hidden="true">…</span>{%- endif -%}
+  {%- endif -%}
+  {%- for n in (pg_lo..pg_hi) -%}
+  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ n }}" {% if n == pg_page %}aria-current="true"{% endif %} aria-label="Страница {{ n }}">{{ n }}</a>
+  {%- endfor -%}
+  {%- if pg_hi < pg_pages -%}
+  {%- if pg_last_gap -%}<span class="page-gap" aria-hidden="true">…</span>{%- endif -%}
+  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_pages }}" aria-label="Страница {{ pg_pages }}">{{ pg_pages }}</a>
+  {%- endif -%}
+  {%- if pg_page < pg_pages -%}
+  <a class="page-link page-nav" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_page | plus: 1 }}" aria-label="Вперёд" rel="next">›</a>
+  {%- else -%}
+  <span class="page-link page-nav" aria-disabled="true" aria-label="Вперёд">›</span>
+  {%- endif -%}
+</nav>

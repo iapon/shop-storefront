@@ -593,6 +593,11 @@
             B2a: data-variant — текущий вариант (обновляет пикер), cart.js
             кладёт строку-пару (slug+variant, D23). {%- endcomment -%}
           <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}" data-variant="{{ pv_def.id }}" data-stock="{{ pv_def.stock }}">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
+          {%- comment -%} uxfix D2: вариантный товар, у которого НЕТ доступного
+             варианта (все нули/скрыты) — кнопка «В корзину» НЕАКТИВНА
+             (disabled + aria-disabled, muted-стиль в CSS), не спрятана:
+             подпись «Нет в наличии» остаётся тихим текстом бейджа. {%- endcomment -%}
+          <button class="btn btn-primary" type="button" disabled aria-disabled="true">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
           {%- endif -%}
         {%- elsif product.stock > 0 -%}
           {%- assign p = product -%}
@@ -610,6 +615,11 @@
         {%- else -%}
           {%- assign p = product -%}
           {% include "partials/stock-badge" %}
+          {%- comment -%} uxfix D2: нулевой сток безвариантного товара —
+            кнопка «В корзину» неактивна (disabled + aria-disabled; кликов
+            нет, никакого тоста), «Нет в наличии» — тихим текстом бейджа.
+            Серверный гард F6 (k_calc чекаута) остаётся бэкстопом. {%- endcomment -%}
+          <button class="btn btn-primary" type="button" disabled aria-disabled="true">{{ cfg.cta_add_to_cart | default: "В корзину" | escape }}</button>
         {%- endif -%}
       </div>
       <p class="cart-note" data-cart-note role="status" aria-live="polite"></p>

@@ -54,15 +54,20 @@
 {%- assign page_canon = "__SHOP_BASE__/favorites" -%}
 {%- assign page_noindex = true -%}
 {%- assign fav_products = prods.data.products -%}
+{%- comment -%} uxfix D: скрытые товары из избранного не рендерятся
+   (is_hidden выбран в shop_checkout_products; скрытие — витринное,
+   список пользователя не переписываем). {%- endcomment -%}
+{%- assign fav_visible = "" -%}
+{%- for p in fav_products -%}{%- unless p.is_hidden -%}{%- assign fav_visible = fav_visible | append: "1" -%}{%- endunless -%}{%- endfor -%}
 {%- capture content -%}
 <div class="shop-container section-y">
   <h1 class="product-title">Избранное</h1>
-  {%- if fav_products and fav_products.size > 0 -%}
+  {%- if fav_products and fav_products.size > 0 and fav_visible != "" -%}
   <div class="product-grid">
     {%- comment -%} B2c (F1): на этой странице SSR-факт честен (TTL 0) —
        card_fav включает залитые сердечки прямо в разметке. {%- endcomment -%}
     {%- assign card_fav = true -%}
-    {%- for p in fav_products -%}{% include "partials/product-card" %}{%- endfor -%}
+    {%- for p in fav_products -%}{%- unless p.is_hidden -%}{% include "partials/product-card" %}{%- endunless -%}{%- endfor -%}
     {%- assign card_fav = nil -%}
   </div>
   {%- else -%}

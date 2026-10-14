@@ -123,23 +123,25 @@
     {%- comment -%} member-контур живёт на КОРНЕ сайта (платформенная конвенция:
       /login /register /account /logout — НЕ под базой магазина). Вошедшему —
       кабинет и выход (POST-форма: logout — POST-сценарий); гостю — вход/регистрация.
-      Канон лендинга (W7): на десктопе ссылки — в строке шапки (.site-nav),
-      на мобиле — в burger-details (.nav-burger-panel, без JS); в строке
-      остаются только иконки 2.75rem — слипаться нечему. Блок ссылок
-      дублируется в обоих местах (partial не нужен: оба места в base). {%- endcomment -%}
-    <nav class="site-nav" aria-label="Навигация">
-      {%- comment -%} salewave: раздел «Распродажа» — постоянный пункт навигации
-        (товары с заданной sale_price_kopecks; сетка тем же партиалом карточек). {%- endcomment -%}
-      <a href="__SHOP_BASE__/sale">Распродажа</a>
+      headerfix (канон шапки): auth-ссылки — в ПРАВОМ кластере (.header-auth,
+      первый ребёнок .header-actions, до корзины/темы; разрядку кластера ведёт
+      его gap 0.5rem — как между иконками), слева в строке — только логотип.
+      На мобиле строка шапки — только иконки (канон W7: влезание в 320), ссылки
+      живут в burger-details (.nav-burger-panel, без JS). Блок ссылок
+      дублируется в обоих местах (partial не нужен: оба места в base).
+      Раздел «Распродажа» пунктом шапки не является — тихая ссылка в футере. {%- endcomment -%}
+    <div class="header-actions">
       {%- if member and member.id -%}
+      <div class="header-auth">
         <a href="/account">Кабинет</a>
         <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>
+      </div>
       {%- else -%}
+      <div class="header-auth">
         <a href="/login">Войти</a>
         <a href="/register">Регистрация</a>
+      </div>
       {%- endif -%}
-    </nav>
-    <div class="header-actions">
       {%- comment -%} B1 (D5): счётчик корзины читается скринридером целиком
          («Корзина: 3» — sr-only слово + число), а data-cart-count — живой
          регион: cart.js обновляет число после гидратации/правок не молча. {%- endcomment -%}
@@ -172,7 +174,9 @@
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
         </summary>
         <nav class="nav-burger-panel">
-          <a href="__SHOP_BASE__/sale">Распродажа</a>
+          {%- comment -%} headerfix: «Распродажа» из шапки (в т.ч. бургера) убрана —
+            обнаружимость раздела держит тихая ссылка в футере; чип категории
+            rasprodazha в теле страниц — контент, не затронут. {%- endcomment -%}
           {%- if member and member.id -%}
             <a href="/account">Кабинет</a>
             <form class="nav-logout" method="post" action="/logout"><button class="nav-logout-btn" type="submit">Выйти</button></form>
@@ -202,8 +206,11 @@
         {%- if cfg.address -%}<p class="footer-line">{{ cfg.address | escape }}</p>{%- endif -%}
         {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours | escape }}</p>{%- endif -%}
       </div>
-      {%- if cfg.phone or cfg.email or cfg.social_link or cfg.has_offer or cfg.has_tos -%}
+      {%- comment -%} headerfix: колонка служебных ссылок рендерится ВСЕГДА —
+        первая строка «Распродажа» (раздел /shop/sale жив, из шапки убран;
+        тихая ссылка = единственная точка обнаружимости). Остальное — по флагам. {%- endcomment -%}
       <div class="footer-col">
+        <p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/sale">Распродажа</a></p>
         {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone | escape }}</a></p>{%- endif -%}
         {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email | escape }}">{{ cfg.email | escape }}</a></p>{%- endif -%}
         {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link | escape }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" | escape }}</a></p>{%- endif -%}
@@ -214,7 +221,6 @@
         {%- if cfg.has_offer -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/offer">Оферта</a></p>{%- endif -%}
         {%- if cfg.has_tos -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/tos">Условия обслуживания</a></p>{%- endif -%}
       </div>
-      {%- endif -%}
       {%- if cfg.legal -%}
       <div class="footer-col footer-legal">{{ cfg.legal | escape }}</div>
       {%- endif -%}

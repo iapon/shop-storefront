@@ -117,12 +117,20 @@ img, svg { max-width: 100%; height: auto; display: block; }
   overflow-wrap: break-word;
 }
 .shop-logo:hover { text-decoration: none; color: var(--accent); }
-.site-nav { display: none; }
-.site-nav a, .site-nav .nav-logout-btn {
+/* headerfix: auth-ссылки правого кластера (.header-auth — первый ребёнок
+   .header-actions, до корзины/темы). Стиль тихой текстовой ссылки — канон
+   бывшего .site-nav (кнопкой НЕ выглядит, hover — bg-soft); разрядку пары
+   ведёт собственный gap, дистанцию до корзины/темы — gap .header-actions
+   (0.5rem, как между иконками). На мобиле кластер скрыт: строка шапки —
+   только иконки (канон W7, влезание в 320), ссылки живут в .nav-burger-panel
+   (свои стили, классом header-auth не помечены — каскадной встречи нет);
+   ≥48rem — кластер возвращается в строку справа. */
+.header-auth { display: none; }
+.header-auth a, .header-auth .nav-logout-btn {
   color: var(--muted); font-size: 0.92rem; font-weight: 500;
   padding: 0.4rem 0.6rem; border-radius: 6px;
 }
-.site-nav a:hover, .site-nav .nav-logout-btn:hover { color: var(--text); background: var(--bg-soft); text-decoration: none; }
+.header-auth a:hover, .header-auth .nav-logout-btn:hover { color: var(--text); background: var(--bg-soft); text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
 
 /* burger-details (канон лендинга, без JS): иконка-кнопка 2.75rem,
@@ -1282,8 +1290,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   /* канон hero лендинга; нижний отступ 2rem — воздух над тулбаром ≈ воздуху
      под ним (ритм «hero — тулбар — грид» ровный, находка владельца B1) */
   .cat-hero { padding: var(--shop-space-9) 0 var(--shop-space-7); }
-  /* шапка: ссылки выходят из burger в строку, burger прячется */
-  .site-nav { display: flex; gap: 0.25rem; }
+  /* шапка (headerfix): auth-кластер выходит в строку справа (до корзины/темы),
+     burger прячется; слева остаётся только логотип */
+  .header-auth { display: flex; gap: 0.25rem; align-items: center; }
   .nav-burger { display: none; }
   .shop-header-inner { flex-wrap: nowrap; }
   /* тулбар: десктопная форма, мобильные кнопки скрыты */

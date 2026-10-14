@@ -580,6 +580,43 @@ await smokeQtySteppers();
   }
 }
 
+/* ── Проба headerfix: канон шапки — слева логотип, справа auth-кластер ─────
+   Контракт (headerfix): «Распродажа» в шапке нет (ни в строке, ни в бургере);
+   auth-ссылки — .header-auth ПЕРЕД корзиной в .header-actions (гость: Войти/
+   Регистрация, вошедший: Кабинет/POST-Выйти); футер несёт тихую ссылку
+   /shop/sale (единственная точка обнаружимости раздела). CSS-гард: кластер
+   скрыт в базе (мобайл — строка только с иконками, ссылки в бургер-панели),
+   ≥48rem возвращается в строку; правило-возврат стоит НИЖЕ base display:none
+   (гард порядка — урок каскада .page-gap/.page-gap-m). */
+{
+  const guest = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
+  const member = await renderMockPage(engine, 'account', null, { query: { ...q } });
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8');
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const head = (h) => (/<header[^>]*>[\s\S]*?<\/header>/.exec(h)?.[0]) ?? '';
+  const gh = head(guest), mh = head(member);
+  check(!gh.includes('site-nav'), 'шапка: legacy .site-nav не вернулась');
+  check(!gh.includes('/sale'), 'шапка: ссылки «Распродажа» быть не должно (ни строка, ни бургер)');
+  check(!mh.includes('/sale'), 'member-шапка: ссылки «Распродажа» быть не должно');
+  const gAuth = /<div class="header-auth">([\s\S]*?)<\/div>\s*<a class="cart-counter"/.exec(gh);
+  check(gAuth && gAuth[1].includes('href="/login"') && gAuth[1].includes('href="/register"'), 'гость: .header-auth до корзины несёт /login и /register');
+  const mAuth = /<div class="header-auth">([\s\S]*?)<\/div>\s*<a class="cart-counter"/.exec(mh);
+  check(mAuth && mAuth[1].includes('href="/account"') && mAuth[1].includes('action="/logout"'), 'вошедший: .header-auth до корзины несёт /account и POST /logout');
+  const foot = guest.slice(guest.indexOf('<footer'));
+  check(foot.includes('href="/shop/sale"'), 'футер: тихая ссылка «Распродажа» на /shop/sale');
+  const baseRule = /(^|\n)\.header-auth\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+  check(/display:\s*none/.test(baseRule), 'CSS: .header-auth скрыт в базе (мобайл — иконки, ссылки в бургере)');
+  const mqPos = css.indexOf('.header-auth { display: flex', css.indexOf('@media (min-width: 48rem)'));
+  check(mqPos > -1 && mqPos > css.indexOf('.header-auth { display: none'), 'CSS: ≥48rem .header-auth возвращается в строку (MQ ниже базы — каскадный гард)');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL headerfix: ' + fails.join(' | '));
+  } else {
+    console.log('OK   headerfix (шапка без «Распродажи»; слева логотип; справа auth-кластер до корзины; футерная ссылка /shop/sale; CSS-гард мобайл/десктоп)');
+  }
+}
+
 /* ── Проба раскладки: футер прижат к низу на коротких страницах ──────────
    Контракт (w3-stretch): body — flex-колонка на весь экран (100dvh), main
    растёт (flex: 1 0 auto), футер — sibling сразу после main в base.liquid.
@@ -2511,4 +2548,4 @@ if (failed) {
   console.log('smoke: FAILED (см. FAIL выше)');
   process.exit(1);
 }
-console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + varphoto + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + revlogin + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');
+console.log('smoke done: render + theme-toggle + cart-replace + qty-steppers + seo-pack + xss-echo + site-config + member-menu + headerfix + layout-stretch + layout-mobile + toolbar-compact + chips-more-less + b1-chips-render + w9-f2-320 + w9-f4-counter + w9-f3-f6-lines + w9-stock-cart + b2a-picker + varphoto + b2a-cart + b2b-checkout + b2c-favorites-ssr + b2c-favorites-js + b2c-reviews + revlogin + w9-f10-fade + w9-f8-footer + w7-canon + w6-ux + partial-purity + b1-a11y + b1-dropdown');

@@ -1,8 +1,9 @@
 {%- comment -%}
-  partials/pagination.liquid — окно страниц (uxfix A2). ЧИСТАЯ ФУНКЦИЯ:
-  ноль assign/capture — вход задаёт вызывающий шаблон (каталог/категория),
-  паршал читает и эмитит на месте. ВСЯ арифметика окна — у вызывающего
-  (фильтры внутри if/for ненадёжны между движками — паттерн витрины).
+  partials/pagination.liquid — окно страниц (uxfix2 A2 — каноническая схема).
+  ЧИСТАЯ ФУНКЦИЯ: ноль assign/capture — вход задаёт вызывающий шаблон
+  (каталог/категория), паршал читает и эмитит на месте. ВСЯ арифметика
+  окна — у вызывающего (фильтры внутри if/for ненадёжны между движками —
+  паттерн витрины).
 
   Вход:
     pg_base      — база ссылки БЕЗ query («__SHOP_BASE__/» или
@@ -12,17 +13,28 @@
                    или пустая строка;
     pg_page      — текущая страница (целое ≥ 1);
     pg_pages     — всего страниц (вызывается только при pg_pages > 1);
-    pg_lo/pg_hi  — границы окна: [pg_page−2 .. pg_page+2], кламп в 1..pg_pages;
-    pg_first_gap — многоточие ПОСЛЕ «1» (окно началось с ≥ 3 страницы);
-    pg_last_gap  — многоточие ПЕРЕД последней (окно кончилось до pg_pages−1).
+    pg_lo/pg_hi  — границы ОКНА БЕЗ краёв: 2 ≤ pg_lo ≤ pg_hi ≤ pg_pages−1
+                   (края «1» и «LAST» паршал рендерит ВСЕГДА сам — LAST
+                   видна при любом c; окна касанием краёв не дублируются);
+                   пустое окно допустимо (pg_lo > pg_hi — маленький LAST);
+    pg_first_gap — многоточие ПОСЛЕ «1» (между краем и окном есть разрыв);
+    pg_last_gap  — многоточие ПЕРЕД LAST;
+    pg_x1_hi     — верх мобильной скрытой зоны СЛЕВА: окна-номера 2..x1_hi
+                   получают .page-x (на мобиле прячутся, ≥48rem видны);
+    pg_x2_lo/pg_x2_hi — то же СПРАВА: x2_lo..pg_pages−1;
+    pg_mgap_first/pg_mgap_last — многоточия МОБИЛЬНОГО окна (разрывы между
+                   краями и c±1): .page-gap-m — видны <48rem, на десктопе
+                   десктопные .page-gap.
 
-  Окно: первая, последняя, текущая ±2, многоточия (…); «Назад»/«Вперёд»
-  всегда в разметке: неактивная сторона — span[aria-disabled] (нельзя
-  кликнуть = disabled, НЕ спрятанная). Ссылки — обычные <a> (?page=N):
-  работают в no-JS, а при JS-swap состояние (aria-current/активность
-  сторон) приезжает готовое из сервера — catalog.js заменяет
-  data-shop-main целиком (uxfix A1: aria-current честный, потому что
-  сервер его честно рендерит).
+  Каноническое окно (у вызывающего): head c ≤ 4 → 1..5; tail c ≥ LAST−3 →
+  LAST−4..LAST; иначе c−1..c+1. Мобильное окно уже: c−1 c c+1 + края —
+  влезает в 320px одной строкой (≤9 клеток × 1.75rem, CSS).
+
+  «Назад»/«Вперёд» всегда в разметке: неактивная сторона —
+  span[aria-disabled] (нельзя кликнуть = disabled, НЕ спрятанная).
+  Ссылки — обычные <a> (?page=N): работают в no-JS, а при JS-swap
+  состояние (aria-current/активность сторон) приезжает готовое из
+  сервера — catalog.js заменяет data-shop-main целиком (uxfix A1).
 {%- endcomment -%}
 <nav class="pagination" aria-label="Страницы">
   {%- if pg_page > 1 -%}
@@ -30,17 +42,17 @@
   {%- else -%}
   <span class="page-link page-nav" aria-disabled="true" aria-label="Назад">‹</span>
   {%- endif -%}
-  {%- if pg_lo > 1 -%}
-  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page=1" aria-label="Страница 1">1</a>
+  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page=1" aria-label="Страница 1" {% if pg_page == 1 %}aria-current="true"{% endif %}>1</a>
   {%- if pg_first_gap -%}<span class="page-gap" aria-hidden="true">…</span>{%- endif -%}
-  {%- endif -%}
+  {%- if pg_mgap_first -%}<span class="page-gap page-gap-m" aria-hidden="true">…</span>{%- endif -%}
+  {%- if pg_lo <= pg_hi -%}
   {%- for n in (pg_lo..pg_hi) -%}
-  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ n }}" {% if n == pg_page %}aria-current="true"{% endif %} aria-label="Страница {{ n }}">{{ n }}</a>
+  <a class="page-link{% if n <= pg_x1_hi %} page-x{% endif %}{% if n >= pg_x2_lo %}{% if n <= pg_x2_hi %} page-x{% endif %}{% endif %}" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ n }}" {% if n == pg_page %}aria-current="true"{% endif %} aria-label="Страница {{ n }}">{{ n }}</a>
   {%- endfor -%}
-  {%- if pg_hi < pg_pages -%}
-  {%- if pg_last_gap -%}<span class="page-gap" aria-hidden="true">…</span>{%- endif -%}
-  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_pages }}" aria-label="Страница {{ pg_pages }}">{{ pg_pages }}</a>
   {%- endif -%}
+  {%- if pg_last_gap -%}<span class="page-gap" aria-hidden="true">…</span>{%- endif -%}
+  {%- if pg_mgap_last -%}<span class="page-gap page-gap-m" aria-hidden="true">…</span>{%- endif -%}
+  <a class="page-link" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_pages }}" aria-label="Страница {{ pg_pages }}" {% if pg_page == pg_pages %}aria-current="true"{% endif %}>{{ pg_pages }}</a>
   {%- if pg_page < pg_pages -%}
   <a class="page-link page-nav" href="{{ pg_base }}{% if pg_qs %}?{% endif %}{{ pg_qs }}page={{ pg_page | plus: 1 }}" aria-label="Вперёд" rel="next">›</a>
   {%- else -%}

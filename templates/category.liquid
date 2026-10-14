@@ -192,20 +192,49 @@
     {%- assign page_no = query.page | at_least: 1 -%}
     {%- unless page_no -%}{%- assign page_no = 1 -%}{%- endunless -%}
     {%- if pages > 1 -%}
+      {%- comment -%} uxfix2 A2: каноническое окно — общепринятая схема
+         (head c ≤ 4 → 1..5; tail c ≥ LAST−3 → LAST−4..LAST; иначе c±1;
+         края «1»/«LAST» у паршала, LAST видна всегда, разрывы —
+         многоточиями; мобильное окно уже — c±1 + края, .page-x/.page-gap-m).
+         Контракт partial — catalogs/catalog.liquid, вся арифметика здесь. {%- endcomment -%}
       {%- capture pg_qs -%}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if stock_on %}stock=1&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{%- endcapture -%}
       {%- assign pg_base = "__SHOP_BASE__/category/" | append: category.slug -%}
       {%- assign pg_page = page_no -%}
       {%- assign pg_pages = pages -%}
-      {%- assign pg_lo = page_no | minus: 2 | at_least: 1 -%}
-      {%- assign pg_hi = page_no | plus: 2 | at_most: pages -%}
+      {%- assign pg_tail_from = pages | minus: 3 -%}
+      {%- if page_no <= 4 -%}
+        {%- assign pg_canon_lo = 1 -%}
+        {%- assign pg_canon_hi = 5 -%}
+      {%- elsif page_no >= pg_tail_from -%}
+        {%- assign pg_canon_lo = pages | minus: 4 -%}
+        {%- assign pg_canon_hi = pages -%}
+      {%- else -%}
+        {%- assign pg_canon_lo = page_no | minus: 1 -%}
+        {%- assign pg_canon_hi = page_no | plus: 1 -%}
+      {%- endif -%}
+      {%- assign pg_lm1 = pages | minus: 1 -%}
+      {%- assign pg_lo = pg_canon_lo | at_least: 2 -%}
+      {%- assign pg_hi = pg_canon_hi | at_most: pg_lm1 -%}
       {%- assign pg_first_gap = false -%}
       {%- if pg_lo > 2 -%}{%- assign pg_first_gap = true -%}{%- endif -%}
-      {%- assign pg_last_m1 = pages | minus: 1 -%}
       {%- assign pg_last_gap = false -%}
-      {%- if pg_last_m1 > pg_hi -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+      {%- if pg_hi < pg_lm1 -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+      {%- assign pg_mlo = page_no | minus: 1 | at_least: 1 -%}
+      {%- assign pg_mhi = page_no | plus: 1 | at_most: pages -%}
+      {%- assign pg_x1_hi = pg_mlo | minus: 1 -%}
+      {%- assign pg_x2_lo = pg_mhi | plus: 1 -%}
+      {%- assign pg_x2_hi = pg_lm1 -%}
+      {%- assign pg_mfirst_vis = pg_mlo | at_least: pg_lo -%}
+      {%- assign pg_mgap_first = false -%}
+      {%- if pg_mfirst_vis > 2 -%}{%- assign pg_mgap_first = true -%}{%- endif -%}
+      {%- assign pg_mlast_vis = pg_mhi | at_most: pg_hi -%}
+      {%- assign pg_mgap_last = false -%}
+      {%- if pg_mlast_vis < pg_lm1 -%}{%- assign pg_mgap_last = true -%}{%- endif -%}
       {% include "partials/pagination" %}
       {%- assign pg_base = nil -%}{%- assign pg_page = nil -%}{%- assign pg_pages = nil -%}{%- assign pg_qs = nil -%}
-      {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_last_m1 = nil -%}
+      {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_lm1 = nil -%}
+      {%- assign pg_mlo = nil -%}{%- assign pg_mhi = nil -%}{%- assign pg_x1_hi = nil -%}{%- assign pg_x2_lo = nil -%}{%- assign pg_x2_hi = nil -%}
+      {%- assign pg_mgap_first = nil -%}{%- assign pg_mgap_last = nil -%}{%- assign pg_tail_from = nil -%}{%- assign pg_canon_lo = nil -%}{%- assign pg_canon_hi = nil -%}{%- assign pg_mfirst_vis = nil -%}{%- assign pg_mlast_vis = nil -%}
     {%- endif -%}
     {%- comment -%} №15: полное SEO-описание — под гридом {%- endcomment -%}
     {%- if category.description -%}

@@ -152,9 +152,10 @@
     query-эхо — ТОЛЬКО через escape/url_encode: страницы с ?q= и ?cat=
     кэшируются (TTL 300), reflected XSS был бы кэшируемым (B-1). {%- endcomment -%}
   {%- comment -%} B1 (D2): сколько чипов видно до «Ещё N» — cfg.filters_visible
-    (владелец правит в «Настройках магазина»), пусто/мусор → 5. {%- endcomment -%}
+    (владелец правит в «Настройках магазина»), пусто/мусор → 6 (uxfix2 B3:
+    канон ряда — Все + В наличии + 6 категорий + «Ещё N»). {%- endcomment -%}
   {%- assign vis_n = cfg.filters_visible | plus: 0 -%}
-  {%- if vis_n < 1 -%}{%- assign vis_n = 5 -%}{%- endif -%}
+  {%- if vis_n < 1 -%}{%- assign vis_n = 6 -%}{%- endif -%}
   <form class="cat-tools" method="get" action="__SHOP_BASE__/" data-cat-tools data-chips-open="0">
     {%- if current_cat -%}<input type="hidden" name="cat" value="{{ current_cat | escape }}">{%- endif -%}
     {%- if stock_on -%}<input type="hidden" name="stock" value="1">{%- endif -%}
@@ -321,23 +322,58 @@
   {%- assign page_no = query.page | at_least: 1 -%}
   {%- unless page_no -%}{%- assign page_no = 1 -%}{%- endunless -%}
   {%- if pages > 1 -%}
-    {%- comment -%} uxfix A2: окно страниц (первая/последняя/текущая ±2/
-       многоточия, неактивная сторона prev/next — disabled, не спрятана)
-       — partials/pagination; state запроса собирается один раз. {%- endcomment -%}
+    {%- comment -%} uxfix2 A2: каноническое окно страниц — общепринятая схема:
+       head (c ≤ 4) → 1..5; tail (c ≥ LAST−3) → LAST−4..LAST; иначе c±1.
+       Края «1»/«LAST» рендерит паршал ВСЕГДА (partial-контракт: окно без
+       краёв, 2..LAST−1), LAST видна при любом c; многоточия — по обе
+       стороны разрыва. Рядом — мобильные границы (c±1 + края): номера
+       окна вне c±1 несут .page-x (CSS прячет <48rem), разрывы для мобилы —
+       .page-gap-m. partial — чистая функция, вся арифметика здесь. {%- endcomment -%}
     {%- capture pg_qs -%}{% if current_cat %}cat={{ current_cat | escape }}&amp;{% endif %}{% if current_q %}q={{ q_enc }}&amp;{% endif %}{% if stock_on %}stock=1&amp;{% endif %}{% if sort_suffix %}sort={{ sort_suffix }}&amp;{% endif %}{%- endcapture -%}
     {%- assign pg_base = "__SHOP_BASE__/" -%}
     {%- assign pg_page = page_no -%}
     {%- assign pg_pages = pages -%}
-    {%- assign pg_lo = page_no | minus: 2 | at_least: 1 -%}
-    {%- assign pg_hi = page_no | plus: 2 | at_most: pages -%}
+    {%- assign pg_tail_from = pages | minus: 3 -%}
+    {%- if page_no <= 4 -%}
+      {%- assign pg_canon_lo = 1 -%}
+      {%- assign pg_canon_hi = 5 -%}
+    {%- elsif page_no >= pg_tail_from -%}
+      {%- assign pg_canon_lo = pages | minus: 4 -%}
+      {%- assign pg_canon_hi = pages -%}
+    {%- else -%}
+      {%- assign pg_canon_lo = page_no | minus: 1 -%}
+      {%- assign pg_canon_hi = page_no | plus: 1 -%}
+    {%- endif -%}
+    {%- comment -%} кламп окна в 2..LAST−1 (края — у паршала), пустое окно
+       допустимо (маленький LAST). {%- endcomment -%}
+    {%- assign pg_lm1 = pages | minus: 1 -%}
+    {%- assign pg_lo = pg_canon_lo | at_least: 2 -%}
+    {%- assign pg_hi = pg_canon_hi | at_most: pg_lm1 -%}
     {%- assign pg_first_gap = false -%}
     {%- if pg_lo > 2 -%}{%- assign pg_first_gap = true -%}{%- endif -%}
-    {%- assign pg_last_m1 = pages | minus: 1 -%}
     {%- assign pg_last_gap = false -%}
-    {%- if pg_last_m1 > pg_hi -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+    {%- if pg_hi < pg_lm1 -%}{%- assign pg_last_gap = true -%}{%- endif -%}
+    {%- comment -%} мобильное окно: c−1..c+1 (+ края у паршала); .page-x —
+       номера окна между краем и мобильным окном; .page-gap-m — разрывы
+       мобилы: есть, если между краем и ПЕРВЫМ/ПОСЛЕДНИМ ВИДИМЫМ на мобиле
+       номером (max/min из мобильной и десктопной границ окна) спрятаны
+       страницы. {%- endcomment -%}
+    {%- assign pg_mlo = page_no | minus: 1 | at_least: 1 -%}
+    {%- assign pg_mhi = page_no | plus: 1 | at_most: pages -%}
+    {%- assign pg_x1_hi = pg_mlo | minus: 1 -%}
+    {%- assign pg_x2_lo = pg_mhi | plus: 1 -%}
+    {%- assign pg_x2_hi = pg_lm1 -%}
+    {%- assign pg_mfirst_vis = pg_mlo | at_least: pg_lo -%}
+    {%- assign pg_mgap_first = false -%}
+    {%- if pg_mfirst_vis > 2 -%}{%- assign pg_mgap_first = true -%}{%- endif -%}
+    {%- assign pg_mlast_vis = pg_mhi | at_most: pg_hi -%}
+    {%- assign pg_mgap_last = false -%}
+    {%- if pg_mlast_vis < pg_lm1 -%}{%- assign pg_mgap_last = true -%}{%- endif -%}
     {% include "partials/pagination" %}
     {%- assign pg_base = nil -%}{%- assign pg_page = nil -%}{%- assign pg_pages = nil -%}{%- assign pg_qs = nil -%}
-    {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_last_m1 = nil -%}
+    {%- assign pg_lo = nil -%}{%- assign pg_hi = nil -%}{%- assign pg_first_gap = nil -%}{%- assign pg_last_gap = nil -%}{%- assign pg_lm1 = nil -%}
+    {%- assign pg_mlo = nil -%}{%- assign pg_mhi = nil -%}{%- assign pg_x1_hi = nil -%}{%- assign pg_x2_lo = nil -%}{%- assign pg_x2_hi = nil -%}
+    {%- assign pg_mgap_first = nil -%}{%- assign pg_mgap_last = nil -%}{%- assign pg_tail_from = nil -%}{%- assign pg_canon_lo = nil -%}{%- assign pg_canon_hi = nil -%}{%- assign pg_mfirst_vis = nil -%}{%- assign pg_mlast_vis = nil -%}
   {%- endif -%}
 
   {%- comment -%} №15: полное SEO-описание категории — под гридом {%- endcomment -%}

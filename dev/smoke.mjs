@@ -738,14 +738,18 @@ const mediaBlock = (cssSrc, header) => {
   }
 }
 
-/* ── Проба «чипы: перенос без обрезки + Ещё N» (B1 D2, разнос владельца) ──
-   МОБАЙЛ: чипы ПЕРЕНОСЯТСЯ строками (flex-wrap), «Ещё N» скрыт; обрезка
-   чипа пополам ЗАПРЕЩЕНА — чип не сжимается (flex: 0 0 auto) и не
-   переносит текст (min-width: max-content). ДЕСКТОП (≥48rem): чипы в
-   строке тулбара (мокап В3), свёрнуто — первые N (лишние .chip-extra
-   спрятаны, кнопка .chip-more видна), раскрыто ([data-chips-open="1"]
-   на форме) — .chip-extra возвращаются, ряд переносится строками;
-   активная категория всегда видима (.chip-extra[data-pinned="1"]).
+/* ── Проба «чипы: одна скролл-строка на мобиле + Ещё N» (B1 D2 → uxfix2 B) ──
+   МОБАЙЛ: ряд чипов — ОДНА горризонтальная скролл-строка БЕЗ переноса
+   (nowrap + overflow-x: auto); обрезка чипа пополам ЗАПРЕЩЕНА — чип не
+   сжимается (flex: 0 0 auto) и не переносит текст (min-width:
+   max-content). ДЕСКТОП (≥48rem): чипы в строке тулбара (мокап В3),
+   свёрнуто — первые N (лишние .chip-extra спрятаны, кнопка .chip-more
+   видна), раскрыто ([data-chips-open="1"] на форме) — .chip-extra
+   возвращаются, ряд переносится строками; активная категория всегда
+   видима (.chip-extra[data-pinned="1"]).
+   uxfix2 B: .chip-extra-m на десктопе снимает мобильный лимит ТОЛЬКО у
+   чипов вне десктопного (:not(.chip-extra)) — прежний плоский селектор
+   каскадно «воскрешал» чипы с обоими классами и ломал filters_visible.
    DOM-поведение (клик/Esc) проверяет живая браузерная проба B1;
    здесь — контракт по исходникам CSS + разметка (data-chips-more,
    data-pinned, chip-extra в рендере при N < числа категорий). */
@@ -756,7 +760,9 @@ const mediaBlock = (cssSrc, header) => {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
   const rowRule = /\.chip-row\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
-  check(/flex-wrap:\s*wrap/.test(rowRule), 'chip-row: мобайл не переносит чипы строками (нет flex-wrap: wrap)');
+  check(/flex-wrap:\s*nowrap/.test(rowRule), 'chip-row: мобайл не одна скролл-строка (нет flex-wrap: nowrap)');
+  check(/overflow-x:\s*auto/.test(rowRule), 'chip-row: мобайл без горризонтального скролла (нет overflow-x: auto)');
+  check(/\.chip-row::-webkit-scrollbar\s*\{[^}]*display:\s*none/.test(css), 'chip-row: скроллбар мобайл-ряда не спрятан');
   check(/\.chip\s*\{[^}]*flex:\s*0 0 auto/.test(css), 'чип сжимается внутри строки (должен быть flex: 0 0 auto)');
   check(/\.chip\s*\{[^}]*min-width:\s*max-content/.test(css), 'чип без min-width: max-content — текст может переноситься/обрезаться внутри пилюли');
   check(!/text-overflow:\s*ellipsis[^}]*\}\s*\.chip|\.chip\s*\{[^}]*text-overflow:\s*ellipsis/.test(css), 'на чипе есть ellipsis — обрезка названий категорий запрещена (D2)');
@@ -769,7 +775,7 @@ const mediaBlock = (cssSrc, header) => {
   const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
   check(/\.chip-more\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: кнопка «Ещё N» не показана');
   check(/\.chip-more-m\s*\{[^}]*display:\s*none/.test(block48), '≥48rem: мобильная кнопка «Ещё категории (K)» не скрыта');
-  check(/\.chip-extra-m\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: мобильный лимит не снят (chip-extra-m должны быть видны)');
+  check(/\.chip-extra-m:not\(\.chip-extra\)\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: мобильный лимит снят не точечно (нужен .chip-extra-m:not(.chip-extra)) — плоский селектор воскрешал спрятанные .chip-extra');
   check(/\.chip-extra\s*\{[^}]*display:\s*none/.test(block48), '≥48rem: лишние чипы (.chip-extra) не спрятаны в свёрнутом состоянии');
   check(/\.chip-extra\[data-pinned="1"\]\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: активная категория за пределами первых N не закреплена (data-pinned)');
   check(/\.cat-tools\[data-chips-open="1"\]\s*\.chip-row\s*\{[^}]*flex-wrap:\s*wrap/.test(block48), '≥48rem: раскрытие «Ещё N» не переносит чипы строками');
@@ -786,25 +792,25 @@ const mediaBlock = (cssSrc, header) => {
     failed++;
     console.log('FAIL chips-more-less: ' + fails.join(' | '));
   } else {
-    console.log('OK   chips-more-less (десктоп: первые N + Ещё N + pinned; мобайл: первые 3 слота + «Ещё категории (K)» + pinned-m; перенос без обрезки)');
+    console.log('OK   chips-more-less (десктоп: первые N + Ещё N + pinned; мобайл: 3 слота + «Ещё категории (K)» одной скролл-строкой; классы лимитов независимы)');
   }
 }
 
 /* ── Проба B1: чипы «первые N + Ещё N» в РЕНДЕРЕ (моки) ───────────────
    В моке каталога 8 категорий (5 корней + 1 потомок + 2 корня… ровно:
    ceramics/textile/stationery/plates(потомок)/decor/podarki/ny-gifts/
-   arhiv) → 8 чипов. filters_visible по умолчанию 5 → первые 5 чипов
-   видимы, 3 уезжают в .chip-extra, кнопка «Ещё 3»; переопределение
-   cfg.filters_visible=2 → «Ещё 6»; активная категория за пределами N
-   несёт data-pinned="1" и НЕ прячется. */
+   arhiv) → 8 чипов. filters_visible по умолчанию 6 (uxfix2 B3) → первые
+   6 чипов видимы, 2 уезжают в .chip-extra, кнопка «Ещё 2»;
+   переопределение cfg.filters_visible=2 → «Ещё 6»; активная категория
+   за пределами N несёт data-pinned="1" и НЕ прячется. */
 {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
   const catHtml = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
-  check(catHtml.includes('data-chips-more'), 'рендер: кнопка «Ещё N» не появилась при 8 категориях и N=5');
-  check(/Ещё<\/span> <span class="chip-count">3</.test(catHtml), 'рендер: счётчик «Ещё» не равен 3 при 8 категориях и N=5');
+  check(catHtml.includes('data-chips-more'), 'рендер: кнопка «Ещё N» не появилась при 8 категориях и N=6');
+  check(/Ещё<\/span> <span class="chip-count">2</.test(catHtml), 'рендер: счётчик «Ещё» не равен 2 при 8 категориях и N=6');
   const extraCount = (catHtml.match(/chip-extra(?![\w-])/g) || []).length;
-  check(extraCount === 3, `рендер: спрятанных чипов .chip-extra ${extraCount} вместо 3`);
+  check(extraCount === 2, `рендер: спрятанных чипов .chip-extra ${extraCount} вместо 2`);
   check(catHtml.includes('data-pinned="1"') === false, 'рендер: data-pinned появился без активной категории за пределами N');
   check(/Ещё категории \(6\)/.test(catHtml), 'рендер: мобильная кнопка «Ещё категории (6)» не посчиталась (8 категорий − 2, мандат: 3 чипа включая «Все»)');
   check((catHtml.match(/chip-extra-m(?![\w-])/g) || []).length === 6, 'рендер: мобильных скрытых чипов .chip-extra-m не 6');
@@ -821,12 +827,78 @@ const mediaBlock = (cssSrc, header) => {
     overrides: undefined,
     g_site: { data: { cfg: [{ name: 'Тест', filters_visible: 'abc' }] } },
   });
-  check(/chip-count">3</.test(empty), 'рендер: мусор в filters_visible не дал дефолт N=5');
+  check(/chip-count">2</.test(empty), 'рендер: мусор в filters_visible не дал дефолт N=6');
   if (fails.length) {
     failed++;
     console.log('FAIL b1-chips-render: ' + fails.join(' | '));
   } else {
-    console.log('OK   b1-chips-render (N=5: Ещё 3 / .chip-extra ×3; filters_visible=2 → Ещё 6; мусор → дефолт 5; pinned-активная)');
+    console.log('OK   b1-chips-render (N=6: Ещё 2 / .chip-extra ×2; filters_visible=2 → Ещё 6; мусор → дефолт 6; pinned-активная)');
+  }
+}
+
+/* ── Проба uxfix2 A2: каноническое окно пагинации в РЕНДЕРЕ ──────────
+   Общепринятая схема: head (c ≤ 4) → «1 2 3 4 5 … LAST»; tail (c ≥
+   LAST−3) → «1 … LAST−4 LAST−3 LAST−2 LAST−1 LAST»; иначе «1 … c−1 c
+   c+1 … LAST». LAST видна всегда (ни при каком c нет «1 … 4 5 6 7 8»
+   без явной последней), края не дублируются окном. Мобильные маркеры:
+   .page-x на номерах окна вне c±1, .page-gap-m на разрывах мобилы.
+   count переопределяется моком на 96 → 8 страниц по 12. */
+{
+  const fails = [];
+  const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const bigCount = { count: { data: { productsCount: 96 } } };
+  const windowOf = async (page) => {
+    const html = await renderMockPage(engine, 'catalog', null, {
+      query: { ...q, page: String(page) }, ...bigCount,
+    });
+    const nav = /<nav class="pagination"[^>]*>[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+    const items = [...nav.matchAll(/<(?:a|span)\b([^>]*)>([^<]*)<\/(?:a|span)>/g)]
+      .map(([, attrs, txt]) => ({ attrs, txt: txt.trim() }));
+    return { nav, items };
+  };
+  // десктопная форма: мобильные разрывы (.page-gap-m) в разметке есть,
+  // но прячет/показывает их CSS — в форму окна они не входят
+  const shape = (items) => items
+    .filter((i) => !i.attrs.includes('page-gap-m'))
+    .map((i) => (i.attrs.includes('aria-current') ? `[${i.txt}]` : i.txt))
+    .join(' ');
+  const cases = [
+    { page: 1, want: '‹ [1] 2 3 4 5 … 8 ›' },
+    { page: 2, want: '‹ 1 [2] 3 4 5 … 8 ›' },
+    { page: 4, want: '‹ 1 2 3 [4] 5 … 8 ›' },
+    { page: 5, want: '‹ 1 … 4 [5] 6 7 8 ›' },
+    { page: 6, want: '‹ 1 … 4 5 [6] 7 8 ›' },
+    { page: 8, want: '‹ 1 … 4 5 6 7 [8] ›' },
+  ];
+  for (const c of cases) {
+    const { items } = await windowOf(c.page);
+    check(shape(items) === c.want, `окно стр. ${c.page}: «${shape(items)}» вместо «${c.want}»`);
+  }
+  // aria-current — ровно один; LAST-край есть на всех страницах
+  for (const p of [1, 2, 4, 5, 6, 8]) {
+    const { items } = await windowOf(p);
+    check(items.filter((i) => i.attrs.includes('aria-current')).length === 1, `стр. ${p}: aria-current не единственный`);
+    check(items.some((i) => i.txt === '8' && !i.attrs.includes('page-nav')), `стр. ${p}: край LAST (8) не отрендерен`);
+  }
+  // мобильные маркеры: на стр. 8 спрятаны 4-6 (окно мобилы = 7 8 + края,
+  // многоточие слева); на стр. 6 спрятана 4 (окно мобилы = 5 6 7 + края);
+  // разрыв мобилы на десктопе не показывается (CSS), в разметке есть
+  const { items: tail } = await windowOf(8);
+  const hidden = tail.filter((i) => i.attrs.includes('page-x')).map((i) => i.txt);
+  check(hidden.join(',') === '4,5,6', `стр. 8: .page-x ${hidden.join(',')} вместо 4,5,6`);
+  check(tail.filter((i) => i.attrs.includes('page-gap-m')).length === 1, 'стр. 8: мобильное многоточие .page-gap-m не слева одно');
+  const { items: mid } = await windowOf(6);
+  const hiddenMid = mid.filter((i) => i.attrs.includes('page-x')).map((i) => i.txt);
+  check(hiddenMid.join(',') === '4', `стр. 6: .page-x ${hiddenMid.join(',')} вместо 4`);
+  check(mid.filter((i) => i.attrs.includes('page-gap-m')).length === 1, 'стр. 6: мобильный разрыв не слева один');
+  const { items: head } = await windowOf(1);
+  check(head.filter((i) => i.attrs.includes('page-gap-m')).length === 1, 'стр. 1: мобильный разрыв не справа один');
+  check(head.filter((i) => i.attrs.includes('page-x')).map((i) => i.txt).join(',') === '3,4,5', 'стр. 1: .page-x не 3,4,5');
+  if (fails.length) {
+    failed++;
+    console.log('FAIL pagination-window: ' + fails.join(' | '));
+  } else {
+    console.log('OK   pagination-window (канон: head 1..5+LAST / tail 1…LAST−4..LAST / middle c±1; LAST всегда; page-x/page-gap-m на мобиле)');
   }
 }
 

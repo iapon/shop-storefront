@@ -846,6 +846,9 @@ const mediaBlock = (cssSrc, header) => {
 {
   const fails = [];
   const check = (cond, msg) => { if (!cond) fails.push(msg); };
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'static', 'css', 'shop.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const block48 = mediaBlock(css, '@media \\(min-width: 48rem\\)');
   const bigCount = { count: { data: { productsCount: 96 } } };
   const windowOf = async (page) => {
     const html = await renderMockPage(engine, 'catalog', null, {
@@ -883,6 +886,16 @@ const mediaBlock = (cssSrc, header) => {
   // мобильные маркеры: на стр. 8 спрятаны 4-6 (окно мобилы = 7 8 + края,
   // многоточие слева); на стр. 6 спрятана 4 (окно мобилы = 5 6 7 + края);
   // разрыв мобилы на десктопе не показывается (CSS), в разметке есть
+  // CSS-каскад: .page-gap { display:none } матчает элемент с двумя
+  // классами — правило .page-gap-m (inline-flex) обязано стоять НИЖЕ,
+  // иначе мобильное «…» пропадает и «1 5 [6]» слипается (uxfix2 A3).
+  const gapNoneIdx = css.indexOf('.page-gap { display: none; }');
+  const gapMIdx = css.search(/\.page-gap-m\s*\{[^}]*display:\s*inline-flex/);
+  check(gapNoneIdx > -1 && gapMIdx > gapNoneIdx, 'каскад многоточий: .page-gap-m (inline-flex) не ниже .page-gap { display: none } — мобильное «…» мертво');
+  const b48gapMNone = /\.page-gap-m\s*\{[^}]*display:\s*none/.test(block48);
+  check(b48gapMNone, '≥48rem: мобильное многоточие не спрятано');
+  check(/\.page-gap\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: десктопное многоточие не показано');
+  check(/\.page-x\s*\{[^}]*display:\s*inline-flex/.test(block48), '≥48rem: промежуточные номера окна не возвращены');
   const { items: tail } = await windowOf(8);
   const hidden = tail.filter((i) => i.attrs.includes('page-x')).map((i) => i.txt);
   check(hidden.join(',') === '4,5,6', `стр. 8: .page-x ${hidden.join(',')} вместо 4,5,6`);

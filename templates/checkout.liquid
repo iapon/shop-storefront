@@ -194,6 +194,7 @@
             <span class="delivery-option-main">
               <span class="delivery-option-title">{{ m.title }}</span>
               {%- if m.description -%}<span class="delivery-option-desc">{{ m.description }}</span>{%- endif -%}
+              {%- if m.price_kopecks == 0 and addr.data.addresses.first -%}<span class="delivery-option-desc">Адрес: {{ addr.data.addresses.first.city }}, {{ addr.data.addresses.first.address }} ({{ addr.data.addresses.first.hours }})</span>{%- endif -%}
             </span>
             <span class="delivery-option-price">{% if m.price_kopecks > 0 %}{{ m.price_kopecks | times: 0.01 | money }} {{ cur_sym }}{% else %}бесплатно{% endif %}</span>
           </label>

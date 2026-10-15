@@ -1,0 +1,80 @@
+{%- comment -%}
+  contacts.liquid — страница «Контакты» магазина: адреса из типа «Адреса»
+  (shop_addresses в потоке страницы, rk addr) + контакты из «Настроек магазина»
+  (contact_phone/contact_email/work_hours — поля опциональны, пустое не рендерится).
+  Входит в базовую установку магазина: тип address + сид самовывоза ссылаются сюда.
+{%- endcomment -%}
+{%- comment -%}
+  БУТСТРАП НАСТРОЕК (W8) — ИНЛАЙН в каждом entry-шаблоне.
+  Принцип витрины: данные текут только ВНИЗ; partial = чистая функция
+  входов (движок include не поднимает присваивания включателю —
+  osteele/liquid). Каноническая копия блока —
+  dev/site-config-bootstrap.liquid; смок проверяет байт-равенство во всех
+  entry-шаблонах. НЕ включать через {% include %} — присваивания не
+  доедут до включателя.
+
+  Две ветки адресации:
+    render-страницы: g_site.data.cfg (hoist result_key g_site)
+    письма/API:      results.g_site.cfg (сырой tplCtx flow)
+  Владельцу: поля правятся в админке (Контент → «Настройки магазина» —
+  одна запись с именованными полями; словарь строк-подстановок витрины
+  ликвидирован в W8).
+  Пустое поле = вшитый фоллбек шаблона: cfg-поля читаются на месте с
+  default-фоллбеком (cfg.cta_add_to_cart → «В корзину»), интерфейсные
+  подписи без cfg-поля — константы шаблона; умеющие правят в шаблонах.
+{%- endcomment -%}
+{%- assign cfg = g_site.data.cfg | first -%}
+{%- if cfg == blank -%}{%- assign cfg = results.g_site.cfg | first -%}{%- endif -%}
+{%- assign shop_name = cfg.name | default: "Магазин" -%}
+{%- assign ph_n = "{{n}}" -%}{%- assign ph_amount = "{{amount}}" -%}{%- assign ph_email = "{{email}}" -%}
+{%- comment -%} canon_base — канонический базовый URL (D26): site_url из
+  настроек (нормализация домена, scheme константой — витрина за TLS),
+  фоллбек — живой host запроса (first-class переменная страничных шаблонов;
+  в письмах host нет — там site_url из results.g_site.cfg напрямую). {%- endcomment -%}
+{%- assign canon_base = cfg.site_url | strip -%}
+{%- if canon_base == blank -%}
+  {%- assign canon_base = "https://" | append: host -%}
+{%- elsif canon_base contains "://" -%}
+  {%- assign cb_segs = canon_base | split: "//" -%}
+  {%- assign cb_host = cb_segs[1] | split: "/" | first -%}
+  {%- assign canon_base = cb_segs[0] | append: "//" | append: cb_host -%}
+{%- else -%}
+  {%- assign canon_base = "https://" | append: canon_base -%}
+{%- endif -%}
+{%- comment -%} v1.7.7: символ валюты магазина (cfg.currency, пусто ≡ RUB) —
+  capture+include партиала-карты (assigns include не поднимает). {%- endcomment -%}
+{%- capture cur_sym %}{% include "partials/currency" %}{%- endcapture -%}
+
+{%- assign page_title = "Контакты" -%}
+{%- assign page_canon = "/contacts" -%}
+{%- assign addrs = addr.data.addresses -%}
+{%- capture content -%}
+<div class="shop-container section-y">
+  <h1 class="product-title">Контакты</h1>
+  <div class="shop-prose">
+    {%- if cfg.contact_phone -%}<p>Телефон: <strong>{{ cfg.contact_phone }}</strong></p>{%- endif -%}
+    {%- if cfg.contact_email -%}<p>Email: <a href="mailto:{{ cfg.contact_email }}">{{ cfg.contact_email }}</a></p>{%- endif -%}
+    {%- if cfg.work_hours -%}<p>{{ cfg.work_hours }}</p>{%- endif -%}
+  </div>
+  <h2 class="rel-heading">Адреса самовывоза</h2>
+  {%- if addrs and addrs.size > 0 -%}
+  <div class="delivery-list">
+    {%- for a in addrs -%}
+    <div class="delivery-option">
+      <span class="delivery-option-main">
+        <span class="delivery-option-title">{% if a.title %}{{ a.title }}{% elsif a.city %}{{ a.city }}{% else %}Самовывоз{% endif %}</span>
+        {%- if a.city and a.title -%}<span class="delivery-option-desc">{{ a.city }}</span>{%- endif -%}
+        {%- if a.address -%}<span class="delivery-option-desc">{{ a.address }}</span>{%- endif -%}
+        {%- if a.hours -%}<span class="delivery-option-desc">{{ a.hours }}</span>{%- endif -%}
+        {%- if a.phone -%}<span class="delivery-option-desc">{{ a.phone }}</span>{%- endif -%}
+      </span>
+    </div>
+    {%- endfor -%}
+  </div>
+  {%- else -%}
+  <p class="field-hint">Адреса появятся здесь — добавьте их в Контент → «Адреса».</p>
+  {%- endif -%}
+  <p><a class="btn btn-secondary" href="__SHOP_BASE__/">В каталог</a></p>
+</div>
+{%- endcapture -%}
+{% include "base" %}

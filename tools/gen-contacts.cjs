@@ -22,7 +22,7 @@ const contacts = `{%- comment -%}
 ${bootstrap}
 
 {%- assign page_title = "Контакты" -%}
-{%- assign page_canon = "/contacts" -%}
+{%- assign page_canon = "__SHOP_BASE__/contacts" -%}
 {%- assign addrs = addr.data.addresses -%}
 {%- capture content -%}
 <div class="shop-container section-y">

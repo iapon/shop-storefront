@@ -206,11 +206,14 @@
         {%- if cfg.address -%}<p class="footer-line">{{ cfg.address | escape }}</p>{%- endif -%}
         {%- if cfg.work_hours -%}<p class="footer-line">{{ cfg.work_hours | escape }}</p>{%- endif -%}
       </div>
-      {%- comment -%} headerfix: колонка служебных ссылок рендерится ВСЕГДА —
-        первая строка «Распродажа» (раздел /shop/sale жив, из шапки убран;
-        тихая ссылка = единственная точка обнаружимости). Остальное — по флагам. {%- endcomment -%}
+      {%- comment -%} sale-cat: отдельный раздел /sale снесён — скидки живут
+        через категорию rasprodazha (чип «Распродажа» в каталоге), ссылки на
+        /sale больше нет ни в шапке, ни в футере. Колонка служебных ссылок —
+        только когда в ней есть хоть одна ссылка: phone/email/social по
+        данным, оферта/тоС по флагам (мёртвых ссылок и пустых колонок
+        не бывает). {%- endcomment -%}
+      {%- if cfg.phone or cfg.email or cfg.social_link or cfg.has_offer or cfg.has_tos -%}
       <div class="footer-col">
-        <p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/sale">Распродажа</a></p>
         {%- if cfg.phone -%}<p class="footer-line"><a class="footer-link" href="tel:{{ cfg.phone | remove: " " }}">{{ cfg.phone | escape }}</a></p>{%- endif -%}
         {%- if cfg.email -%}<p class="footer-line"><a class="footer-link" href="mailto:{{ cfg.email | escape }}">{{ cfg.email | escape }}</a></p>{%- endif -%}
         {%- if cfg.social_link -%}<p class="footer-line"><a class="footer-link" href="{{ cfg.social_link | escape }}" rel="noopener nofollow">{{ cfg.social_link | remove: "https://" | remove: "http://" | escape }}</a></p>{%- endif -%}
@@ -221,6 +224,7 @@
         {%- if cfg.has_offer -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/offer">Оферта</a></p>{%- endif -%}
         {%- if cfg.has_tos -%}<p class="footer-line"><a class="footer-link" href="__SHOP_BASE__/tos">Условия обслуживания</a></p>{%- endif -%}
       </div>
+      {%- endif -%}
       {%- if cfg.legal -%}
       <div class="footer-col footer-legal">{{ cfg.legal | escape }}</div>
       {%- endif -%}

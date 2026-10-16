@@ -19,8 +19,6 @@ const cases = [
   ['category', 'found', ['Керамика', 'Посуда и декор', 'Товаров: 26', 'Тарелки', 'product-card', 'data-sort-select', 'category/ceramics?page=3']],
   ['category', 'nested', ['Керамика', 'Тарелки', 'category/ceramics', 'Товаров: 1']],
   ['category', 'not_found', ['Категория не найдена']],
-  ['sale', null, ['Распродажа', 'product-card', 'Товаров: 3', '<s class="price-old">3090.00</s>', '2190.00', 'badge-sale', '−29%', '−30%', 'Нет в наличии', 'href="/shop/sale"', 'rel="canonical"', '/shop/sale"']],
-  ['sale', 'empty', ['Сейчас скидок нет', 'В каталог']],
   ['product', null, ['Кружка «Лён»', '990.00', 'В корзину', 'В наличии: 12', 'data-gallery-thumb', 'gallery-nav', 'data-cart-qty', 'data-qty-step', 'Характеристики', 'Материал: белая глина', 'breadcrumbs']],
   ['product', 'sale', ['Кружка «Лён»', '<s class="price-old" data-pv-price-old>1290.00</s>', 'data-pv-price>790.00<', 'badge-sale', '−38%', '630.00', '"price":"790.00"', 'priceCurrency']],
   ['product', 'vars', ['Худи оверсайз', 'data-variant-picker', 'data-pv-data', 'data-pv-group', 'data-pv-value="Синий"', 'aria-checked="true"', 'data-pv-status', 'aria-live="polite"', '2990.00', '>В наличии</span>', 'В корзину', 'data-pv-price', 'data-pv-badge', 'static/js/picker.js']],
@@ -581,13 +579,14 @@ await smokeQtySteppers();
 }
 
 /* ── Проба headerfix: канон шапки — слева логотип, справа auth-кластер ─────
-   Контракт (headerfix): «Распродажа» в шапке нет (ни в строке, ни в бургере);
-   auth-ссылки — .header-auth ПЕРЕД корзиной в .header-actions (гость: Войти/
-   Регистрация, вошедший: Кабинет/POST-Выйти); футер несёт тихую ссылку
-   /shop/sale (единственная точка обнаружимости раздела). CSS-гард: кластер
-   скрыт в базе (мобайл — строка только с иконками, ссылки в бургер-панели),
-   ≥48rem возвращается в строку; правило-возврат стоит НИЖЕ base display:none
-   (гард порядка — урок каскада .page-gap/.page-gap-m). */
+   Контракт (headerfix + sale-cat): «Распродажа» в шапке нет (ни в строке, ни
+   в бургере) и в футере тоже — отдельный раздел /sale снесён (sale-cat),
+   скидки живут через категорию rasprodazha (чип в каталоге); auth-ссылки —
+   .header-auth ПЕРЕД корзиной в .header-actions (гость: Войти/Регистрация,
+   вошедший: Кабинет/POST-Выйти). CSS-гард: кластер скрыт в базе (мобайл —
+   строка только с иконками, ссылки в бургер-панели), ≥48rem возвращается
+   в строку; правило-возврат стоит НИЖЕ base display:none (гард порядка —
+   урок каскада .page-gap/.page-gap-m). */
 {
   const guest = await renderMockPage(engine, 'catalog', null, { query: { ...q } });
   const member = await renderMockPage(engine, 'account', null, { query: { ...q } });
@@ -604,7 +603,7 @@ await smokeQtySteppers();
   const mAuth = /<div class="header-auth">([\s\S]*?)<\/div>\s*<a class="cart-counter"/.exec(mh);
   check(mAuth && mAuth[1].includes('href="/account"') && mAuth[1].includes('action="/logout"'), 'вошедший: .header-auth до корзины несёт /account и POST /logout');
   const foot = guest.slice(guest.indexOf('<footer'));
-  check(foot.includes('href="/shop/sale"'), 'футер: тихая ссылка «Распродажа» на /shop/sale');
+  check(!foot.includes('/sale'), 'футер: ссылки на снесённый раздел /sale быть не должно (sale-cat)');
   const baseRule = /(^|\n)\.header-auth\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
   check(/display:\s*none/.test(baseRule), 'CSS: .header-auth скрыт в базе (мобайл — иконки, ссылки в бургере)');
   const mqPos = css.indexOf('.header-auth { display: flex', css.indexOf('@media (min-width: 48rem)'));
@@ -613,7 +612,7 @@ await smokeQtySteppers();
     failed++;
     console.log('FAIL headerfix: ' + fails.join(' | '));
   } else {
-    console.log('OK   headerfix (шапка без «Распродажи»; слева логотип; справа auth-кластер до корзины; футерная ссылка /shop/sale; CSS-гард мобайл/десктоп)');
+    console.log('OK   headerfix (шапка и футер без «Распродажи» — раздел /sale снесён; слева логотип; справа auth-кластер до корзины; CSS-гард мобайл/десктоп)');
   }
 }
 

@@ -157,7 +157,6 @@ const PAGE_FOR_MOCK = {
   catalog: { template: 'catalog', mock: 'catalog', pick: null },
   product: { template: 'product', mock: 'product', pick: 'found' },
   category: { template: 'category', mock: 'category', pick: 'found' },
-  sale: { template: 'sale', mock: 'sale', pick: null },
   checkout: { template: 'checkout', mock: 'checkout', pick: 'guest' },
   favorites: { template: 'favorites', mock: 'favorites', pick: 'filled' },
   cart: { template: 'checkout', mock: 'cart', pick: 'guest' }, // отдельной страницы корзины нет: та же типографика
@@ -171,7 +170,6 @@ const PAGE_FOR_MOCK = {
 const PATH_ROUTES = [
   { re: /^\/$/, mock: 'catalog' },
   { re: /^\/category\/[^/]+\/?$/, mock: 'category' },
-  { re: /^\/sale\/?$/, mock: 'sale' },
   { re: /^\/checkout\/?$/, mock: 'checkout' },
   { re: /^\/product\/[^/]+\/?$/, mock: 'product' },
   { re: /^\/order\/[^/]+\/?$/, mock: 'order' },
